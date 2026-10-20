@@ -17,6 +17,9 @@ ICONSET=build.noindex/AppIcon.iconset
 swift Scripts/make-icon.swift "$ICONSET"
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 
+# Localizations (en, fr, it, es)
+cp -R Localization/*.lproj "$APP/Contents/Resources/"
+
 # SwiftPM resource bundles (KeyboardShortcuts localizations)
 for b in "$BIN"/*.bundle; do [ -e "$b" ] && cp -R "$b" "$APP/Contents/Resources/"; done
 

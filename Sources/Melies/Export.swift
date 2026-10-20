@@ -3,7 +3,7 @@ import AppKit
 
 enum ExportError: LocalizedError {
     case noVideoTrack
-    var errorDescription: String? { "Aucune piste video dans ce fichier." }
+    var errorDescription: String? { L("export.novideo") }
 }
 
 /// Twitter-friendly export: H.264 MP4, 30 fps, width <= 1920, aspect ratio between 1:3 and 3:1.

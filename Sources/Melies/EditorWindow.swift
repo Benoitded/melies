@@ -36,8 +36,12 @@ final class EditorWindowController {
             w.center()
             window = w
             session.onPinChange = { [weak w] pinned in w?.level = pinned ? .floating : .normal }
+            // Closing with the red button must also remove the Dock icon.
+            NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
+                MainActor.assumeIsolated { NSApp.setActivationPolicy(.accessory) }
+            }
         }
-        NSApp.setActivationPolicy(.accessory)
+        NSApp.setActivationPolicy(.regular) // Dock icon only while the editor is open
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
     }
@@ -53,6 +57,7 @@ final class EditorWindowController {
     func close() {
         session.model?.player.pause()
         window?.orderOut(nil)
+        NSApp.setActivationPolicy(.accessory)
     }
 }
 
@@ -69,7 +74,7 @@ final class SettingsWindowController {
                 backing: .buffered,
                 defer: false
             )
-            w.title = "Réglages Méliès"
+            w.title = L("settings.title")
             w.isReleasedWhenClosed = false
             w.contentView = NSHostingView(rootView: SettingsView())
             w.center()

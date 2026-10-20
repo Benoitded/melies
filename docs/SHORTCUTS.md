@@ -7,7 +7,8 @@
 | Cmd+Shift+6 (réglable) | Démarrer l'enregistrement (on dessine la zone), puis le même raccourci l'arrête |
 | Cmd+Shift+E (réglable) | Ouvrir l'éditeur sur la dernière vidéo du Bureau |
 
-Pendant l'enregistrement, un bouton rouge `■ 0:07` apparaît dans la barre de
+Pendant l'enregistrement, tout ce qui est hors de la zone est assombri (et absent
+de la vidéo), et un bouton rouge `■ 0:07` apparaît dans la barre de
 menu : un clic arrête et ouvre l'éditeur sur la vidéo. 
 Choix de la zone : glisser pour dessiner, **Espace maintenu** pour déplacer le
 rectangle sans le redimensionner (comme macOS et Shottr), Esc pour annuler.

@@ -9,21 +9,21 @@ struct MeliesApp: App {
 
     var body: some Scene {
         MenuBarExtra("Méliès", systemImage: recorder.isRecording ? "record.circle.fill" : "film") {
-            Button(recorder.isRecording ? "Arrêter l'enregistrement" : "Enregistrer l'écran") {
+            Button(recorder.isRecording ? L("menu.record.stop") : L("menu.record.start")) {
                 ScreenRecorder.shared.toggle()
             }
-            Text("Raccourci : \(KeyboardShortcuts.getShortcut(for: .record)?.description ?? "aucun")")
+            Text(L("menu.shortcut", KeyboardShortcuts.getShortcut(for: .record) == nil ? L("menu.none") : shortcutLabel(.record)))
             Divider()
-            Button("Ouvrir l'éditeur") { EditorWindowController.shared.openLatest() }
-            Button("Ouvrir un fichier…") {
+            Button(L("menu.open_editor")) { EditorWindowController.shared.openLatest() }
+            Button(L("menu.open_file")) {
                 EditorWindowController.shared.show()
                 EditorWindowController.shared.session.chooseFile()
             }
             Divider()
-            Button("Réglages et raccourcis…") { SettingsWindowController.shared.show() }
-            Button("Bienvenue et aide…") { OnboardingWindowController.shared.show() }
+            Button(L("menu.settings")) { SettingsWindowController.shared.show() }
+            Button(L("menu.help")) { OnboardingWindowController.shared.show() }
             Divider()
-            Button("Quitter Méliès") { NSApp.terminate(nil) }.keyboardShortcut("q")
+            Button(L("menu.quit")) { NSApp.terminate(nil) }.keyboardShortcut("q")
         }
     }
 }
@@ -41,6 +41,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if OnboardingWindowController.needed {
             Task { @MainActor in OnboardingWindowController.shared.show() }
+        }
+
+        if let out = ProcessInfo.processInfo.environment["MELIES_ONBOARDING_SNAPSHOT"] {
+            Task { @MainActor in
+                OnboardingWindowController.shared.show()
+                try? await Task.sleep(for: .seconds(2.2))
+                OnboardingWindowController.shared.snapshot(to: out)
+                NSApp.terminate(nil)
+            }
         }
 
         // Debug hooks: MELIES_OPEN=file.mov opens it, MELIES_SNAPSHOT=out.png saves a render and quits.

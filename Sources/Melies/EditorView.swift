@@ -53,12 +53,12 @@ struct EditorView: View {
         var body: some View {
             VStack(spacing: 14) {
                 Image(systemName: "film.stack").font(.system(size: 44)).foregroundStyle(.secondary)
-                Text("Aucune vidéo").font(.title3.weight(.semibold))
-                Text("Glisse un fichier ici, ou ouvre-en un avec ⌘⇧O.")
+                Text(L("empty.title")).font(.title3.weight(.semibold))
+                Text(L("empty.hint"))
                     .foregroundStyle(.secondary)
                 HStack {
-                    Button("Dernière capture") { session.openLatest() }
-                    Button("Ouvrir…") { session.chooseFile() }
+                    Button(L("empty.latest")) { session.openLatest() }
+                    Button(L("empty.open")) { session.chooseFile() }
                 }
             }
         }

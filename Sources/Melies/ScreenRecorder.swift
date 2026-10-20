@@ -16,6 +16,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
     private var startedAt = Date()
     private var finishContinuation: CheckedContinuation<Void, Never>?
     private var busy = false
+    private var overlay: RecordingOverlay?
 
     /// Same shortcut starts and stops.
     func toggle() {
@@ -31,19 +32,20 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
         guard CGPreflightScreenCaptureAccess() else {
             CGRequestScreenCaptureAccess()
-            alert("Autorise Méliès à enregistrer l'écran",
-                  "Réglages Système > Confidentialité et sécurité > Enregistrement de l'écran et de l'audio système, active Méliès, puis relance l'app et réessaie.")
+            alert(L("rec.perm.title"),
+                  L("rec.perm.text"))
             return
         }
         guard let selection = await RegionSelector.select() else { return }
-        try? await Task.sleep(for: .milliseconds(220)) // let the overlay disappear from the capture
+        overlay = RecordingOverlay(screen: selection.screen, region: selection.rect)
+        try? await Task.sleep(for: .milliseconds(220)) // let the selector disappear before capturing
 
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
             let key = NSDeviceDescriptionKey("NSScreenNumber")
             let id = selection.screen.deviceDescription[key] as? CGDirectDisplayID
             guard let display = content.displays.first(where: { $0.displayID == id }) ?? content.displays.first else {
-                alert("Aucun écran trouvé", ""); return
+                closeOverlay(); alert(L("rec.nodisplay"), ""); return
             }
 
             let scale = selection.screen.backingScaleFactor
@@ -62,7 +64,10 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
             recordingConfig.outputFileType = .mov
             let output = SCRecordingOutput(configuration: recordingConfig, delegate: self)
 
-            let stream = SCStream(filter: SCContentFilter(display: display, excludingWindows: []), configuration: config, delegate: self)
+            // Keep every Méliès window (dimming overlay, editor, menu bar button) out of the video.
+            let ownPID = ProcessInfo.processInfo.processIdentifier
+            let own = content.windows.filter { $0.owningApplication?.processID == ownPID }
+            let stream = SCStream(filter: SCContentFilter(display: display, excludingWindows: own), configuration: config, delegate: self)
             try stream.addRecordingOutput(output)
             try await stream.startCapture()
 
@@ -73,7 +78,8 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
             isRecording = true
             showStatusItem()
         } catch {
-            alert("Impossible de démarrer l'enregistrement", error.localizedDescription)
+            closeOverlay()
+            alert(L("rec.failed"), error.localizedDescription)
         }
     }
 
@@ -81,6 +87,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
     private func stop() async {
         guard let stream, isRecording else { return }
+        closeOverlay()
         busy = true
         defer { busy = false }
 
@@ -145,7 +152,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
             .foregroundColor: NSColor.systemRed,
             .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold),
         ])
-        statusItem?.button?.toolTip = "Arrêter l'enregistrement"
+        statusItem?.button?.toolTip = L("tip.stop")
     }
 
     private func hideStatusItem() {
@@ -158,6 +165,11 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
     @objc private func stopFromButton() { toggle() }
 
     // MARK: Helpers
+
+    private func closeOverlay() {
+        overlay?.close()
+        overlay = nil
+    }
 
     private func even(_ value: CGFloat) -> Int { max(2, Int((value / 2).rounded()) * 2) }
 

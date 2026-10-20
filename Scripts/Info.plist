@@ -2,6 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array><string>en</string><string>fr</string><string>it</string><string>es</string></array>
     <key>CFBundleName</key><string>Méliès</string>
     <key>CFBundleDisplayName</key><string>Méliès</string>
     <key>CFBundleIdentifier</key><string>dev.melies.app</string>
@@ -13,7 +16,7 @@
     <key>LSMinimumSystemVersion</key><string>15.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
-    <key>NSDesktopFolderUsageDescription</key><string>Méliès lit tes captures d'écran vidéo sur le Bureau.</string>
+    <key>NSDesktopFolderUsageDescription</key><string>Méliès reads your screen recordings from the Desktop.</string>
     <key>CFBundleDocumentTypes</key>
     <array>
         <dict>

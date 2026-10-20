@@ -18,6 +18,7 @@ final class EditorModel: ObservableObject {
     @Published var fps: Double = 0
 
     private var timeObserver: Any?
+    private var shareDelegate: ShareDelegate?
     private var frameDuration: Double = 1.0 / 30.0
 
     init(url: URL) {
@@ -101,14 +102,14 @@ final class EditorModel: ObservableObject {
 
     private func export(to destination: URL) async -> Bool {
         busy = true
-        status = "Export en cours..."
+        status = L("status.exporting")
         player.pause()
         defer { busy = false }
         do {
             try await TwitterExport.run(asset: asset, range: range, to: destination)
             return true
         } catch {
-            status = "Echec de l'export : \(error.localizedDescription)"
+            status = L("status.fail", error.localizedDescription)
             return false
         }
     }
@@ -126,7 +127,8 @@ final class EditorModel: ObservableObject {
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.writeObjects([tmp as NSURL])
-        status = "Copie (\(sizeLabel(tmp))). Colle-le dans Twitter."
+        status = L("status.copied", sizeLabel(tmp))
+        finish(toast: L("toast.copied"))
     }
 
     /// Export to a temp file and show the system share sheet.
@@ -134,8 +136,13 @@ final class EditorModel: ObservableObject {
         let tmp = FileManager.default.temporaryDirectory
             .appendingPathComponent("melies-\(Int(Date().timeIntervalSince1970)).mp4")
         guard await export(to: tmp), let view else { return }
-        status = "Prêt à partager (\(sizeLabel(tmp)))"
+        status = L("status.share_ready", sizeLabel(tmp))
         let picker = NSSharingServicePicker(items: [tmp])
+        let delegate = ShareDelegate { [weak self] chose in
+            if chose { self?.finish(toast: nil) }
+        }
+        shareDelegate = delegate
+        picker.delegate = delegate
         picker.show(relativeTo: NSRect(x: view.bounds.maxX - 120, y: view.bounds.maxY - 50, width: 1, height: 1),
                     of: view, preferredEdge: .minY)
     }
@@ -151,7 +158,26 @@ final class EditorModel: ObservableObject {
             n += 1
         }
         guard await export(to: target) else { return }
-        status = "Enregistre : \(target.lastPathComponent) (\(sizeLabel(target)))"
+        status = L("status.saved", target.lastPathComponent, sizeLabel(target))
         NSWorkspace.shared.activateFileViewerSelecting([target])
+        finish(toast: L("toast.saved"))
+    }
+
+    /// After a successful copy, save or share, close the editor (and with it the Dock icon).
+    private func finish(toast: String?) {
+        guard UserDefaults.standard.object(forKey: "closeAfterAction") as? Bool ?? true else { return }
+        if let toast { Toast.show(toast) }
+        EditorWindowController.shared.close()
+    }
+}
+
+/// Reports whether the user actually picked a sharing service (nil means the picker was dismissed).
+final class ShareDelegate: NSObject, NSSharingServicePickerDelegate {
+    private let onChoose: @MainActor (Bool) -> Void
+    init(onChoose: @escaping @MainActor (Bool) -> Void) { self.onChoose = onChoose }
+
+    func sharingServicePicker(_ picker: NSSharingServicePicker, didChoose service: NSSharingService?) {
+        let chose = service != nil
+        Task { @MainActor in self.onChoose(chose) }
     }
 }

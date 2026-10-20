@@ -3,24 +3,28 @@ import SwiftUI
 
 struct SettingsView: View {
     @AppStorage("watchedFolder") private var watchedFolder = ""
+    @AppStorage("closeAfterAction") private var closeAfterAction = true
 
     var body: some View {
         Form {
-            Section("Raccourci global") {
-                KeyboardShortcuts.Recorder("Enregistrer l'écran (début / fin)", name: .record)
-                KeyboardShortcuts.Recorder("Ouvrir l'éditeur", name: .openEditor)
+            Section(L("settings.section.global")) {
+                KeyboardShortcuts.Recorder(L("settings.record"), name: .record)
+                KeyboardShortcuts.Recorder(L("settings.open_editor"), name: .openEditor)
             }
-            Section("Dossier surveillé") {
+            Section(L("settings.section.folder")) {
                 HStack {
                     Text(LatestRecording.watchedFolder().path).lineLimit(1).truncationMode(.middle)
                     Spacer()
-                    Button("Choisir…") { chooseFolder() }
+                    Button(L("settings.choose")) { chooseFolder() }
                 }
             }
-            Section("Raccourcis de l'éditeur") {
+            Section {
+                Toggle(L("settings.close_after"), isOn: $closeAfterAction)
+            }
+            Section(L("settings.section.editor")) {
                 ForEach(EditorShortcuts.all, id: \.keys) { item in
                     HStack {
-                        Text(item.action)
+                        Text(L(item.action))
                         Spacer()
                         Text(item.keys).font(.system(.body, design: .monospaced)).foregroundStyle(.secondary)
                     }

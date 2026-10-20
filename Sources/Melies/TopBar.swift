@@ -8,41 +8,41 @@ struct TopBar: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            BarButton(symbol: "doc.on.doc", title: "Copier le MP4 Twitter", shortcut: "(⌘C)", disabled: model.busy) {
+            BarButton(symbol: "doc.on.doc", title: L("tip.copy"), shortcut: "(⌘C)", disabled: model.busy) {
                 Task { await model.copy() }
             }
-            BarButton(symbol: "square.and.arrow.down", title: "Enregistrer le MP4 Twitter", shortcut: "(⌘S)", disabled: model.busy) {
+            BarButton(symbol: "square.and.arrow.down", title: L("tip.save"), shortcut: "(⌘S)", disabled: model.busy) {
                 Task { await model.save() }
             }
             divider
-            BarButton(symbol: session.pinned ? "pin.fill" : "pin", title: "Garder au premier plan", active: session.pinned) {
+            BarButton(symbol: session.pinned ? "pin.fill" : "pin", title: L("tip.pin"), active: session.pinned) {
                 session.pinned.toggle()
             }
-            BarButton(symbol: "square.and.arrow.up", title: "Partager", disabled: model.busy) {
+            BarButton(symbol: "square.and.arrow.up", title: L("tip.share"), disabled: model.busy) {
                 Task { await model.share(from: NSApp.keyWindow?.contentView) }
             }
             BarButton(symbol: recorder.isRecording ? "stop.circle.fill" : "record.circle",
-                      title: recorder.isRecording ? "Arrêter l'enregistrement" : "Enregistrer l'écran",
+                      title: recorder.isRecording ? L("tip.stop") : L("tip.record"),
                       shortcut: "(⇧⌘6)", active: recorder.isRecording) {
                 ScreenRecorder.shared.toggle()
             }
             divider
-            BarButton(symbol: "scissors", title: "Trim", shortcut: "(I / O)", active: true) {}
-            BarButton(symbol: "arrow.up.right", title: "Flèche", shortcut: "(A, v2)", disabled: true) {}
-            BarButton(symbol: "textformat", title: "Texte", shortcut: "(T, v2)", disabled: true) {}
-            BarButton(symbol: "ruler", title: "Mesure", shortcut: "(v2)", disabled: true) {}
-            BarButton(symbol: "rectangle", title: "Rectangle", shortcut: "(R, v2)", disabled: true) {}
-            BarButton(symbol: "viewfinder", title: "Spotlight et zoom", shortcut: "(Z, v2)", disabled: true) {}
-            BarButton(symbol: "pencil", title: "Crayon", shortcut: "(v2)", disabled: true) {}
-            BarButton(symbol: "ellipsis", title: "Plus", shortcut: "(v2)", disabled: true) {}
+            BarButton(symbol: "scissors", title: L("tip.trim"), shortcut: "(I / O)", active: true) {}
+            BarButton(symbol: "arrow.up.right", title: L("tip.arrow"), shortcut: L("tip.soon"), disabled: true) {}
+            BarButton(symbol: "textformat", title: L("tip.text"), shortcut: L("tip.soon"), disabled: true) {}
+            BarButton(symbol: "ruler", title: L("tip.measure"), shortcut: L("tip.soon"), disabled: true) {}
+            BarButton(symbol: "rectangle", title: L("tip.rect"), shortcut: L("tip.soon"), disabled: true) {}
+            BarButton(symbol: "viewfinder", title: L("tip.spotlight"), shortcut: L("tip.soon"), disabled: true) {}
+            BarButton(symbol: "pencil", title: L("tip.pencil"), shortcut: L("tip.soon"), disabled: true) {}
+            BarButton(symbol: "ellipsis", title: L("tip.more"), shortcut: L("tip.soon"), disabled: true) {}
 
             Spacer(minLength: 12)
 
-            info(value: sizeText, label: "Taille source")
+            info(value: sizeText, label: L("info.source"))
             divider
-            info(value: String(format: "%.1f s", max(model.end - model.start, 0)), label: "Durée")
+            info(value: String(format: "%.1f s", max(model.end - model.start, 0)), label: L("info.duration"))
             divider
-            info(value: fpsText, label: "Export 30 fps")
+            info(value: fpsText, label: L("info.export"))
         }
         .padding(.leading, 78) // room for the traffic lights
         .padding(.trailing, 16)
