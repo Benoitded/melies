@@ -66,12 +66,14 @@ struct CropOverlay: View {
         )
     }
 
+    /// Handle centers, nudged inside the video so they stay fully visible when the crop touches an edge.
     private func handlePoints(_ r: CGRect) -> [CGPoint] {
-        [
+        let inner = videoRect.insetBy(dx: 6, dy: 6)
+        return [
             CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.midX, y: r.minY), CGPoint(x: r.maxX, y: r.minY),
             CGPoint(x: r.minX, y: r.midY), CGPoint(x: r.maxX, y: r.midY),
             CGPoint(x: r.minX, y: r.maxY), CGPoint(x: r.midX, y: r.maxY), CGPoint(x: r.maxX, y: r.maxY),
-        ]
+        ].map { CGPoint(x: min(max($0.x, inner.minX), inner.maxX), y: min(max($0.y, inner.minY), inner.maxY)) }
     }
 
     private func hit(_ p: CGPoint, in r: CGRect) -> Part? {

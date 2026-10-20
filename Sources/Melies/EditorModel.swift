@@ -97,7 +97,7 @@ final class EditorModel: ObservableObject {
         if cropMode {
             confirmCrop()
         } else {
-            if cropRect == nil { cropRect = CGRect(x: 0.06, y: 0.06, width: 0.88, height: 0.88) }
+            if cropRect == nil { cropRect = CGRect(x: 0, y: 0, width: 1, height: 1) } // default: the whole frame
             cropMode = true
         }
     }
