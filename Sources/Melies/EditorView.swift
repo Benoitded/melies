@@ -70,15 +70,18 @@ struct EditorView: View {
     private struct Loaded: View {
         @ObservedObject var session: EditorSession
         @ObservedObject var model: EditorModel
+        @State private var lastDrag: CGSize = .zero
+
+        private func updateCanvas(_ geo: GeometryProxy) {
+            model.canvasSize = geo.size
+            model.canvasOrigin = geo.frame(in: .global).origin
+        }
 
         var body: some View {
             VStack(spacing: 12) {
                 TopBar(session: session, model: model).zIndex(1)
                 GeometryReader { geo in
-                    let area = CGRect(origin: .zero, size: geo.size)
-                    let video = model.sourceSize.width > 0
-                        ? AVMakeRect(aspectRatio: model.sourceSize, insideRect: area)
-                        : area
+                    let video = model.videoRect(in: geo.size)
                     ZStack {
                         Checkerboard()
                         PlayerView(player: model.player)
@@ -88,6 +91,20 @@ struct EditorView: View {
                             CropOverlay(model: model, videoRect: video)
                         }
                     }
+                    .contentShape(Rectangle())
+                    // Double click: 100% under the pointer, or back to fit.
+                    .simultaneousGesture(SpatialTapGesture(count: 2).onEnded { value in
+                        if !model.cropMode { model.toggleActual(at: value.location) }
+                    })
+                    // Grab and drag the video when it is zoomed in.
+                    .simultaneousGesture(DragGesture(minimumDistance: 2).onChanged { value in
+                        guard !model.cropMode, model.zoom > 1.0001 else { return }
+                        model.panBy(CGSize(width: value.translation.width - lastDrag.width,
+                                           height: value.translation.height - lastDrag.height))
+                        lastDrag = value.translation
+                    }.onEnded { _ in lastDrag = .zero })
+                    .onAppear { updateCanvas(geo) }
+                    .onChange(of: geo.size) { _, _ in updateCanvas(geo) }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .padding(.horizontal, 16)

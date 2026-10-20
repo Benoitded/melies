@@ -114,3 +114,9 @@
 "menu.reopen" = "Riapri Méliès";
 "menu.more" = "Altro";
 "menu.show_folder" = "Mostra la cartella delle registrazioni";
+"mm.view" = "Vista";
+"mm.zoom_in" = "Ingrandisci";
+"mm.zoom_out" = "Rimpicciolisci";
+"mm.zoom_actual" = "Dimensione reale";
+"mm.zoom_fit" = "Adatta alla finestra";
+"info.zoom" = "Zoom";

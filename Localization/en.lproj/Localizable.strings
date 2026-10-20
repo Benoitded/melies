@@ -114,3 +114,9 @@
 "menu.reopen" = "Reopen Méliès";
 "menu.more" = "More";
 "menu.show_folder" = "Show recordings folder";
+"mm.view" = "View";
+"mm.zoom_in" = "Zoom In";
+"mm.zoom_out" = "Zoom Out";
+"mm.zoom_actual" = "Actual Size";
+"mm.zoom_fit" = "Zoom to Fit";
+"info.zoom" = "Zoom";

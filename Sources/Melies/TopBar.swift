@@ -46,6 +46,8 @@ struct TopBar: View {
             info(value: String(format: "%.1f s", max(model.end - model.start, 0)), label: L("info.duration"))
             divider
             info(value: fpsText, label: L("info.export"))
+            divider
+            info(value: "\(model.zoomPercent)%", label: L("info.zoom"))
         }
         .padding(.leading, 78) // room for the traffic lights
         .padding(.trailing, 16)

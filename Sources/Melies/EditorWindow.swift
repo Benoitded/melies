@@ -10,6 +10,56 @@ final class EditorWindowController {
 
     var isKey: Bool { window?.isKeyWindow ?? false }
 
+    private var eventMonitor: Any?
+    private var lastRightDrag: CGPoint?
+
+    /// Trackpad pinch, Cmd+scroll to zoom, two-finger scroll or right-drag to pan (only over the canvas).
+    private func installZoomMonitor() {
+        guard eventMonitor == nil else { return }
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.magnify, .scrollWheel, .rightMouseDown, .rightMouseDragged]) { [weak self] event in
+            MainActor.assumeIsolated { self?.handle(event) ?? event }
+        }
+    }
+
+    private func handle(_ event: NSEvent) -> NSEvent? {
+        guard let window, event.window === window, window.isVisible, let model = session.model,
+              let content = window.contentView else { return event }
+        // Window coordinates have a bottom-left origin; the canvas uses top-left.
+        let point = CGPoint(x: event.locationInWindow.x - model.canvasOrigin.x,
+                            y: content.bounds.height - event.locationInWindow.y - model.canvasOrigin.y)
+        let canvas = CGRect(origin: .zero, size: model.canvasSize)
+        guard canvas.contains(point) || event.type == .rightMouseDragged else { return event }
+
+        switch event.type {
+        case .magnify:
+            model.setZoom(model.zoom * (1 + Double(event.magnification)), anchor: point)
+            return nil
+        case .scrollWheel:
+            let precise = event.hasPreciseScrollingDeltas
+            if event.modifierFlags.contains(.command) || event.modifierFlags.contains(.option) {
+                model.setZoom(model.zoom * exp(Double(event.scrollingDeltaY) * (precise ? 0.01 : 0.04)), anchor: point)
+                return nil
+            }
+            if model.zoom > 1.0001 {
+                let k: CGFloat = precise ? 1 : 6
+                model.panBy(CGSize(width: event.scrollingDeltaX * k, height: event.scrollingDeltaY * k))
+                return nil
+            }
+            return event
+        case .rightMouseDown:
+            lastRightDrag = event.locationInWindow
+            return event
+        case .rightMouseDragged:
+            if let last = lastRightDrag {
+                model.panBy(CGSize(width: event.locationInWindow.x - last.x, height: -(event.locationInWindow.y - last.y)))
+            }
+            lastRightDrag = event.locationInWindow
+            return nil
+        default:
+            return event
+        }
+    }
+
     /// Hotkey entry point: show the editor on the newest recording.
     func openLatest() {
         session.openLatest()
@@ -33,7 +83,7 @@ final class EditorWindowController {
             w.titlebarAppearsTransparent = true
             w.titleVisibility = .hidden
             w.isReleasedWhenClosed = false
-            w.minSize = NSSize(width: 640, height: 400)
+            w.minSize = NSSize(width: 800, height: 420)
             // An empty unified toolbar makes the title bar tall, so the traffic lights sit centered
             // on the same row as our own toolbar.
             let toolbar = NSToolbar(identifier: "melies.editor")
@@ -53,6 +103,7 @@ final class EditorWindowController {
                 }
             }
         }
+        installZoomMonitor()
         NSApp.setActivationPolicy(.regular) // Dock icon only while the editor is open
         MainMenu.install()
         NSApp.activate(ignoringOtherApps: true)

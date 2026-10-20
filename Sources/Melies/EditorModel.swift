@@ -20,6 +20,12 @@ final class EditorModel: ObservableObject {
     @Published var cropRect: CGRect?
     @Published var cropMode = false
     @Published var thumbnails: [NSImage] = []
+    /// Canvas zoom: 1 means "fit in the window". `pan` moves the video from its fitted center.
+    @Published var zoom: Double = 1
+    @Published var pan: CGSize = .zero
+    /// Size and window position of the video canvas, kept up to date by the view.
+    var canvasSize: CGSize = .zero
+    var canvasOrigin: CGPoint = .zero
 
     private var timeObserver: Any?
     private var shareDelegate: ShareDelegate?
@@ -89,6 +95,78 @@ final class EditorModel: ObservableObject {
             if let frame { last = frame }
             return last
         }
+    }
+
+    // MARK: Zoom (canvas only, the exported video is not affected)
+
+    func fitRect(in size: CGSize) -> CGRect {
+        let area = CGRect(origin: .zero, size: size)
+        guard sourceSize.width > 0, size.width > 0, size.height > 0 else { return area }
+        return AVMakeRect(aspectRatio: sourceSize, insideRect: area)
+    }
+
+    /// Where the video is drawn inside the canvas, including zoom and pan.
+    func videoRect(in size: CGSize) -> CGRect {
+        let fit = fitRect(in: size)
+        let w = fit.width * zoom, h = fit.height * zoom
+        return CGRect(x: fit.midX + pan.width - w / 2, y: fit.midY + pan.height - h / 2, width: w, height: h)
+    }
+
+    private var maxZoom: Double {
+        let fit = fitRect(in: canvasSize)
+        return fit.width > 0 ? min(8, 12000 / Double(fit.width)) : 8
+    }
+
+    private var backingScale: Double { Double(NSScreen.main?.backingScaleFactor ?? 2) }
+
+    /// Zoom percentage as in Shottr: 100% is one video pixel per screen pixel.
+    var zoomPercent: Int {
+        let width = videoRect(in: canvasSize).width
+        guard sourceSize.width > 0, width > 0 else { return 100 }
+        return Int((Double(width) * backingScale / Double(sourceSize.width) * 100).rounded())
+    }
+
+    /// Zoom keeping the point under `anchor` (canvas coordinates) fixed. Defaults to the center.
+    func setZoom(_ value: Double, anchor: CGPoint? = nil) {
+        let new = min(max(value, 0.25), maxZoom)
+        guard new != zoom, canvasSize.width > 0 else { return }
+        let fit = fitRect(in: canvasSize)
+        let a = anchor ?? CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+        let center = CGPoint(x: fit.midX + pan.width, y: fit.midY + pan.height)
+        let ratio = new / zoom
+        let newCenter = CGPoint(x: a.x - (a.x - center.x) * ratio, y: a.y - (a.y - center.y) * ratio)
+        zoom = new
+        pan = CGSize(width: newCenter.x - fit.midX, height: newCenter.y - fit.midY)
+        clampPan()
+    }
+
+    func panBy(_ delta: CGSize) {
+        pan = CGSize(width: pan.width + delta.width, height: pan.height + delta.height)
+        clampPan()
+    }
+
+    /// Keep at least a strip of the video on screen, and re-center when it fits.
+    private func clampPan() {
+        guard zoom > 1.0001 else { pan = .zero; return }
+        let fit = fitRect(in: canvasSize)
+        let maxX = max(0, (fit.width * zoom + canvasSize.width) / 2 - 80)
+        let maxY = max(0, (fit.height * zoom + canvasSize.height) / 2 - 80)
+        pan = CGSize(width: min(max(pan.width, -maxX), maxX), height: min(max(pan.height, -maxY), maxY))
+    }
+
+    func zoomIn() { setZoom(zoom * 1.25) }
+    func zoomOut() { setZoom(zoom / 1.25) }
+    func zoomToFit() { zoom = 1; pan = .zero }
+
+    func zoomActual(anchor: CGPoint? = nil) {
+        let fit = fitRect(in: canvasSize)
+        guard fit.width > 0, sourceSize.width > 0 else { return }
+        setZoom(Double(sourceSize.width) / backingScale / Double(fit.width), anchor: anchor)
+    }
+
+    /// Double click: jump to 100% under the pointer, or back to fit.
+    func toggleActual(at point: CGPoint) {
+        if abs(zoomPercent - 100) <= 2 { zoomToFit() } else { zoomActual(anchor: point) }
     }
 
     // MARK: Crop

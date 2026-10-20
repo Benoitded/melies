@@ -20,12 +20,18 @@ final class MenuActions: NSObject, NSMenuItemValidation {
         session.loadFromPasteboard()
     }
 
+    @objc func zoomIn() { session.model?.zoomIn() }
+    @objc func zoomOut() { session.model?.zoomOut() }
+    @objc func zoomActual() { session.model?.zoomActual() }
+    @objc func zoomFit() { session.model?.zoomToFit() }
+
     @objc func copyVideo() { Task { await session.model?.copy() } }
     @objc func saveVideo() { Task { await session.model?.save() } }
 
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         switch item.action {
-        case #selector(copyVideo), #selector(saveVideo):
+        case #selector(copyVideo), #selector(saveVideo), #selector(zoomIn), #selector(zoomOut),
+             #selector(zoomActual), #selector(zoomFit):
             return session.model != nil && EditorWindowController.shared.isKey
         default:
             return true
@@ -51,6 +57,7 @@ enum MainMenu {
         main.addItem(submenuItem(appMenu()))
         main.addItem(submenuItem(fileMenu()))
         main.addItem(submenuItem(editMenu()))
+        main.addItem(submenuItem(viewMenu()))
         let window = windowMenu()
         main.addItem(submenuItem(window))
         let help = helpMenu()
@@ -74,7 +81,7 @@ enum MainMenu {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             MainActor.assumeIsolated {
                 let items = NSApp.mainMenu?.items ?? []
-                let ours = items.count == 5 && items[1].submenu?.title == L("mm.file")
+                let ours = items.count == 6 && items[1].submenu?.title == L("mm.file")
                 if !ours { install() }
             }
         }
@@ -126,6 +133,15 @@ enum MainMenu {
         add(menu, L("mm.redo"), Selector(("redo:")), "z", [.command, .shift])
         menu.addItem(.separator())
         add(menu, L("tip.copy"), #selector(MenuActions.copyVideo), "c", target: MenuActions.shared)
+        return menu
+    }
+
+    private static func viewMenu() -> NSMenu {
+        let menu = NSMenu(title: L("mm.view"))
+        add(menu, L("mm.zoom_in"), #selector(MenuActions.zoomIn), "+", target: MenuActions.shared)
+        add(menu, L("mm.zoom_out"), #selector(MenuActions.zoomOut), "-", target: MenuActions.shared)
+        add(menu, L("mm.zoom_actual"), #selector(MenuActions.zoomActual), "0", target: MenuActions.shared)
+        add(menu, L("mm.zoom_fit"), #selector(MenuActions.zoomFit), "1", target: MenuActions.shared)
         return menu
     }
 
