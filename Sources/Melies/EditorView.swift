@@ -123,17 +123,27 @@ struct EditorView: View {
                     .onChange(of: geo.size) { _, _ in updateCanvas(geo) }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(alignment: .topTrailing) { ZoomPanel(model: model).padding(10) }
                 .padding(.horizontal, 16)
 
                 RangeSlider(model: model).padding(.horizontal, 16)
                 ZoomLane(model: model).padding(.horizontal, 16)
-                ZoomInspector(model: model).padding(.horizontal, 16)
 
-                HStack(spacing: 10) {
+                HStack(spacing: 12) {
                     Button { model.togglePlay() } label: {
-                        Image(systemName: model.isPlaying ? "pause.fill" : "play.fill").frame(width: 18)
+                        Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 12))
+                            .frame(width: 28, height: 28)
+                            .background(Circle().fill(Color.primary.opacity(0.1)))
+                            .contentShape(Circle())
                     }
-                    Text(timeLabel).font(.system(.callout, design: .monospaced)).foregroundStyle(.secondary)
+                    .buttonStyle(.plain)
+                    HStack(spacing: 5) {
+                        Text(timecode(max(model.current - model.start, 0)))
+                        Text("/").foregroundStyle(.tertiary)
+                        Text(timecode(model.end - model.start)).foregroundStyle(.secondary)
+                    }
+                    .font(.system(size: 12).monospacedDigit())
                     Spacer()
                     if let status = model.status {
                         Text(status).font(.callout).foregroundStyle(.secondary).lineLimit(1)
@@ -142,11 +152,12 @@ struct EditorView: View {
                 }
                 .padding(.horizontal, 16)
             }
-            .padding(.bottom, 16)
+            .padding(.bottom, 14)
         }
 
-        private var timeLabel: String {
-            String(format: "%.2f s   [%.2f → %.2f]  =  %.2f s", model.current, model.start, model.end, model.end - model.start)
+        private func timecode(_ seconds: Double) -> String {
+            let s = max(seconds, 0)
+            return String(format: "%d:%02d.%d", Int(s) / 60, Int(s) % 60, Int((s * 10).truncatingRemainder(dividingBy: 10)))
         }
     }
 }

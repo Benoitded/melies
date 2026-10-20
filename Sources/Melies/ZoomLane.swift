@@ -1,12 +1,13 @@
 import SwiftUI
 
-/// Lane under the timeline holding the zoom waypoints. Drag a diamond to retime it, click to edit it.
-/// The tinted bar before each diamond is the travel time of the animation.
+/// Lane under the timeline: the zoom level over time as a curve, with a diamond for each waypoint.
+/// The curve shows the dynamics at a glance (a long ramp is a slow zoom, a steep one is a fast zoom).
+/// Drag a diamond to retime it, click it to edit it.
 struct ZoomLane: View {
     @ObservedObject var model: EditorModel
 
     private let handleWidth: CGFloat = 14 // must match RangeSlider so both lanes line up
-    private let height: CGFloat = 26
+    private let height: CGFloat = 42
     private let space = "zoomlane"
 
     @State private var grab: CGFloat?
@@ -18,39 +19,64 @@ struct ZoomLane: View {
             let x = { (t: Double) -> CGFloat in handleWidth + usable * CGFloat(t / total) }
             let time = { (x: CGFloat) -> Double in Double((x - handleWidth) / usable) * total }
 
+            let top: CGFloat = 8, bottom = height - 8
+            let maxScale = max(model.zoomPoints.map(\.scale).max() ?? 2, 2)
+            let y = { (scale: Double) -> CGFloat in bottom - CGFloat(log(scale) / log(maxScale)) * (bottom - top) }
+
             ZStack(alignment: .topLeading) {
-                Capsule().fill(Color.primary.opacity(0.07))
-                    .frame(width: usable, height: 12)
-                    .offset(x: handleWidth, y: 7)
-                    .allowsHitTesting(false)
+                // Baseline: no zoom.
+                Path { p in
+                    p.move(to: CGPoint(x: handleWidth, y: bottom))
+                    p.addLine(to: CGPoint(x: handleWidth + usable, y: bottom))
+                }
+                .stroke(Color.primary.opacity(0.16), lineWidth: 1)
+                .allowsHitTesting(false)
 
                 if model.zoomPoints.isEmpty {
                     Text(L("zoom.hint"))
                         .font(.system(size: 11)).foregroundStyle(.secondary)
-                        .offset(x: handleWidth + 10, y: 5)
+                        .offset(x: handleWidth + 4, y: bottom - 20)
+                        .allowsHitTesting(false)
+                } else {
+                    let samples = 160
+                    let curve = Path { p in
+                        for i in 0...samples {
+                            let t = total * Double(i) / Double(samples)
+                            let scale = ZoomCamera.state(at: t, points: model.zoomPoints).scale
+                            let point = CGPoint(x: x(t), y: y(scale))
+                            if i == 0 { p.move(to: point) } else { p.addLine(to: point) }
+                        }
+                    }
+                    Path { p in
+                        p.addPath(curve)
+                        p.addLine(to: CGPoint(x: x(total), y: bottom))
+                        p.addLine(to: CGPoint(x: x(0), y: bottom))
+                        p.closeSubpath()
+                    }
+                    .fill(Color.accentColor.opacity(0.16))
+                    .allowsHitTesting(false)
+                    curve
+                        .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
                         .allowsHitTesting(false)
                 }
 
-                ForEach(Array(model.zoomPoints.enumerated()), id: \.element.id) { index, point in
-                    let previous = index > 0 ? model.zoomPoints[index - 1].time : 0
-                    let start = max(point.time - point.transition, previous)
-                    Capsule().fill(Color.accentColor.opacity(0.45))
-                        .frame(width: max(x(point.time) - x(start), 3), height: 8)
-                        .offset(x: x(start), y: 9)
-                        .allowsHitTesting(false)
-                }
+                // Playhead, continuing the one in the frame strip.
+                Rectangle().fill(Color.primary.opacity(0.4))
+                    .frame(width: 1, height: height)
+                    .offset(x: x(model.current))
+                    .allowsHitTesting(false)
 
                 ForEach(model.zoomPoints) { point in
                     let selected = point.id == model.selectedPointID
                     Rectangle()
                         .fill(selected ? Color.accentColor : Color.white)
-                        .overlay(Rectangle().stroke(selected ? Color.white : Color.black.opacity(0.4), lineWidth: 1.2))
+                        .overlay(Rectangle().stroke(selected ? Color.white : Color.black.opacity(0.45), lineWidth: 1.2))
                         .frame(width: selected ? 12 : 10, height: selected ? 12 : 10)
                         .rotationEffect(.degrees(45))
                         .shadow(color: .black.opacity(0.3), radius: 1.5, y: 1)
-                        .frame(width: 22, height: height)
+                        .frame(width: 24, height: 24)
                         .contentShape(Rectangle())
-                        .position(x: x(point.time), y: height / 2)
+                        .position(x: x(point.time), y: y(point.scale))
                         .highPriorityGesture(
                             DragGesture(minimumDistance: 0, coordinateSpace: .named(space))
                                 .onChanged { value in
@@ -72,37 +98,45 @@ struct ZoomLane: View {
     }
 }
 
-/// Settings of the selected zoom point: level, travel speed and easing.
-struct ZoomInspector: View {
+/// Settings of the selected zoom point, in the floating panel: level, travel speed, style, delete.
+struct ZoomPanel: View {
     @ObservedObject var model: EditorModel
+
+    private let speeds: [(seconds: Double, symbol: String, tip: String)] = [
+        (0.25, "hare.fill", "0.25 s"), (0.6, "figure.walk", "0.6 s"), (1.2, "tortoise.fill", "1.2 s"),
+    ]
 
     var body: some View {
         if let point = model.selectedPoint {
-            HStack(spacing: 16) {
+            ToolPanel {
                 HStack(spacing: 8) {
-                    Text(L("zoom.level"))
-                    Slider(value: Binding(get: { point.scale }, set: { v in model.updateSelected { $0.scale = v } }), in: 1...6)
-                        .frame(width: 120)
-                    Text(String(format: "%.1f×", point.scale)).monospacedDigit().frame(width: 38, alignment: .leading)
+                    Image(systemName: "plus.magnifyingglass").foregroundStyle(.secondary).font(.system(size: 13))
+                    WedgeSlider(value: Binding(get: { point.scale }, set: { v in model.updateSelected { $0.scale = v } }), range: 1...6)
+                    Text(String(format: "%.1f×", point.scale))
+                        .font(.system(size: 12, weight: .medium)).monospacedDigit()
+                        .frame(width: 34, alignment: .leading)
                 }
-                HStack(spacing: 8) {
-                    Text(L("zoom.speed"))
-                    Slider(value: Binding(get: { point.transition }, set: { v in model.updateSelected { $0.transition = v } }), in: 0...2.5)
-                        .frame(width: 110)
-                    Text(String(format: "%.1f s", point.transition)).monospacedDigit().frame(width: 38, alignment: .leading)
+                .tip(L("zoom.level"), trailing: true)
+
+                IconSegments(
+                    items: speeds.map { s in .init(value: s.seconds, tip: "\(L("zoom.speed")) \(s.tip)", icon: AnyView(Image(systemName: s.symbol).font(.system(size: 13)))) },
+                    selection: speeds.first { abs($0.seconds - point.transition) < 0.06 }?.seconds,
+                    onSelect: { v in model.updateSelected { $0.transition = v } }
+                )
+
+                IconSegments(
+                    items: ZoomEase.allCases.map { e in .init(value: e, tip: L(e.labelKey), icon: AnyView(EaseGlyph(ease: e))) },
+                    selection: point.ease,
+                    onSelect: { v in model.updateSelected { $0.ease = v } }
+                )
+
+                Button { model.deleteSelected() } label: {
+                    Image(systemName: "trash").font(.system(size: 13)).foregroundStyle(.secondary)
+                        .frame(width: 26, height: 26).contentShape(Rectangle())
                 }
-                Picker(L("zoom.ease"), selection: Binding(get: { point.ease }, set: { v in model.updateSelected { $0.ease = v } })) {
-                    ForEach(ZoomEase.allCases, id: \.self) { Text(L($0.labelKey)).tag($0) }
-                }
-                .pickerStyle(.menu)
-                .frame(width: 170)
-                Spacer(minLength: 0)
-                Button { model.deleteSelected() } label: { Image(systemName: "trash") }
-                    .help(L("zoom.delete"))
-                Button(L("zoom.done")) { model.selectPoint(nil) }
+                .buttonStyle(.plain)
+                .tip(L("zoom.delete"), trailing: true)
             }
-            .controlSize(.small)
-            .font(.system(size: 12))
         }
     }
 }
@@ -139,12 +173,6 @@ struct ZoomRegionOverlay: View {
                     Circle().fill(Color.white).overlay(Circle().stroke(Color.accentColor, lineWidth: 2))
                         .frame(width: 12, height: 12).position(c)
                 }
-                Text(String(format: "%.1f×", point.scale))
-                    .font(.system(size: 11, weight: .semibold)).monospacedDigit()
-                    .padding(.horizontal, 7).padding(.vertical, 2)
-                    .background(Capsule().fill(Color.accentColor))
-                    .foregroundStyle(.white)
-                    .position(x: r.minX + 28, y: r.minY + 16)
             }
             .contentShape(Rectangle())
             .gesture(

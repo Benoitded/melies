@@ -68,3 +68,12 @@ fixe : image pleine identique (49 dB), zoom x2 à la bonne région.
 
 Pendant l'enregistrement, la position du curseur est échantillonnée à 30 Hz et écrite dans
 `<nom>.cursor.json` à côté de la vidéo. Un nouveau zoom se centre sur la souris à cet instant.
+
+## Réglages des outils : panneau flottant (2026-10-20)
+
+Inspiré de Shottr, observé directement dans l'app : quand un objet est sélectionné, un petit
+panneau flottant apparaît en haut à droite de l'image (chevron pour le replier, couleur,
+épaisseur en curseur en forme de coin, styles en boutons d'icônes). Même composant
+(`ToolPanel`, `IconSegments`, `WedgeSlider`) pour les points de zoom maintenant, et pour les
+flèches, le texte et les rectangles ensuite. La piste de zoom trace la courbe du niveau
+de zoom pour qu'on voie la dynamique d'un coup d'oeil.
