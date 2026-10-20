@@ -10,7 +10,9 @@
 - [ ] Glisser-déposer, Cmd+Shift+O, Cmd+Shift+V
 
 ## v2
-- [ ] Crop de la zone
+- [x] Crop de l'image (poignées, appliqué à l'export)
+- [x] Aperçu des images sur la timeline, quadrillage derrière la vidéo
+- [x] Réglages à onglets (Général, Raccourcis, Avancé), thème clair / sombre / système
 - [ ] Flèches, texte, rectangle, spotlight, blur
 - [ ] Zones de zoom avec timing
 - [ ] Cmd+Z / Cmd+Shift+Z

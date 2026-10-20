@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -7,7 +8,7 @@ struct EditorView: View {
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.92).ignoresSafeArea()
+            Color(nsColor: .windowBackgroundColor).ignoresSafeArea()
             if let model = session.model {
                 Loaded(session: session, model: model)
             } else {
@@ -15,6 +16,7 @@ struct EditorView: View {
             }
             shortcuts
         }
+        .ignoresSafeArea(.container, edges: .top)
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             guard let provider = providers.first else { return false }
             _ = provider.loadObject(ofClass: URL.self) { url, _ in
@@ -27,10 +29,14 @@ struct EditorView: View {
     /// Invisible buttons that carry the Shottr-style keyboard shortcuts.
     private var shortcuts: some View {
         Group {
-            Button("") { close() }.keyboardShortcut(.escape, modifiers: [])
+            Button("") {
+                if let model = session.model, model.cropMode { model.cancelCrop() } else { close() }
+            }.keyboardShortcut(.escape, modifiers: [])
             Button("") { session.chooseFile() }.keyboardShortcut("o", modifiers: [.command, .shift])
             if let model = session.model {
                 Button("") { model.togglePlay() }.keyboardShortcut(.space, modifiers: [])
+                Button("") { model.toggleCrop() }.keyboardShortcut("c", modifiers: [])
+                Button("") { if model.cropMode { model.confirmCrop() } }.keyboardShortcut(.return, modifiers: [])
                 Button("") { model.setIn() }.keyboardShortcut("i", modifiers: [])
                 Button("") { model.setOut() }.keyboardShortcut("o", modifiers: [])
                 Button("") { model.step(frames: -1) }.keyboardShortcut(.leftArrow, modifiers: [])
@@ -68,9 +74,23 @@ struct EditorView: View {
         var body: some View {
             VStack(spacing: 12) {
                 TopBar(session: session, model: model).zIndex(1)
-                PlayerView(player: model.player)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .padding(.horizontal, 16)
+                GeometryReader { geo in
+                    let area = CGRect(origin: .zero, size: geo.size)
+                    let video = model.sourceSize.width > 0
+                        ? AVMakeRect(aspectRatio: model.sourceSize, insideRect: area)
+                        : area
+                    ZStack {
+                        Checkerboard()
+                        PlayerView(player: model.player)
+                            .frame(width: video.width, height: video.height)
+                            .position(x: video.midX, y: video.midY)
+                        if model.cropMode || model.cropRect != nil {
+                            CropOverlay(model: model, videoRect: video)
+                        }
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .padding(.horizontal, 16)
 
                 RangeSlider(model: model).padding(.horizontal, 16)
 

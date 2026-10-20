@@ -105,7 +105,11 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         isRecording = false
         hideStatusItem()
         if let url = outputURL, FileManager.default.fileExists(atPath: url.path) {
-            EditorWindowController.shared.open(url)
+            if UserDefaults.standard.object(forKey: "openEditorAfterRecording") as? Bool ?? true {
+                EditorWindowController.shared.open(url)
+            } else {
+                Toast.show(L("toast.recorded"))
+            }
         }
     }
 

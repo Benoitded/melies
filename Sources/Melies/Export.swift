@@ -6,12 +6,14 @@ enum ExportError: LocalizedError {
     var errorDescription: String? { L("export.novideo") }
 }
 
-/// Twitter-friendly export: H.264 MP4, 30 fps, width <= 1920, aspect ratio between 1:3 and 3:1.
+/// Share-friendly export: H.264 MP4, 30 fps, width <= 1920, aspect ratio between 1:3 and 3:1
+/// (so Twitter and most apps accept it), optionally cropped.
 enum TwitterExport {
     static let maxWidth: CGFloat = 1920
     static let fps: Int32 = 30
 
-    static func run(asset: AVAsset, range: CMTimeRange, to url: URL) async throws {
+    /// `crop` is normalized (0...1) in the upright frame, origin top-left.
+    static func run(asset: AVAsset, range: CMTimeRange, crop: CGRect? = nil, to url: URL) async throws {
         guard let track = try await asset.loadTracks(withMediaType: .video).first else {
             throw ExportError.noVideoTrack
         }
@@ -23,11 +25,18 @@ enum TwitterExport {
         let srcW = abs(oriented.width)
         let srcH = abs(oriented.height)
 
-        let scale = min(1, maxWidth / srcW)
-        var contentW = (srcW * scale).rounded()
-        var contentH = (srcH * scale).rounded()
+        // Region of the upright frame that survives, in pixels.
+        let region = crop ?? CGRect(x: 0, y: 0, width: 1, height: 1)
+        let cropX = (region.minX * srcW).rounded()
+        let cropY = (region.minY * srcH).rounded()
+        let cropW = max((region.width * srcW).rounded(), 2)
+        let cropH = max((region.height * srcH).rounded(), 2)
 
-        // Pad to stay within Twitter's 3:1 / 1:3 aspect ratio limits.
+        let scale = min(1, maxWidth / cropW)
+        var contentW = (cropW * scale).rounded()
+        var contentH = (cropH * scale).rounded()
+
+        // Pad to stay within the 3:1 / 1:3 aspect ratio limits.
         var outW = contentW
         var outH = contentH
         if contentW / contentH > 3 { outH = (contentW / 3).rounded(.up) }
@@ -37,11 +46,12 @@ enum TwitterExport {
         outW = (outW / 2).rounded(.up) * 2
         outH = (outH / 2).rounded(.up) * 2
 
-        // Move the oriented frame back to the origin, scale it, then center it in the canvas.
+        // Upright frame at the origin, crop corner to (0,0), scale, then center in the canvas.
         let originFix = CGAffineTransform(translationX: -min(0, oriented.width), y: -min(0, oriented.height))
         let transform = preferred
             .concatenating(originFix)
-            .concatenating(CGAffineTransform(scaleX: scale, y: scale))
+            .concatenating(CGAffineTransform(translationX: -cropX, y: -cropY))
+            .concatenating(CGAffineTransform(scaleX: contentW / cropW, y: contentH / cropH))
             .concatenating(CGAffineTransform(translationX: (outW - contentW) / 2, y: (outH - contentH) / 2))
 
         let layer = AVMutableVideoCompositionLayerInstruction(assetTrack: track)

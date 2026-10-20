@@ -16,6 +16,10 @@ final class EditorModel: ObservableObject {
     @Published var status: String?
     @Published var sourceSize: CGSize = .zero
     @Published var fps: Double = 0
+    /// Crop region, normalized (0...1) in the upright frame, origin top-left. nil means no crop.
+    @Published var cropRect: CGRect?
+    @Published var cropMode = false
+    @Published var thumbnails: [NSImage] = []
 
     private var timeObserver: Any?
     private var shareDelegate: ShareDelegate?
@@ -55,6 +59,64 @@ final class EditorModel: ObservableObject {
         duration = d.isFinite ? d : 0
         end = duration
         seek(to: 0)
+        await generateThumbnails()
+    }
+
+    /// A strip of frames for the timeline, like the trim bar in Photos.
+    private func generateThumbnails() async {
+        guard duration > 0 else { return }
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 360, height: 180)
+        generator.requestedTimeToleranceBefore = .positiveInfinity
+        generator.requestedTimeToleranceAfter = .positiveInfinity
+
+        let count = 24
+        let times = (0..<count).map {
+            CMTime(seconds: duration * (Double($0) + 0.5) / Double(count), preferredTimescale: 600)
+        }
+        var frames = [NSImage?](repeating: nil, count: count)
+        do {
+            for try await result in generator.images(for: times) {
+                if let index = times.firstIndex(of: result.requestedTime) {
+                    frames[index] = NSImage(cgImage: try result.image, size: .zero)
+                }
+            }
+        } catch {}
+        // Fill any gap with the previous frame so the strip never has holes.
+        var last: NSImage?
+        thumbnails = frames.compactMap { frame in
+            if let frame { last = frame }
+            return last
+        }
+    }
+
+    // MARK: Crop
+
+    func toggleCrop() {
+        if cropMode {
+            confirmCrop()
+        } else {
+            if cropRect == nil { cropRect = CGRect(x: 0.06, y: 0.06, width: 0.88, height: 0.88) }
+            cropMode = true
+        }
+    }
+
+    /// Keep the crop and leave crop mode. A crop that covers the whole frame means no crop.
+    func confirmCrop() {
+        cropMode = false
+        if let r = cropRect, r.width > 0.985, r.height > 0.985 { cropRect = nil }
+    }
+
+    func cancelCrop() {
+        cropMode = false
+        cropRect = nil
+    }
+
+    /// Pixel size of the cropped frame, nil when there is no crop.
+    var croppedSize: CGSize? {
+        guard let r = cropRect, sourceSize.width > 0 else { return nil }
+        return CGSize(width: (sourceSize.width * r.width).rounded(), height: (sourceSize.height * r.height).rounded())
     }
 
     private func tick(_ seconds: Double) {
@@ -106,7 +168,7 @@ final class EditorModel: ObservableObject {
         player.pause()
         defer { busy = false }
         do {
-            try await TwitterExport.run(asset: asset, range: range, to: destination)
+            try await TwitterExport.run(asset: asset, range: range, crop: cropRect, to: destination)
             return true
         } catch {
             status = L("status.fail", error.localizedDescription)

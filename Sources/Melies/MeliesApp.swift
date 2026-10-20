@@ -1,5 +1,6 @@
 import AppKit
 import KeyboardShortcuts
+import ServiceManagement
 import SwiftUI
 
 @main
@@ -10,20 +11,30 @@ struct MeliesApp: App {
     var body: some Scene {
         // While recording, this icon is removed: the red timer is then the only item, and one click stops.
         MenuBarExtra("Méliès", systemImage: "film", isInserted: Binding(get: { !recorder.isRecording }, set: { _ in })) {
-            Button(L("menu.record.start")) {
-                ScreenRecorder.shared.toggle()
-            }
-            Text(L("menu.shortcut", KeyboardShortcuts.getShortcut(for: .record) == nil ? L("menu.none") : shortcutLabel(.record)))
+            Button(L("menu.reopen")) { EditorWindowController.shared.openLatest() }
+                .keyboardShortcut(swiftUIShortcut(.openEditor))
             Divider()
-            Button(L("menu.open_editor")) { EditorWindowController.shared.openLatest() }
+            Button(L("menu.record.start")) { ScreenRecorder.shared.toggle() }
+                .keyboardShortcut(swiftUIShortcut(.record))
             Button(L("menu.open_file")) {
                 EditorWindowController.shared.show()
                 EditorWindowController.shared.session.chooseFile()
             }
+            Menu(L("menu.more")) {
+                Button(L("menu.show_folder")) { NSWorkspace.shared.open(LatestRecording.watchedFolder()) }
+                Button(L("menu.help")) { OnboardingWindowController.shared.show() }
+            }
             Divider()
-            Button(L("menu.settings")) { SettingsWindowController.shared.show() }.keyboardShortcut(",")
-            Button(L("menu.help")) { OnboardingWindowController.shared.show() }
-            Divider()
+            Toggle(L("set.startup.launch"), isOn: Binding(
+                get: { SMAppService.mainApp.status == .enabled },
+                set: { on in
+                    if on { try? SMAppService.mainApp.register() } else { try? SMAppService.mainApp.unregister() }
+                }
+            ))
+            Button { SettingsWindowController.shared.show() } label: {
+                Label(L("mm.settings"), systemImage: "gearshape")
+            }
+            .keyboardShortcut(",")
             Button(L("menu.quit")) { NSApp.terminate(nil) }.keyboardShortcut("q")
         }
     }
@@ -32,6 +43,7 @@ struct MeliesApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        Appearance.apply()
         MainMenu.install()
         KeyboardShortcuts.onKeyUp(for: .openEditor) {
             Task { @MainActor in EditorWindowController.shared.openLatest() }
@@ -50,6 +62,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 OnboardingWindowController.shared.show()
                 try? await Task.sleep(for: .seconds(2.2))
                 OnboardingWindowController.shared.snapshot(to: out)
+                NSApp.terminate(nil)
+            }
+        }
+
+        if let out = ProcessInfo.processInfo.environment["MELIES_SETTINGS_SNAPSHOT"] {
+            let tab = Int(ProcessInfo.processInfo.environment["MELIES_SETTINGS_TAB"] ?? "0") ?? 0
+            Task { @MainActor in
+                SettingsWindowController.shared.show(tab: tab)
+                try? await Task.sleep(for: .seconds(1.5))
+                SettingsWindowController.shared.snapshot(to: out)
                 NSApp.terminate(nil)
             }
         }

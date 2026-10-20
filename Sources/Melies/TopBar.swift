@@ -27,7 +27,10 @@ struct TopBar: View {
                 ScreenRecorder.shared.toggle()
             }
             divider
-            BarButton(symbol: "scissors", title: L("tip.trim"), shortcut: "(I / O)", active: true) {}
+            BarButton(symbol: "scissors", title: L("tip.trim"), shortcut: "(I / O)") {}
+            BarButton(symbol: "crop", title: L("tip.crop"), shortcut: "(C)", active: model.cropMode || model.cropRect != nil) {
+                model.toggleCrop()
+            }
             BarButton(symbol: "arrow.up.right", title: L("tip.arrow"), shortcut: L("tip.soon"), disabled: true) {}
             BarButton(symbol: "textformat", title: L("tip.text"), shortcut: L("tip.soon"), disabled: true) {}
             BarButton(symbol: "ruler", title: L("tip.measure"), shortcut: L("tip.soon"), disabled: true) {}
@@ -38,7 +41,7 @@ struct TopBar: View {
 
             Spacer(minLength: 12)
 
-            info(value: sizeText, label: L("info.source"))
+            info(value: sizeText, label: model.croppedSize == nil ? L("info.source") : L("info.crop"))
             divider
             info(value: String(format: "%.1f s", max(model.end - model.start, 0)), label: L("info.duration"))
             divider
@@ -50,8 +53,9 @@ struct TopBar: View {
     }
 
     private var sizeText: String {
-        guard model.sourceSize.width > 0 else { return "..." }
-        return "\(Int(model.sourceSize.width))×\(Int(model.sourceSize.height))"
+        let size = model.croppedSize ?? model.sourceSize
+        guard size.width > 0 else { return "..." }
+        return "\(Int(size.width))×\(Int(size.height))"
     }
 
     private var fpsText: String {
@@ -59,7 +63,7 @@ struct TopBar: View {
     }
 
     private var divider: some View {
-        Rectangle().fill(Color.white.opacity(0.14)).frame(width: 1, height: 22).padding(.horizontal, 6)
+        Rectangle().fill(Color.primary.opacity(0.14)).frame(width: 1, height: 22).padding(.horizontal, 6)
     }
 
     private func info(value: String, label: String) -> some View {
@@ -89,7 +93,7 @@ struct BarButton: View {
                 .frame(width: 34, height: 30)
                 .background(
                     RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(Color.white.opacity(active ? 0.16 : (hovering && !disabled ? 0.09 : 0)))
+                        .fill(Color.primary.opacity(active ? 0.16 : (hovering && !disabled ? 0.09 : 0)))
                 )
                 .opacity(disabled ? 0.35 : 1)
                 .contentShape(Rectangle())
@@ -137,9 +141,9 @@ struct Tooltip: View {
         .padding(.vertical, 8)
         .background(
             Capsule(style: .continuous)
-                .fill(Color(white: 0.17))
-                .overlay(Capsule(style: .continuous).stroke(Color.white.opacity(0.14), lineWidth: 1))
-                .shadow(color: .black.opacity(0.4), radius: 8, y: 3)
+                .fill(.regularMaterial)
+                .overlay(Capsule(style: .continuous).stroke(Color.primary.opacity(0.14), lineWidth: 1))
+                .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
         )
     }
 }
