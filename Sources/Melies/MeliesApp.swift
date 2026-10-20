@@ -32,6 +32,7 @@ struct MeliesApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        MainMenu.install()
         KeyboardShortcuts.onKeyUp(for: .openEditor) {
             Task { @MainActor in EditorWindowController.shared.openLatest() }
         }
@@ -49,6 +50,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 OnboardingWindowController.shared.show()
                 try? await Task.sleep(for: .seconds(2.2))
                 OnboardingWindowController.shared.snapshot(to: out)
+                NSApp.terminate(nil)
+            }
+        }
+
+        // Debug: MELIES_MENU_DUMP=1 prints the main menu after launch settles.
+        if ProcessInfo.processInfo.environment["MELIES_MENU_DUMP"] != nil {
+            Task { @MainActor in
+                EditorWindowController.shared.show()
+                try? await Task.sleep(for: .seconds(1.5))
+                for top in NSApp.mainMenu?.items ?? [] {
+                    print("[menu] \(top.submenu?.title ?? "?")")
+                    for item in top.submenu?.items ?? [] where !item.isSeparatorItem {
+                        let keys = item.keyEquivalent.isEmpty ? "" : "  (\(item.keyEquivalentModifierMask.contains(.shift) ? "shift " : "")cmd+\(item.keyEquivalent))"
+                        print("[menu]    \(item.title)\(keys)")
+                    }
+                }
                 NSApp.terminate(nil)
             }
         }

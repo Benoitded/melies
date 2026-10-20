@@ -8,6 +8,8 @@ final class EditorWindowController {
     let session = EditorSession()
     private var window: NSWindow?
 
+    var isKey: Bool { window?.isKeyWindow ?? false }
+
     /// Hotkey entry point: show the editor on the newest recording.
     func openLatest() {
         session.openLatest()
@@ -37,11 +39,15 @@ final class EditorWindowController {
             window = w
             session.onPinChange = { [weak w] pinned in w?.level = pinned ? .floating : .normal }
             // Closing with the red button must also remove the Dock icon.
-            NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
-                MainActor.assumeIsolated { NSApp.setActivationPolicy(.accessory) }
+            NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.session.model?.player.pause()
+                    NSApp.setActivationPolicy(.accessory)
+                }
             }
         }
         NSApp.setActivationPolicy(.regular) // Dock icon only while the editor is open
+        MainMenu.install()
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
     }

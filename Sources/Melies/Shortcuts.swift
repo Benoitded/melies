@@ -21,10 +21,10 @@ enum EditorShortcuts {
         ("Shift + Left / Right", "sc.frames10"),
         ("Cmd + C", "sc.copy"),
         ("Cmd + S", "sc.save"),
-        ("Cmd + Shift + O", "sc.openfile"),
+        ("Cmd + O", "sc.openfile"),
         ("Cmd + Shift + V", "sc.paste"),
         ("Cmd + ,", "sc.settings"),
-        ("Esc", "sc.close"),
+        ("Cmd + W / Esc", "sc.close"),
     ]
 }
 

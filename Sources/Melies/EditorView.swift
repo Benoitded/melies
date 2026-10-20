@@ -28,9 +28,7 @@ struct EditorView: View {
     private var shortcuts: some View {
         Group {
             Button("") { close() }.keyboardShortcut(.escape, modifiers: [])
-            Button("") { SettingsWindowController.shared.show() }.keyboardShortcut(",", modifiers: [.command])
             Button("") { session.chooseFile() }.keyboardShortcut("o", modifiers: [.command, .shift])
-            Button("") { session.loadFromPasteboard() }.keyboardShortcut("v", modifiers: [.command, .shift])
             if let model = session.model {
                 Button("") { model.togglePlay() }.keyboardShortcut(.space, modifiers: [])
                 Button("") { model.setIn() }.keyboardShortcut("i", modifiers: [])
@@ -39,8 +37,6 @@ struct EditorView: View {
                 Button("") { model.step(frames: 1) }.keyboardShortcut(.rightArrow, modifiers: [])
                 Button("") { model.step(frames: -10) }.keyboardShortcut(.leftArrow, modifiers: [.shift])
                 Button("") { model.step(frames: 10) }.keyboardShortcut(.rightArrow, modifiers: [.shift])
-                Button("") { Task { await model.copy() } }.keyboardShortcut("c", modifiers: [.command])
-                Button("") { Task { await model.save() } }.keyboardShortcut("s", modifiers: [.command])
             }
         }
         .opacity(0)
