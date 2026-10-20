@@ -14,6 +14,8 @@ final class EditorModel: ObservableObject {
     @Published var isPlaying = false
     @Published var busy = false
     @Published var status: String?
+    @Published var sourceSize: CGSize = .zero
+    @Published var fps: Double = 0
 
     private var timeObserver: Any?
     private var frameDuration: Double = 1.0 / 30.0
@@ -38,9 +40,16 @@ final class EditorModel: ObservableObject {
 
     private func load() async {
         let d = (try? await asset.load(.duration).seconds) ?? 0
-        if let track = try? await asset.loadTracks(withMediaType: .video).first,
-           let rate = try? await track.load(.nominalFrameRate), rate > 0 {
-            frameDuration = 1.0 / Double(min(rate, 60))
+        if let track = try? await asset.loadTracks(withMediaType: .video).first {
+            if let rate = try? await track.load(.nominalFrameRate), rate > 0 {
+                fps = Double(rate)
+                frameDuration = 1.0 / Double(min(rate, 60))
+            }
+            if let natural = try? await track.load(.naturalSize),
+               let transform = try? await track.load(.preferredTransform) {
+                let o = natural.applying(transform)
+                sourceSize = CGSize(width: abs(o.width), height: abs(o.height))
+            }
         }
         duration = d.isFinite ? d : 0
         end = duration
@@ -118,6 +127,17 @@ final class EditorModel: ObservableObject {
         pb.clearContents()
         pb.writeObjects([tmp as NSURL])
         status = "Copie (\(sizeLabel(tmp))). Colle-le dans Twitter."
+    }
+
+    /// Export to a temp file and show the system share sheet.
+    func share(from view: NSView?) async {
+        let tmp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("melies-\(Int(Date().timeIntervalSince1970)).mp4")
+        guard await export(to: tmp), let view else { return }
+        status = "Prêt à partager (\(sizeLabel(tmp)))"
+        let picker = NSSharingServicePicker(items: [tmp])
+        picker.show(relativeTo: NSRect(x: view.bounds.maxX - 120, y: view.bounds.maxY - 50, width: 1, height: 1),
+                    of: view, preferredEdge: .minY)
     }
 
     /// Cmd+S: export next to the original, never overwriting.

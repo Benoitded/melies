@@ -35,10 +35,19 @@ final class EditorWindowController {
             w.contentView = NSHostingView(rootView: EditorView(session: session, close: { [weak self] in self?.close() }))
             w.center()
             window = w
+            session.onPinChange = { [weak w] pinned in w?.level = pinned ? .floating : .normal }
         }
         NSApp.setActivationPolicy(.accessory)
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+    }
+
+    /// Debug helper: render the window content to a PNG (MELIES_SNAPSHOT=path).
+    func snapshot(to path: String) {
+        guard let view = window?.contentView,
+              let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+        view.cacheDisplay(in: view.bounds, to: rep)
+        try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
     }
 
     func close() {

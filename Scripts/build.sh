@@ -25,10 +25,10 @@ xattr -cr "$APP"
 # Sign with a stable identity if one exists, so macOS keeps folder permissions between builds.
 IDENTITY=$(security find-identity -v -p codesigning | grep -m1 "Apple Development" | sed -E 's/.*"(.*)"/\1/' || true)
 if [ -n "$IDENTITY" ]; then
-  codesign --force --deep --sign "$IDENTITY" "$APP"
+  codesign --force --deep --sign "$IDENTITY" "$APP" || { xattr -cr "$APP"; sleep 1; codesign --force --deep --sign "$IDENTITY" "$APP"; }
   echo "Signed with: $IDENTITY"
 else
-  codesign --force --deep --sign - "$APP"
+  codesign --force --deep --sign - "$APP" || { xattr -cr "$APP"; sleep 1; codesign --force --deep --sign - "$APP"; }
   echo "Signed ad hoc"
 fi
 echo "Built $APP"

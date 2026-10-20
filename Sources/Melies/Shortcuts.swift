@@ -3,11 +3,15 @@ import KeyboardShortcuts
 extension KeyboardShortcuts.Name {
     /// Global shortcut that opens the editor on the latest recording.
     static let openEditor = Self("openEditor", default: .init(.e, modifiers: [.command, .shift]))
+    /// Global shortcut that starts, and stops, a screen recording.
+    static let record = Self("record", default: .init(.six, modifiers: [.command, .shift]))
 }
 
 /// Shortcuts available inside the editor, shown in the Settings cheat sheet.
 enum EditorShortcuts {
     static let all: [(keys: String, action: String)] = [
+        ("Cmd + Shift + 6 (global)", "Enregistrer l'écran / arrêter"),
+        ("Cmd + Shift + E (global)", "Ouvrir l'éditeur"),
         ("Space", "Lecture / pause"),
         ("I", "Point d'entree (trim)"),
         ("O", "Point de sortie (trim)"),

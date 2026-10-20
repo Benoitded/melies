@@ -6,6 +6,8 @@ import UniformTypeIdentifiers
 @MainActor
 final class EditorSession: ObservableObject {
     @Published var model: EditorModel?
+    @Published var pinned = false { didSet { onPinChange?(pinned) } }
+    var onPinChange: ((Bool) -> Void)?
 
     func open(_ url: URL) {
         model?.player.pause()

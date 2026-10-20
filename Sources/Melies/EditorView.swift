@@ -9,7 +9,7 @@ struct EditorView: View {
         ZStack {
             Color.black.opacity(0.92).ignoresSafeArea()
             if let model = session.model {
-                Loaded(model: model)
+                Loaded(session: session, model: model)
             } else {
                 Empty(session: session)
             }
@@ -65,15 +65,17 @@ struct EditorView: View {
     }
 
     private struct Loaded: View {
+        @ObservedObject var session: EditorSession
         @ObservedObject var model: EditorModel
 
         var body: some View {
             VStack(spacing: 12) {
+                TopBar(session: session, model: model).zIndex(1)
                 PlayerView(player: model.player)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .padding(.top, 28)
+                    .padding(.horizontal, 16)
 
-                RangeSlider(model: model)
+                RangeSlider(model: model).padding(.horizontal, 16)
 
                 HStack(spacing: 10) {
                     Button { model.togglePlay() } label: {
@@ -85,12 +87,10 @@ struct EditorView: View {
                         Text(status).font(.callout).foregroundStyle(.secondary).lineLimit(1)
                     }
                     if model.busy { ProgressView().controlSize(.small) }
-                    Button("Copier  ⌘C") { Task { await model.copy() } }.disabled(model.busy)
-                    Button("Enregistrer  ⌘S") { Task { await model.save() } }
-                        .buttonStyle(.borderedProminent).disabled(model.busy)
                 }
+                .padding(.horizontal, 16)
             }
-            .padding([.horizontal, .bottom], 16)
+            .padding(.bottom, 16)
         }
 
         private var timeLabel: String {

@@ -7,6 +7,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("Raccourci global") {
+                KeyboardShortcuts.Recorder("Enregistrer l'écran (début / fin)", name: .record)
                 KeyboardShortcuts.Recorder("Ouvrir l'éditeur", name: .openEditor)
             }
             Section("Dossier surveillé") {

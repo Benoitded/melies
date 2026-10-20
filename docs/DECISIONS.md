@@ -42,3 +42,12 @@ Notarisation à faire seulement si on distribue.
 Prévu plus tard, sous le GitHub de l'équipe. Mac uniquement (comme Shottr).
 Avant de publier : vérifier le nom (marques, App Store), ajouter une licence,
 ne rien mettre de propre à Byzantine dans le code.
+
+## Enregistrement d'écran intégré (2026-10-20)
+
+Demandé dès la v1 : Cmd+Shift+6 démarre et arrête. Implémentation avec
+ScreenCaptureKit (`SCRecordingOutput`, macOS 15 minimum), zone dessinée sur un
+overlay plein écran, fichier .mov H.264 60 fps dans le dossier surveillé, puis
+l'éditeur s'ouvre dessus. L'arrêt se fait avec le même raccourci ou le bouton
+rouge dans la barre de menu. Demande l'autorisation "Enregistrement de l'écran"
+au premier lancement.

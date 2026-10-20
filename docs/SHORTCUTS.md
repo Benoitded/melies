@@ -4,7 +4,11 @@
 
 | Raccourci | Action |
 |---|---|
+| Cmd+Shift+6 (réglable) | Démarrer l'enregistrement (on dessine la zone), puis le même raccourci l'arrête |
 | Cmd+Shift+E (réglable) | Ouvrir l'éditeur sur la dernière vidéo du Bureau |
+
+Pendant l'enregistrement, un bouton rouge `■ 0:07` apparaît dans la barre de
+menu : un clic arrête et ouvre l'éditeur sur la vidéo. Esc annule le choix de zone.
 
 ## Éditeur (style Shottr)
 
