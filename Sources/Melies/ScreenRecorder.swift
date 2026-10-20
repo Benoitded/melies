@@ -147,9 +147,13 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
     private func updateStatusTitle() {
         let total = Int(elapsed)
-        let text = String(format: " ■  %d:%02d", total / 60, total % 60)
+        let text = String(format: "■  %d:%02d", total / 60, total % 60)
+        // A red pill with white text reads as a button: click it to stop.
+        statusItem?.button?.wantsLayer = true
+        statusItem?.button?.layer?.backgroundColor = NSColor.systemRed.cgColor
+        statusItem?.button?.layer?.cornerRadius = 6
         statusItem?.button?.attributedTitle = NSAttributedString(string: text, attributes: [
-            .foregroundColor: NSColor.systemRed,
+            .foregroundColor: NSColor.white,
             .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold),
         ])
         statusItem?.button?.toolTip = L("tip.stop")

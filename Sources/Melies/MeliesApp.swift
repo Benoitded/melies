@@ -8,8 +8,9 @@ struct MeliesApp: App {
     @ObservedObject private var recorder = ScreenRecorder.shared
 
     var body: some Scene {
-        MenuBarExtra("Méliès", systemImage: recorder.isRecording ? "record.circle.fill" : "film") {
-            Button(recorder.isRecording ? L("menu.record.stop") : L("menu.record.start")) {
+        // While recording, this icon is removed: the red timer is then the only item, and one click stops.
+        MenuBarExtra("Méliès", systemImage: "film", isInserted: Binding(get: { !recorder.isRecording }, set: { _ in })) {
+            Button(L("menu.record.start")) {
                 ScreenRecorder.shared.toggle()
             }
             Text(L("menu.shortcut", KeyboardShortcuts.getShortcut(for: .record) == nil ? L("menu.none") : shortcutLabel(.record)))
