@@ -23,17 +23,24 @@ cp -R Localization/*.lproj "$APP/Contents/Resources/"
 # SwiftPM resource bundles (KeyboardShortcuts localizations)
 for b in "$BIN"/*.bundle; do [ -e "$b" ] && cp -R "$b" "$APP/Contents/Resources/"; done
 
-xattr -cr "$APP"
-
-# Sign with a stable identity if one exists, so macOS keeps folder permissions between builds.
+# Sign with a stable identity if one exists, so macOS keeps folder and screen permissions between builds.
 IDENTITY=$(security find-identity -v -p codesigning | grep -m1 "Apple Development" | sed -E 's/.*"(.*)"/\1/' || true)
-if [ -n "$IDENTITY" ]; then
-  codesign --force --deep --sign "$IDENTITY" "$APP" || { xattr -cr "$APP"; sleep 1; codesign --force --deep --sign "$IDENTITY" "$APP"; }
-  echo "Signed with: $IDENTITY"
-else
-  codesign --force --deep --sign - "$APP" || { xattr -cr "$APP"; sleep 1; codesign --force --deep --sign - "$APP"; }
-  echo "Signed ad hoc"
-fi
+SIGN_AS="${IDENTITY:--}"
+
+# codesign sometimes trips on stray Finder attributes; clear them and retry before failing loudly.
+sign() {
+  for _ in 1 2 3; do
+    xattr -cr "$APP"
+    xattr -d com.apple.FinderInfo "$APP" 2>/dev/null || true
+    codesign --force --deep --sign "$SIGN_AS" "$APP" 2>/dev/null && return 0
+    sleep 1
+  done
+  codesign --force --deep --sign "$SIGN_AS" "$APP"
+}
+sign
+codesign --verify --deep --strict "$APP"
+echo "Signed with: ${IDENTITY:-ad hoc}"
+
 # One installed copy only: ~/Applications/Melies.app (the build dir is ignored by Spotlight).
 pkill -x Melies 2>/dev/null || true
 rm -rf "$HOME/Applications/Melies.app"
