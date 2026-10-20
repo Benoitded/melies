@@ -23,6 +23,7 @@ enum EditorShortcuts {
         ("Cmd + S", "sc.save"),
         ("Cmd + Shift + O", "sc.openfile"),
         ("Cmd + Shift + V", "sc.paste"),
+        ("Cmd + ,", "sc.settings"),
         ("Esc", "sc.close"),
     ]
 }

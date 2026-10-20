@@ -25,6 +25,7 @@ rectangle sans le redimensionner (comme macOS et Shottr), Esc pour annuler.
 | Cmd+S | Exporter en MP4 Twitter et enregistrer à côté de l'original |
 | Cmd+Shift+O | Ouvrir un fichier |
 | Cmd+Shift+V | Charger une vidéo depuis le presse-papiers |
+| Cmd+, | Ouvrir les Réglages |
 | Esc | Fermer |
 
 À venir (v2) : outils flèche (A), texte (T), rectangle (R), spotlight, blur (B),

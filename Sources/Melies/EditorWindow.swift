@@ -75,6 +75,7 @@ final class SettingsWindowController {
                 defer: false
             )
             w.title = L("settings.title")
+            w.level = .floating // stay visible above a pinned editor
             w.isReleasedWhenClosed = false
             w.contentView = NSHostingView(rootView: SettingsView())
             w.center()

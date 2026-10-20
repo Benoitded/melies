@@ -21,7 +21,7 @@ struct MeliesApp: App {
                 EditorWindowController.shared.session.chooseFile()
             }
             Divider()
-            Button(L("menu.settings")) { SettingsWindowController.shared.show() }
+            Button(L("menu.settings")) { SettingsWindowController.shared.show() }.keyboardShortcut(",")
             Button(L("menu.help")) { OnboardingWindowController.shared.show() }
             Divider()
             Button(L("menu.quit")) { NSApp.terminate(nil) }.keyboardShortcut("q")

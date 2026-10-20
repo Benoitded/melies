@@ -28,6 +28,7 @@ struct EditorView: View {
     private var shortcuts: some View {
         Group {
             Button("") { close() }.keyboardShortcut(.escape, modifiers: [])
+            Button("") { SettingsWindowController.shared.show() }.keyboardShortcut(",", modifiers: [.command])
             Button("") { session.chooseFile() }.keyboardShortcut("o", modifiers: [.command, .shift])
             Button("") { session.loadFromPasteboard() }.keyboardShortcut("v", modifiers: [.command, .shift])
             if let model = session.model {

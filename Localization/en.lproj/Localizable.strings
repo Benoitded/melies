@@ -70,3 +70,4 @@
 "toast.copied" = "Copied";
 "toast.saved" = "Saved";
 "settings.close_after" = "Close the editor after copy, save or share";
+"sc.settings" = "Settings";
