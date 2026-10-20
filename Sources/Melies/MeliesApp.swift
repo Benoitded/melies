@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import KeyboardShortcuts
 import ServiceManagement
 import SwiftUI
@@ -76,6 +77,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // Debug: MELIES_EXPORT_TEST=out.mp4 with MELIES_OPEN=in.mp4 exports with a crop and zoom animation.
+        if let out = ProcessInfo.processInfo.environment["MELIES_EXPORT_TEST"],
+           let input = ProcessInfo.processInfo.environment["MELIES_OPEN"] {
+            Task { @MainActor in
+                let asset = AVURLAsset(url: URL(fileURLWithPath: input))
+                let points = [
+                    ZoomPoint(time: 1.0, scale: 2, center: CGPoint(x: 0.25, y: 0.5), transition: 0.5, ease: .smooth),
+                    ZoomPoint(time: 3.0, scale: 1, center: CGPoint(x: 0.5, y: 0.5), transition: 0.5, ease: .smooth),
+                ]
+                do {
+                    let duration = try await asset.load(.duration)
+                    try await VideoExport.run(asset: asset, range: CMTimeRange(start: .zero, duration: duration), points: points, to: URL(fileURLWithPath: out))
+                    print("[export] done")
+                } catch { print("[export] failed: \(error)") }
+                NSApp.terminate(nil)
+            }
+        }
+
         // Debug: MELIES_MENU_DUMP=1 prints the main menu after launch settles.
         if ProcessInfo.processInfo.environment["MELIES_MENU_DUMP"] != nil {
             Task { @MainActor in
@@ -97,6 +116,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let path = env["MELIES_OPEN"] {
             Task { @MainActor in
                 EditorWindowController.shared.open(URL(fileURLWithPath: path))
+                if env["MELIES_ZOOM_DEMO"] != nil {
+                    try? await Task.sleep(for: .seconds(1))
+                    EditorWindowController.shared.session.model?.addZoom()
+                    if env["MELIES_ZOOM_DEMO"] == "preview" { EditorWindowController.shared.session.model?.selectPoint(nil); EditorWindowController.shared.session.model?.seek(to: 1.5) }
+                }
                 if let out = env["MELIES_SNAPSHOT"] {
                     try? await Task.sleep(for: .seconds(2))
                     EditorWindowController.shared.snapshot(to: out)

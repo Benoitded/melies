@@ -120,3 +120,14 @@
 "mm.zoom_actual" = "Actual Size";
 "mm.zoom_fit" = "Zoom to Fit";
 "info.zoom" = "Zoom";
+"zoom.hint" = "Press Z to add a zoom animation at the playhead";
+"zoom.level" = "Zoom";
+"zoom.speed" = "Speed";
+"zoom.ease" = "Style";
+"zoom.done" = "Done";
+"zoom.delete" = "Delete this zoom point";
+"ease.smooth" = "Smooth";
+"ease.snappy" = "Snappy";
+"ease.linear" = "Linear";
+"ease.spring" = "Spring";
+"tip.zoomanim" = "Zoom animation";

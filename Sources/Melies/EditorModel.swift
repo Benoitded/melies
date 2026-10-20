@@ -20,6 +20,9 @@ final class EditorModel: ObservableObject {
     @Published var cropRect: CGRect?
     @Published var cropMode = false
     @Published var thumbnails: [NSImage] = []
+    @Published var zoomPoints: [ZoomPoint] = []
+    @Published var selectedPointID: UUID?
+    var cursor: CursorTrack?
     /// Canvas zoom: 1 means "fit in the window". `pan` moves the video from its fitted center.
     @Published var zoom: Double = 1
     @Published var pan: CGSize = .zero
@@ -64,6 +67,7 @@ final class EditorModel: ObservableObject {
         }
         duration = d.isFinite ? d : 0
         end = duration
+        cursor = CursorTrack.load(for: url)
         seek(to: 0)
         await generateThumbnails()
     }
@@ -101,8 +105,8 @@ final class EditorModel: ObservableObject {
 
     func fitRect(in size: CGSize) -> CGRect {
         let area = CGRect(origin: .zero, size: size)
-        guard sourceSize.width > 0, size.width > 0, size.height > 0 else { return area }
-        return AVMakeRect(aspectRatio: sourceSize, insideRect: area)
+        guard displaySize.width > 0, size.width > 0, size.height > 0 else { return area }
+        return AVMakeRect(aspectRatio: displaySize, insideRect: area)
     }
 
     /// Where the video is drawn inside the canvas, including zoom and pan.
@@ -122,8 +126,8 @@ final class EditorModel: ObservableObject {
     /// Zoom percentage as in Shottr: 100% is one video pixel per screen pixel.
     var zoomPercent: Int {
         let width = videoRect(in: canvasSize).width
-        guard sourceSize.width > 0, width > 0 else { return 100 }
-        return Int((Double(width) * backingScale / Double(sourceSize.width) * 100).rounded())
+        guard displaySize.width > 0, width > 0 else { return 100 }
+        return Int((Double(width) * backingScale / Double(displaySize.width) * 100).rounded())
     }
 
     /// Zoom keeping the point under `anchor` (canvas coordinates) fixed. Defaults to the center.
@@ -160,13 +164,107 @@ final class EditorModel: ObservableObject {
 
     func zoomActual(anchor: CGPoint? = nil) {
         let fit = fitRect(in: canvasSize)
-        guard fit.width > 0, sourceSize.width > 0 else { return }
-        setZoom(Double(sourceSize.width) / backingScale / Double(fit.width), anchor: anchor)
+        guard fit.width > 0, displaySize.width > 0 else { return }
+        setZoom(Double(displaySize.width) / backingScale / Double(fit.width), anchor: anchor)
     }
 
     /// Double click: jump to 100% under the pointer, or back to fit.
     func toggleActual(at point: CGPoint) {
         if abs(zoomPercent - 100) <= 2 { zoomToFit() } else { zoomActual(anchor: point) }
+    }
+
+    // MARK: Zoom animation (camera waypoints)
+
+    /// Crop region (or the whole frame), normalized in the source.
+    var baseRect: CGRect { cropRect ?? CGRect(x: 0, y: 0, width: 1, height: 1) }
+
+    var baseSize: CGSize {
+        CGSize(width: sourceSize.width * baseRect.width, height: sourceSize.height * baseRect.height)
+    }
+
+    /// With zoom points and nothing selected, the canvas shows the result of the camera.
+    var previewingCamera: Bool { !zoomPoints.isEmpty && selectedPointID == nil && !cropMode }
+
+    var displaySize: CGSize { previewingCamera ? baseSize : sourceSize }
+
+    var selectedPoint: ZoomPoint? { zoomPoints.first { $0.id == selectedPointID } }
+
+    /// Region of the source the camera shows at time `t`, normalized.
+    func cameraRegion(at t: Double) -> CGRect {
+        ZoomCamera.region(of: ZoomCamera.state(at: t, points: zoomPoints), in: baseRect)
+    }
+
+    func region(of point: ZoomPoint) -> CGRect {
+        ZoomCamera.region(of: CameraState(scale: point.scale, center: ZoomCamera.clampedCenter(point.center, scale: point.scale)), in: baseRect)
+    }
+
+    /// Where a new zoom should point: under the recorded cursor when we have it, else the middle.
+    private func smartCenter(at t: Double, scale: Double) -> CGPoint {
+        var center = CGPoint(x: 0.5, y: 0.5)
+        if let p = cursor?.position(at: t) {
+            let b = baseRect
+            center = CGPoint(x: (p.x - b.minX) / b.width, y: (p.y - b.minY) / b.height)
+        }
+        center = CGPoint(x: min(max(center.x, 0), 1), y: min(max(center.y, 0), 1))
+        return ZoomCamera.clampedCenter(center, scale: scale)
+    }
+
+    /// Z: the first time, creates a zoom with a start and an end. Afterwards, adds a waypoint at the playhead.
+    func addZoom() {
+        cropMode = false
+        let t = min(max(current, 0), duration)
+        if zoomPoints.isEmpty {
+            let lead = 0.6, hold = 2.4
+            var arrive = t + lead
+            var leave = arrive + hold
+            let limit = max(duration - 0.05, 0.2)
+            if leave > limit { let shift = leave - limit; arrive -= shift; leave -= shift }
+            arrive = max(arrive, 0.1)
+            leave = max(leave, arrive + 0.4)
+            let first = ZoomPoint(time: arrive, scale: 2, center: smartCenter(at: arrive, scale: 2), transition: min(lead, arrive), ease: .smooth)
+            let last = ZoomPoint(time: min(leave, duration), scale: 1, center: CGPoint(x: 0.5, y: 0.5), transition: 0.7, ease: .smooth)
+            zoomPoints = [first, last]
+            selectPoint(first.id)
+        } else if let existing = zoomPoints.first(where: { abs($0.time - t) < 0.08 }) {
+            selectPoint(existing.id)
+        } else {
+            let state = ZoomCamera.state(at: t, points: zoomPoints)
+            var point = ZoomPoint(time: t, scale: state.scale, center: state.center, transition: 0.6, ease: .smooth)
+            if state.scale <= 1.01 { point.scale = 2; point.center = smartCenter(at: t, scale: 2) }
+            zoomPoints.append(point)
+            zoomPoints.sort { $0.time < $1.time }
+            selectPoint(point.id)
+        }
+    }
+
+    func selectPoint(_ id: UUID?) {
+        selectedPointID = id
+        if let point = selectedPoint {
+            player.pause()
+            seek(to: point.time)
+        }
+    }
+
+    func updateSelected(_ change: (inout ZoomPoint) -> Void) {
+        guard let index = zoomPoints.firstIndex(where: { $0.id == selectedPointID }) else { return }
+        change(&zoomPoints[index])
+        zoomPoints[index].scale = min(max(zoomPoints[index].scale, 1), 8)
+        zoomPoints[index].transition = min(max(zoomPoints[index].transition, 0), 5)
+        zoomPoints[index].center = ZoomCamera.clampedCenter(zoomPoints[index].center, scale: zoomPoints[index].scale)
+    }
+
+    /// Dragging a point along the timeline keeps it between its neighbours.
+    func movePoint(_ id: UUID, to time: Double) {
+        guard let index = zoomPoints.firstIndex(where: { $0.id == id }) else { return }
+        let low = index > 0 ? zoomPoints[index - 1].time + 0.05 : 0
+        let high = index < zoomPoints.count - 1 ? zoomPoints[index + 1].time - 0.05 : duration
+        zoomPoints[index].time = min(max(time, low), max(high, low))
+        seek(to: zoomPoints[index].time)
+    }
+
+    func deleteSelected() {
+        zoomPoints.removeAll { $0.id == selectedPointID }
+        selectedPointID = nil
     }
 
     // MARK: Crop
@@ -246,7 +344,7 @@ final class EditorModel: ObservableObject {
         player.pause()
         defer { busy = false }
         do {
-            try await TwitterExport.run(asset: asset, range: range, crop: cropRect, to: destination)
+            try await VideoExport.run(asset: asset, range: range, crop: cropRect, points: zoomPoints, to: destination)
             return true
         } catch {
             status = L("status.fail", error.localizedDescription)

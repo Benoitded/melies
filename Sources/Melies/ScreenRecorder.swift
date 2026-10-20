@@ -17,6 +17,10 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
     private var finishContinuation: CheckedContinuation<Void, Never>?
     private var busy = false
     private var overlay: RecordingOverlay?
+    private var cursorSamples: [CursorTrack.Sample] = []
+    private var cursorTimer: Timer?
+    private var captureRegion: CGRect = .zero
+    private var captureScreen: NSScreen?
 
     /// Same shortcut starts and stops.
     func toggle() {
@@ -77,6 +81,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
             elapsed = 0
             isRecording = true
             showStatusItem()
+            startCursorSampling(region: selection.rect, screen: selection.screen)
         } catch {
             closeOverlay()
             alert(L("rec.failed"), error.localizedDescription)
@@ -87,6 +92,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
     private func stop() async {
         guard let stream, isRecording else { return }
+        stopCursorSampling()
         closeOverlay()
         busy = true
         defer { busy = false }
@@ -171,6 +177,33 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
     }
 
     @objc private func stopFromButton() { toggle() }
+
+    // MARK: Cursor track (lets the editor center a zoom on the mouse)
+
+    private func startCursorSampling(region: CGRect, screen: NSScreen) {
+        cursorSamples = []
+        captureRegion = region
+        captureScreen = screen
+        cursorTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.sampleCursor() }
+        }
+    }
+
+    private func sampleCursor() {
+        guard let screen = captureScreen, captureRegion.width > 0 else { return }
+        let p = NSEvent.mouseLocation // bottom-left origin, global
+        let x = (p.x - screen.frame.minX - captureRegion.minX) / captureRegion.width
+        let y = (screen.frame.maxY - p.y - captureRegion.minY) / captureRegion.height
+        cursorSamples.append(CursorTrack.Sample(t: Date().timeIntervalSince(startedAt), x: min(max(x, 0), 1), y: min(max(y, 0), 1)))
+    }
+
+    private func stopCursorSampling() {
+        cursorTimer?.invalidate()
+        cursorTimer = nil
+        if !cursorSamples.isEmpty, let url = outputURL {
+            CursorTrack(samples: cursorSamples).save(for: url)
+        }
+    }
 
     // MARK: Helpers
 

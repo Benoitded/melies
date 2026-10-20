@@ -30,12 +30,16 @@ struct EditorView: View {
     private var shortcuts: some View {
         Group {
             Button("") {
-                if let model = session.model, model.cropMode { model.cancelCrop() } else { close() }
+                if let model = session.model, model.cropMode { model.cancelCrop() }
+                else if let model = session.model, model.selectedPointID != nil { model.selectPoint(nil) }
+                else { close() }
             }.keyboardShortcut(.escape, modifiers: [])
             Button("") { session.chooseFile() }.keyboardShortcut("o", modifiers: [.command, .shift])
             if let model = session.model {
                 Button("") { model.togglePlay() }.keyboardShortcut(.space, modifiers: [])
                 Button("") { model.toggleCrop() }.keyboardShortcut("c", modifiers: [])
+                Button("") { model.addZoom() }.keyboardShortcut("z", modifiers: [])
+                Button("") { model.deleteSelected() }.keyboardShortcut(.delete, modifiers: [])
                 Button("") { if model.cropMode { model.confirmCrop() } }.keyboardShortcut(.return, modifiers: [])
                 Button("") { model.setIn() }.keyboardShortcut("i", modifiers: [])
                 Button("") { model.setOut() }.keyboardShortcut("o", modifiers: [])
@@ -82,13 +86,25 @@ struct EditorView: View {
                 TopBar(session: session, model: model).zIndex(1)
                 GeometryReader { geo in
                     let video = model.videoRect(in: geo.size)
+                    // With zoom points and nothing selected, preview what the camera sees.
+                    let region = model.previewingCamera ? model.cameraRegion(at: model.current) : CGRect(x: 0, y: 0, width: 1, height: 1)
+                    let playerW = video.width / max(region.width, 0.0001)
+                    let playerH = video.height / max(region.height, 0.0001)
                     ZStack {
                         Checkerboard()
-                        PlayerView(player: model.player)
-                            .frame(width: video.width, height: video.height)
-                            .position(x: video.midX, y: video.midY)
-                        if model.cropMode || model.cropRect != nil {
+                        ZStack(alignment: .topLeading) {
+                            PlayerView(player: model.player)
+                                .frame(width: playerW, height: playerH)
+                                .offset(x: -region.minX * playerW, y: -region.minY * playerH)
+                        }
+                        .frame(width: video.width, height: video.height, alignment: .topLeading)
+                        .clipped()
+                        .position(x: video.midX, y: video.midY)
+                        if model.cropMode || (model.cropRect != nil && !model.previewingCamera) {
                             CropOverlay(model: model, videoRect: video)
+                        }
+                        if model.selectedPoint != nil {
+                            ZoomRegionOverlay(model: model, videoRect: video)
                         }
                     }
                     .contentShape(Rectangle())
@@ -110,6 +126,8 @@ struct EditorView: View {
                 .padding(.horizontal, 16)
 
                 RangeSlider(model: model).padding(.horizontal, 16)
+                ZoomLane(model: model).padding(.horizontal, 16)
+                ZoomInspector(model: model).padding(.horizontal, 16)
 
                 HStack(spacing: 10) {
                     Button { model.togglePlay() } label: {

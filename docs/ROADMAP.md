@@ -14,7 +14,7 @@
 - [x] Aperçu des images sur la timeline, quadrillage derrière la vidéo
 - [x] Réglages à onglets (Général, Raccourcis, Avancé), thème clair / sombre / système
 - [ ] Flèches, texte, rectangle, spotlight, blur
-- [ ] Zones de zoom avec timing
+- [x] Zooms animés : points de caméra (niveau, vitesse, style), centrage auto sur le curseur enregistré, aperçu et export identiques
 - [ ] Cmd+Z / Cmd+Shift+Z
 
 ## v3

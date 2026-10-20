@@ -51,3 +51,20 @@ overlay plein écran, fichier .mov H.264 60 fps dans le dossier surveillé, puis
 l'éditeur s'ouvre dessus. L'arrêt se fait avec le même raccourci ou le bouton
 rouge dans la barre de menu. Demande l'autorisation "Enregistrement de l'écran"
 au premier lancement.
+
+## Zooms animés et compositeur vidéo maison (2026-10-20)
+
+Les zooms sont des points de caméra (temps, niveau, centre, durée de trajet, style)
+rangés sur une piste sous la timeline. Z crée un zoom avec un début et une fin, puis
+ajoute des points intermédiaires qui reprennent l'état courant de la caméra. Le
+niveau est interpolé en échelle logarithmique, le centre linéairement, avec un style
+au choix (fluide, vif, linéaire, ressort).
+
+L'export n'utilise plus d'instructions AVFoundation à transformation constante : un
+`AVVideoCompositing` maison (Core Image) calcule chaque image : rotation, recadrage,
+caméra, mise à l'échelle et bandes noires. Les flèches, le texte et les rectangles seront
+dessinés au même endroit, donc l'aperçu et l'export concordent. Vérifié avec une mire
+fixe : image pleine identique (49 dB), zoom x2 à la bonne région.
+
+Pendant l'enregistrement, la position du curseur est échantillonnée à 30 Hz et écrite dans
+`<nom>.cursor.json` à côté de la vidéo. Un nouveau zoom se centre sur la souris à cet instant.

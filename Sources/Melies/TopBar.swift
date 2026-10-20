@@ -35,7 +35,9 @@ struct TopBar: View {
             BarButton(symbol: "textformat", title: L("tip.text"), shortcut: L("tip.soon"), disabled: true) {}
             BarButton(symbol: "ruler", title: L("tip.measure"), shortcut: L("tip.soon"), disabled: true) {}
             BarButton(symbol: "rectangle", title: L("tip.rect"), shortcut: L("tip.soon"), disabled: true) {}
-            BarButton(symbol: "viewfinder", title: L("tip.spotlight"), shortcut: L("tip.soon"), disabled: true) {}
+            BarButton(symbol: "plus.magnifyingglass", title: L("tip.zoomanim"), shortcut: "(Z)", active: !model.zoomPoints.isEmpty) {
+                model.addZoom()
+            }
             BarButton(symbol: "pencil", title: L("tip.pencil"), shortcut: L("tip.soon"), disabled: true) {}
             BarButton(symbol: "ellipsis", title: L("tip.more"), shortcut: L("tip.soon"), disabled: true) {}
 

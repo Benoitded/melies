@@ -120,3 +120,14 @@
 "mm.zoom_actual" = "Taille réelle";
 "mm.zoom_fit" = "Ajuster à la fenêtre";
 "info.zoom" = "Zoom";
+"zoom.hint" = "Appuie sur Z pour ajouter un zoom animé à la position de lecture";
+"zoom.level" = "Zoom";
+"zoom.speed" = "Vitesse";
+"zoom.ease" = "Style";
+"zoom.done" = "OK";
+"zoom.delete" = "Supprimer ce point de zoom";
+"ease.smooth" = "Fluide";
+"ease.snappy" = "Vif";
+"ease.linear" = "Linéaire";
+"ease.spring" = "Ressort";
+"tip.zoomanim" = "Zoom animé";
