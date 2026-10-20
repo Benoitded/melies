@@ -8,7 +8,9 @@
 | Cmd+Shift+E (réglable) | Ouvrir l'éditeur sur la dernière vidéo du Bureau |
 
 Pendant l'enregistrement, un bouton rouge `■ 0:07` apparaît dans la barre de
-menu : un clic arrête et ouvre l'éditeur sur la vidéo. Esc annule le choix de zone.
+menu : un clic arrête et ouvre l'éditeur sur la vidéo. 
+Choix de la zone : glisser pour dessiner, **Espace maintenu** pour déplacer le
+rectangle sans le redimensionner (comme macOS et Shottr), Esc pour annuler.
 
 ## Éditeur (style Shottr)
 

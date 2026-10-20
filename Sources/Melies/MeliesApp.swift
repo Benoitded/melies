@@ -21,6 +21,7 @@ struct MeliesApp: App {
             }
             Divider()
             Button("Réglages et raccourcis…") { SettingsWindowController.shared.show() }
+            Button("Bienvenue et aide…") { OnboardingWindowController.shared.show() }
             Divider()
             Button("Quitter Méliès") { NSApp.terminate(nil) }.keyboardShortcut("q")
         }
@@ -36,6 +37,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         KeyboardShortcuts.onKeyUp(for: .record) {
             Task { @MainActor in ScreenRecorder.shared.toggle() }
+        }
+
+        if OnboardingWindowController.needed {
+            Task { @MainActor in OnboardingWindowController.shared.show() }
         }
 
         // Debug hooks: MELIES_OPEN=file.mov opens it, MELIES_SNAPSHOT=out.png saves a render and quits.

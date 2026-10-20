@@ -12,6 +12,11 @@ private final class SelectorView: NSView {
     var onDone: ((CGRect?) -> Void)?
     private var start: CGPoint?
     private var current: CGPoint?
+    private var lastPoint: CGPoint?
+    /// While Space is held, dragging moves the whole rectangle instead of resizing it.
+    private var spaceHeld = false {
+        didSet { window?.invalidateCursorRects(for: self) }
+    }
 
     private var selection: CGRect? {
         guard let start, let current else { return nil }
@@ -21,7 +26,9 @@ private final class SelectorView: NSView {
         )
     }
 
-    override func resetCursorRects() { addCursorRect(bounds, cursor: .crosshair) }
+    override func resetCursorRects() {
+        addCursorRect(bounds, cursor: spaceHeld ? .closedHand : .crosshair)
+    }
 
     override func draw(_ dirtyRect: NSRect) {
         NSColor.black.withAlphaComponent(0.32).setFill()
@@ -49,12 +56,25 @@ private final class SelectorView: NSView {
     override func mouseDown(with event: NSEvent) {
         start = convert(event.locationInWindow, from: nil)
         current = start
+        lastPoint = start
         needsDisplay = true
     }
 
     override func mouseDragged(with event: NSEvent) {
-        current = convert(event.locationInWindow, from: nil)
-        needsDisplay = true
+        let point = convert(event.locationInWindow, from: nil)
+        defer { lastPoint = point; needsDisplay = true }
+
+        guard spaceHeld, let last = lastPoint, let rect = selection, let s = start, let c = current else {
+            current = point
+            return
+        }
+        // Move the rectangle by the mouse delta, keeping it fully on screen.
+        var dx = point.x - last.x
+        var dy = point.y - last.y
+        dx = min(max(dx, -rect.minX), bounds.maxX - rect.maxX)
+        dy = min(max(dy, -rect.minY), bounds.maxY - rect.maxY)
+        start = CGPoint(x: s.x + dx, y: s.y + dy)
+        current = CGPoint(x: c.x + dx, y: c.y + dy)
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -64,7 +84,15 @@ private final class SelectorView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
-        if event.keyCode == 53 { onDone?(nil) } // Esc
+        switch event.keyCode {
+        case 53: onDone?(nil)      // Esc cancels
+        case 49: spaceHeld = true  // Space moves the selection
+        default: break
+        }
+    }
+
+    override func keyUp(with event: NSEvent) {
+        if event.keyCode == 49 { spaceHeld = false }
     }
 }
 

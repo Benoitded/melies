@@ -14,7 +14,7 @@ ni de publication pour l'instant. Voir `docs/ROADMAP.md`.
 ## Lancer
 
 ```bash
-Scripts/build.sh && cp -R build/Melies.app ~/Applications/ && open ~/Applications/Melies.app
+Scripts/build.sh && open ~/Applications/Melies.app
 ```
 
 Le script signe avec ton certificat "Apple Development" s'il existe, ce qui
