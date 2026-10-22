@@ -195,6 +195,21 @@ final class EditorWindowController {
 final class SettingsWindowController {
     static let shared = SettingsWindowController()
     private var window: NSWindow?
+    private var sizeObservers: [NSKeyValueObservation] = []
+
+    /// The tab view only resizes the window when the tab changes. A tab whose content grows or shrinks afterwards (the
+    /// MCP section opening and closing) must resize it too, keeping the top edge where it is.
+    private func fit(_ host: NSViewController, in tabs: NSTabViewController) {
+        guard let window, window.isVisible,
+              tabs.tabViewItems.indices.contains(tabs.selectedTabViewItemIndex),
+              tabs.tabViewItems[tabs.selectedTabViewItemIndex].viewController === host else { return }
+        let size = host.preferredContentSize
+        guard size.width > 0, size.height > 0 else { return }
+        var frame = window.frameRect(forContentRect: NSRect(origin: .zero, size: size))
+        frame.origin = NSPoint(x: window.frame.minX, y: window.frame.maxY - frame.height)
+        guard abs(frame.height - window.frame.height) > 0.5 || abs(frame.width - window.frame.width) > 0.5 else { return }
+        window.setFrame(frame, display: true, animate: true)
+    }
 
     func show(tab: Int = 0) {
         if window == nil {
@@ -208,6 +223,12 @@ final class SettingsWindowController {
             ] {
                 let host = NSHostingController(rootView: view)
                 host.sizingOptions = [.preferredContentSize]
+                sizeObservers.append(host.observe(\.preferredContentSize, options: [.new]) { [weak self, weak host, weak tabs] _, _ in
+                    DispatchQueue.main.async {
+                        guard let self, let host, let tabs else { return }
+                        self.fit(host, in: tabs)
+                    }
+                })
                 let item = NSTabViewItem(viewController: host)
                 item.label = label
                 item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)

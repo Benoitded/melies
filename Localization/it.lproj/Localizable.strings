@@ -258,3 +258,5 @@
 "set.countdown.off" = "No";
 "set.countdown.seconds" = "%d s";
 "set.countdown.hint" = "Conto alla rovescia al centro dell'area prima della registrazione. Esc annulla.";
+"tip.clicks.none" = "Mostra i clic (nessuno registrato in questo video)";
+"toast.noclicks" = "Nessun clic è stato registrato in questo video";

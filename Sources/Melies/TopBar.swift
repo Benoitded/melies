@@ -59,7 +59,9 @@ struct TopBar: View {
                         BarButton(symbol: "crop", title: L("tip.crop"), shortcut: "(C)", active: model.cropMode || model.cropRect != nil) {
                             model.toggleCrop()
                         }
-                        BarButton(symbol: "cursorarrow.click.2", title: L("tip.clicks"), active: model.showClicks && model.hasClicks, disabled: !model.hasClicks) {
+                        BarButton(symbol: "cursorarrow.click.2", title: L(model.hasClicks ? "tip.clicks" : "tip.clicks.none"), active: model.showClicks && model.hasClicks, dimmed: !model.hasClicks) {
+                            // No recorded clicks: the button is dimmed, and a click says why instead of doing nothing.
+                            guard model.hasClicks else { Toast.show(L("toast.noclicks")); return }
                             model.showClicks.toggle()
                             UserDefaults.standard.set(model.showClicks, forKey: "showClicks")
                         }
@@ -120,6 +122,8 @@ struct BarButton: View {
     var shortcut: String? = nil
     var active = false
     var disabled = false
+    /// Looks unavailable but still answers a click (to say why it does nothing), unlike `disabled`.
+    var dimmed = false
     let action: () -> Void
     @State private var hovering = false
     @State private var showTip = false
@@ -134,7 +138,7 @@ struct BarButton: View {
                     Capsule()
                         .fill(active ? Color.accentColor.opacity(0.3) : Color.primary.opacity(hovering && !disabled ? 0.1 : 0))
                 )
-                .opacity(disabled ? 0.35 : 1)
+                .opacity(disabled || dimmed ? 0.35 : 1)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

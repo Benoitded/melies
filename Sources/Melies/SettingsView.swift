@@ -101,6 +101,7 @@ struct GeneralTab: View {
         .formStyle(.columns)
         .padding(24)
         .frame(width: 560)
+        .frame(maxHeight: .infinity, alignment: .top) // content starts at the top, not centered in a taller window
     }
 
     private func chooseFolder() {
@@ -226,6 +227,7 @@ struct HotkeysTab: View {
         .formStyle(.columns)
         .padding(24)
         .frame(width: 560)
+        .frame(maxHeight: .infinity, alignment: .top) // content starts at the top, not centered in a taller window
     }
 }
 
@@ -255,6 +257,7 @@ struct AdvancedTab: View {
         .formStyle(.columns)
         .padding(24)
         .frame(width: 560)
+        .frame(maxHeight: .infinity, alignment: .top) // content starts at the top, not centered in a taller window
     }
 }
 

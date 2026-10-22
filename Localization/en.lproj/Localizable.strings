@@ -258,3 +258,5 @@
 "set.countdown.off" = "Off";
 "set.countdown.seconds" = "%d s";
 "set.countdown.hint" = "Counts down in the middle of the area before recording starts. Esc cancels.";
+"tip.clicks.none" = "Show clicks (none were recorded in this video)";
+"toast.noclicks" = "No clicks were recorded in this video";

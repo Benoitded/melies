@@ -258,3 +258,5 @@
 "set.countdown.off" = "Aucun";
 "set.countdown.seconds" = "%d s";
 "set.countdown.hint" = "Décompte au milieu de la zone avant le début de l'enregistrement. Échap annule.";
+"tip.clicks.none" = "Afficher les clics (aucun n'a été enregistré dans cette vidéo)";
+"toast.noclicks" = "Aucun clic n'a été enregistré dans cette vidéo";

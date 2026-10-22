@@ -258,3 +258,5 @@
 "set.countdown.off" = "No";
 "set.countdown.seconds" = "%d s";
 "set.countdown.hint" = "Cuenta atrás en el centro del área antes de grabar. Esc cancela.";
+"tip.clicks.none" = "Mostrar clics (no se grabó ninguno en este vídeo)";
+"toast.noclicks" = "No se grabó ningún clic en este vídeo";
