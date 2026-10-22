@@ -30,6 +30,7 @@
 - [x] Two videos side by side, stacked, or picture in picture ("Combine" window, result reopened in the editor)
 - [x] Audio: system sound and microphone while recording, sound kept or muted on export
 - [x] Automatic zoom from recorded clicks (button in the zoom lane): clicks grouped by time and area, three strengths (Subtle, Normal, Strong), the camera glides between zooms that follow each other closely
+- [x] Cursor smoothing (Off / Light / Smooth, default Light): the recorded cursor path is smoothed before the zoom camera is centered on it; the captured cursor itself is not redrawn
 - [x] Optional countdown before recording (3, 5 or 10 s, off by default)
 - [x] Drag handle: the editor steps aside while the file is dragged (like Shottr)
 - [x] Settings tabs aligned at the top, window follows the size of the content

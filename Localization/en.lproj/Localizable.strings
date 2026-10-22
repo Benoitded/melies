@@ -246,6 +246,11 @@
 "zoom.auto.done" = "%d zooms from %d clicks. Cmd+Z undoes it.";
 "zoom.auto.none" = "No click here is worth a zoom.";
 "zoom.auto.tip" = "Makes the zooms for you from the clicks. The arrow changes how close it goes.";
+"cursor.smoothing" = "Cursor smoothing";
+"cursor.smoothing.off" = "Off";
+"cursor.smoothing.light" = "Light";
+"cursor.smoothing.smooth" = "Smooth";
+"cursor.smoothing.tip" = "Smooths the cursor path the zoom camera follows when a zoom is placed. Preview and export use the same zooms.";
 "error.unreadable" = "“%@” cannot be opened as a video";
 "error.unreadable.hint" = "The file may be damaged, still being written, or in a format macOS cannot read.";
 "error.close" = "Close";

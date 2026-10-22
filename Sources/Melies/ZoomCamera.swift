@@ -83,6 +83,20 @@ enum ZoomCamera {
     }
 }
 
+/// How much the cursor path is smoothed before the zoom camera follows it. Saved between sessions.
+enum CursorSmoothing: Int, CaseIterable {
+    case off, light, smooth
+
+    /// Time constant of the exponential smoothing, seconds (0 = none).
+    var timeConstant: Double { [0, 0.08, 0.22][rawValue] }
+    var labelKey: String { ["cursor.smoothing.off", "cursor.smoothing.light", "cursor.smoothing.smooth"][rawValue] }
+
+    static var saved: CursorSmoothing {
+        get { CursorSmoothing(rawValue: UserDefaults.standard.object(forKey: Pref.cursorSmoothing) as? Int ?? 1) ?? .light }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: Pref.cursorSmoothing) }
+    }
+}
+
 /// Cursor positions and clicks recorded next to a video, normalized in the recorded frame (top-left origin).
 struct CursorTrack {
     struct Sample { var t: Double; var x: Double; var y: Double }
@@ -130,6 +144,32 @@ struct CursorTrack {
             clicks: clicks.map { [rounded($0.t, 1000), rounded($0.x, 10000), rounded($0.y, 10000)] }
         )
         if let data = try? JSONEncoder().encode(payload) { try? data.write(to: Self.sidecarURL(for: video)) }
+    }
+
+    /// The cursor path with the jitter taken out: exponential smoothing with a time constant set by `strength`.
+    /// Pure and deterministic. Samples are sorted by time first (stable); the first and last samples keep their
+    /// exact position, so the path still starts and ends where the recording did. `.off` returns the track as is.
+    func smoothed(strength: CursorSmoothing) -> CursorTrack {
+        let tau = strength.timeConstant
+        guard tau > 0, samples.count > 2 else { return self }
+        let sorted = samples.enumerated()
+            .sorted { ($0.element.t, $0.offset) < ($1.element.t, $1.offset) }
+            .map(\.element)
+            .filter { $0.t.isFinite && $0.x.isFinite && $0.y.isFinite }
+        guard sorted.count > 2 else { return self }
+        var out = sorted
+        var x = sorted[0].x, y = sorted[0].y
+        for i in 1..<(sorted.count - 1) {
+            let dt = max(sorted[i].t - sorted[i - 1].t, 0)
+            let a = 1 - exp(-dt / tau)
+            x += (sorted[i].x - x) * a
+            y += (sorted[i].y - y) * a
+            out[i].x = x
+            out[i].y = y
+        }
+        var copy = self
+        copy.samples = out
+        return copy
     }
 
     /// Interpolated cursor position at time `t`.

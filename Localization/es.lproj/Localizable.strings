@@ -246,6 +246,11 @@
 "zoom.auto.done" = "%d zooms creados con %d clics. Cmd+Z para deshacer.";
 "zoom.auto.none" = "Ningún clic aquí merece un zoom.";
 "zoom.auto.tip" = "Crea los zooms a partir de los clics. La flecha ajusta la intensidad.";
+"cursor.smoothing" = "Suavizado del cursor";
+"cursor.smoothing.off" = "Desactivado";
+"cursor.smoothing.light" = "Ligero";
+"cursor.smoothing.smooth" = "Suave";
+"cursor.smoothing.tip" = "Suaviza la trayectoria del cursor que sigue la cámara del zoom al colocar un zoom. La vista previa y la exportación usan los mismos zooms.";
 "error.unreadable" = "«%@» no se puede abrir como vídeo";
 "error.unreadable.hint" = "El archivo puede estar dañado, aún escribiéndose, o en un formato que macOS no lee.";
 "error.close" = "Cerrar";

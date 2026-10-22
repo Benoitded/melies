@@ -58,6 +58,26 @@ struct ZoomLane: View {
                             .controlSize(.small)
                             .tip(L("zoom.auto.tip"), trailing: true)
                         }
+                        if model.cursor?.samples.isEmpty == false {
+                            Menu {
+                                ForEach(CursorSmoothing.allCases, id: \.self) { level in
+                                    Button {
+                                        CursorSmoothing.saved = level
+                                    } label: {
+                                        Text(L(level.labelKey))
+                                        if CursorSmoothing.saved == level { Image(systemName: "checkmark") }
+                                    }
+                                }
+                            } label: {
+                                Label(L("cursor.smoothing"), systemImage: "scribble.variable").font(.system(size: 11))
+                            }
+                            .menuStyle(.button)
+                            .buttonStyle(.glass)
+                            .clickCursor()
+                            .buttonBorderShape(.capsule)
+                            .controlSize(.small)
+                            .tip(L("cursor.smoothing.tip"), trailing: true)
+                        }
                     }
                     .offset(x: handleWidth + 4, y: bottom - 26)
                 } else {

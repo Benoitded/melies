@@ -39,6 +39,7 @@ smart zooms, cursor smoothing, backgrounds). Try it for real before deciding.
 | File drag-and-drop handle | done (the drop still needs trying) |
 | Target-size export, GIF | **done** (options panel: MP4 or GIF, maximum size, resolution) |
 | Export identical to preview | by construction (same drawing), to be tested on real cases |
+| Cursor smoothing | camera follow only (Off / Light / Smooth); the baked-in real cursor is not redrawn, so not on par yet |
 | Auto zoom from clicks | done (three strengths, glides between close zooms); quality against CleanShot X 5.0 not compared yet |
 | Background, margins, rounded corners, shadow | done (gradient or solid presets, identical preview and export) |
 | Webcam overlay | to do |

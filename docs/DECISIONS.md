@@ -323,3 +323,12 @@ The local MCP server lets an AI app drive the editor, so its inputs are treated 
   Scripts/build.sh`. A release build has none, so no environment variable can change what the published app does.
 - Also changed in the same pass: the microphone entitlement is declared (needed once the hardened runtime is on),
   temporary files are cleaned up, and the release script checks notarization and publishes as a draft first.
+
+## Cursor smoothing (2026-10-22)
+
+- `CursorTrack.smoothed(strength:)` is a pure exponential smoothing of the sampled path (time constants 0 / 0.08 s /
+  0.22 s for Off / Light / Smooth, default Light, saved in `Pref.cursorSmoothing`). First and last samples are kept.
+- It only feeds the camera: the center of a new zoom point is read from the smoothed path. Zoom points store plain
+  centers, so preview and export (both evaluated by `ZoomCamera`) agree by construction.
+- Out of scope: drawing a synthetic cursor over the video. The real cursor baked into the capture stays as recorded,
+  and click rings stay on the raw click positions.

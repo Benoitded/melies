@@ -382,7 +382,7 @@ final class EditorModel {
     /// Where a new zoom should point: under the recorded cursor when we have it, else the middle.
     private func smartCenter(at t: Double, scale: Double) -> CGPoint {
         var center = CGPoint(x: 0.5, y: 0.5)
-        if let p = cursor?.position(at: t) {
+        if let p = cursor?.smoothed(strength: .saved).position(at: t) {
             let b = baseRect
             center = CGPoint(x: (p.x - b.minX) / b.width, y: (p.y - b.minY) / b.height)
         }
