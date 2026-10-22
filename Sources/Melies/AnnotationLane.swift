@@ -58,6 +58,21 @@ struct AnnotationLane: View {
                                     .foregroundStyle(a.color.luminance > 0.6 ? Color.black.opacity(0.7) : Color.white)
                                     .padding(.leading, 17)
                             }
+                            .overlay(alignment: .leading) {
+                                // Tracked: where the target is taken from (line + dot) and how far it was followed.
+                                if a.isTracked, let last = a.track.last {
+                                    let from = x(min(max(a.trackStart, a.start), a.end)) - x(a.start)
+                                    let followed = max(x(min(last.t, a.end)) - x(a.start) - from, 0)
+                                    ZStack(alignment: .leading) {
+                                        Rectangle().fill(.white.opacity(0.28)).frame(width: followed)
+                                        Rectangle().fill(.white.opacity(0.95)).frame(width: 2)
+                                        Circle().fill(.white).frame(width: 7, height: 7).offset(x: -2.5, y: -7)
+                                    }
+                                    .frame(height: rowHeight - 4)
+                                    .offset(x: from)
+                                    .allowsHitTesting(false)
+                                }
+                            }
                             .overlay { grips(visible: selected || hoveredID == a.id) }
                             .frame(width: width, height: rowHeight - 4)
                             .contentShape(Rectangle())

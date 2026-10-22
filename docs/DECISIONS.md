@@ -244,3 +244,14 @@ transporte ce fichier. La promesse reste le repli si l'export n'est pas encore p
 Tailles 1, 2, 3, 5 Mo en plus des anciennes, saisie libre via « Autre... », résolutions 360p et 480p, et un format
 HEVC (H.265) : environ 40 % plus petit à qualité égale (3,4 Mo en H.264 contre 2,1 Mo sur 10 s de test), mais
 Twitter/X et certaines apps peuvent le refuser, d'où la note dans le panneau.
+
+## Suivi sur du texte qui défile (2026-10-22)
+
+Premier essai sur un vrai enregistrement (chat qui défile, jusqu'à ~130 px par image) : zone perdue au premier
+saut. Trois causes : la réduction d'image prenait un pixel sur trois (le texte fin se déformait dès qu'il
+bougeait d'une fraction de pixel), le meilleur alignement sur du texte est un creux d'un pixel que la recherche
+grossière (pas de 3 px) enjambait, et la fenêtre de recherche était trop étroite pour un défilement rapide.
+Maintenant : réduction par moyenne de blocs, recherche grossière sur une copie floue puis affinage sur l'image
+nette, recherche centrée sur la position prédite (dernier déplacement) avec une fenêtre d'un tiers de la hauteur.
+Piège de test : l'image de bruit générée par `geq` était périodique (120 px), le suivi trouvait donc de vrais
+doubles ; le filtre `noise` d'ffmpeg donne un bruit non périodique.
