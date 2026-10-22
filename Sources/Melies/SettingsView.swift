@@ -12,6 +12,7 @@ struct GeneralTab: View {
     @AppStorage("closeAfterAction") private var closeAfterAction = true
     @AppStorage("recordMicrophone") private var recordMicrophone = false
     @AppStorage("recordSystemAudio") private var recordSystemAudio = false
+    @AppStorage("recordCountdown") private var recordCountdown = 0
     @AppStorage("clickColor") private var clickColor = "yellow"
     @AppStorage("clickSize") private var clickSize = 36.0
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
@@ -49,6 +50,20 @@ struct GeneralTab: View {
                     Toggle(L("set.audio.system"), isOn: $recordSystemAudio)
                 }
                 .labeledContent(L("set.audio"))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Picker("", selection: $recordCountdown) {
+                        Text(L("set.countdown.off")).tag(0)
+                        Text(L("set.countdown.seconds", 3)).tag(3)
+                        Text(L("set.countdown.seconds", 5)).tag(5)
+                        Text(L("set.countdown.seconds", 10)).tag(10)
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(width: 250)
+                    Text(L("set.countdown.hint")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                .labeledContent(L("set.countdown"))
 
                 HStack(spacing: 14) {
                     HStack(spacing: 8) {

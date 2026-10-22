@@ -254,3 +254,7 @@
 "trk.toast.lost" = "Oggetto coperto o cambiato a %@ s: l'annotazione termina qui";
 "trk.toast.lost_offscreen" = "Oggetto uscito dall'inquadratura a %@ s: l'annotazione termina qui";
 "trk.toast.done" = "Tracciamento completato";
+"set.countdown" = "Conto alla rovescia";
+"set.countdown.off" = "No";
+"set.countdown.seconds" = "%d s";
+"set.countdown.hint" = "Conto alla rovescia al centro dell'area prima della registrazione. Esc annulla.";

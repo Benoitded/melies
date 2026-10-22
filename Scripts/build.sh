@@ -29,8 +29,8 @@ case "$(xcode-select -p 2>/dev/null)" in
     ;;
 esac
 
-swift build -c release --force-resolved-package-versions
-BIN=$(swift build -c release --force-resolved-package-versions --show-bin-path)
+swift build -c release --force-resolved-versions
+BIN=$(swift build -c release --force-resolved-versions --show-bin-path)
 
 STAGE=$(mktemp -d "${TMPDIR:-/tmp}/melies-build.XXXXXX")
 trap 'rm -rf "$STAGE"' EXIT

@@ -254,3 +254,7 @@
 "trk.toast.lost" = "Object covered or changed at %@ s: the annotation ends there";
 "trk.toast.lost_offscreen" = "Object left the frame at %@ s: the annotation ends there";
 "trk.toast.done" = "Tracking done";
+"set.countdown" = "Countdown";
+"set.countdown.off" = "Off";
+"set.countdown.seconds" = "%d s";
+"set.countdown.hint" = "Counts down in the middle of the area before recording starts. Esc cancels.";

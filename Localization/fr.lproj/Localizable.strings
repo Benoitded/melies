@@ -254,3 +254,7 @@
 "trk.toast.lost" = "Objet masqué ou changé à %@ s : l'annotation s'arrête là";
 "trk.toast.lost_offscreen" = "Objet sorti du cadre à %@ s : l'annotation s'arrête là";
 "trk.toast.done" = "Suivi terminé";
+"set.countdown" = "Compte à rebours";
+"set.countdown.off" = "Aucun";
+"set.countdown.seconds" = "%d s";
+"set.countdown.hint" = "Décompte au milieu de la zone avant le début de l'enregistrement. Échap annule.";

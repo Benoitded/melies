@@ -27,6 +27,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
     /// Same shortcut starts and stops.
     func toggle() {
+        if Countdown.isRunning { Countdown.cancel(); return } // the shortcut again cancels a running count-down
         guard !busy else { return }
         if isRecording { Task { await stop() } } else { Task { await begin() } }
     }
@@ -52,6 +53,14 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         if let fixed { chosen = fixed } else { chosen = await RegionSelector.select() }
         guard let selection = chosen else { return }
         overlay = RecordingOverlay(screen: selection.screen, region: selection.rect)
+        // Optional count-down (Settings, off by default): the area stays dimmed and the number shows inside it.
+        let countdown = UserDefaults.standard.integer(forKey: "recordCountdown")
+        if countdown > 0, fixed == nil {
+            guard await Countdown.run(seconds: countdown, region: selection.rect, screen: selection.screen) else {
+                closeOverlay()
+                return
+            }
+        }
         try? await Task.sleep(for: .milliseconds(220)) // let the selector disappear before capturing
 
         do {

@@ -254,3 +254,7 @@
 "trk.toast.lost" = "Objeto tapado o cambiado a %@ s: la anotación termina ahí";
 "trk.toast.lost_offscreen" = "Objeto fuera del encuadre a %@ s: la anotación termina ahí";
 "trk.toast.done" = "Seguimiento terminado";
+"set.countdown" = "Cuenta atrás";
+"set.countdown.off" = "No";
+"set.countdown.seconds" = "%d s";
+"set.countdown.hint" = "Cuenta atrás en el centro del área antes de grabar. Esc cancela.";
