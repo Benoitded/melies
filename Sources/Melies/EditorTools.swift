@@ -391,17 +391,21 @@ final class EditorTools {
 
     /// A path chosen by an AI client is untrusted: it may come from text on the screen or a file name. It must never
     /// replace an existing file, and must stay in the places a user keeps videos.
-    static func safeExportTarget(_ path: String, ext: String, source: URL) throws -> URL {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
+    static func safeExportTarget(_ path: String, ext: String, source: URL, home homePath: String? = nil) throws -> URL {
+        let home = homePath ?? FileManager.default.homeDirectoryForCurrentUser.path
         var url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath).standardizedFileURL
         // The extension is ours, never the client's: a name like "notes.docx" or ".zshrc" cannot be targeted.
         url = url.deletingPathExtension().appendingPathExtension(ext)
         // Where the folder really is (symlinks followed), so a link inside Movies cannot point elsewhere.
-        let folder = url.deletingLastPathComponent().resolvingSymlinksInPath().path
-        let allowed = ["Movies", "Desktop", "Documents", "Downloads", "Pictures"].map { home + "/" + $0 }
-            + [LatestRecording.watchedFolder().resolvingSymlinksInPath().path,
-               source.deletingLastPathComponent().resolvingSymlinksInPath().path,
-               FileManager.default.temporaryDirectory.resolvingSymlinksInPath().path]
+        // Compared case-insensitively (the default macOS volume is).
+        func real(_ url: URL) -> String { url.resolvingSymlinksInPath().path.lowercased() }
+        let folder = real(url.deletingLastPathComponent())
+        let realHome = real(URL(fileURLWithPath: home))
+        let sourceFolder = real(source.deletingLastPathComponent())
+        var allowed = ["Movies", "Desktop", "Documents", "Downloads", "Pictures"].map { real(URL(fileURLWithPath: home).appendingPathComponent($0)) }
+            + [real(LatestRecording.watchedFolder()), real(FileManager.default.temporaryDirectory)]
+        // A source video sitting directly in the home folder (or at the root) must not make all of it writable.
+        if sourceFolder != realHome, sourceFolder != "/" { allowed.append(sourceFolder) }
         guard allowed.contains(where: { folder == $0 || folder.hasPrefix($0 + "/") }),
               !folder.contains(".app/"), !folder.hasSuffix(".app"),
               !folder.split(separator: "/").contains(where: { $0.hasPrefix(".") }) else {
