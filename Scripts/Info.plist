@@ -9,7 +9,8 @@
     <key>CFBundleDisplayName</key><string>Méliès</string>
     <key>CFBundleIdentifier</key><string>dev.melies.app</string>
     <key>CFBundleExecutable</key><string>Melies</string>
-    <key>CFBundleIconFile</key><string>AppIcon</string>
+    <key>CFBundleIconFile</key><string>Melies</string>
+    <key>CFBundleIconName</key><string>Melies</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>0.1.0</string>
     <key>CFBundleVersion</key><string>1</string>

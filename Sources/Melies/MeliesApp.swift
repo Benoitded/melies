@@ -109,6 +109,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        if ProcessInfo.processInfo.environment["MELIES_SHOW_ONBOARDING"] != nil {
+            Task { @MainActor in OnboardingWindowController.shared.show() }
+        }
+
+        if let tab = ProcessInfo.processInfo.environment["MELIES_SHOW_SETTINGS"] {
+            Task { @MainActor in SettingsWindowController.shared.show(tab: Int(tab) ?? 0) }
+        }
+
         // Debug: MELIES_MENU_DUMP=1 prints the main menu after launch settles.
         if ProcessInfo.processInfo.environment["MELIES_MENU_DUMP"] != nil {
             Task { @MainActor in
