@@ -639,6 +639,34 @@ final class EditorModel: ObservableObject {
         }
     }
 
+    // MARK: Size estimate
+
+    @Published var measuredMB: Double?
+
+    /// Encodes three one-second samples of the result with the current settings and extrapolates the file size.
+    /// A formula is wrong for screen recordings, which compress far below the average bitrate asked for.
+    func measureEstimate() async {
+        measuredMB = nil
+        let settings = ExportSettings.current
+        let total = max(end - start, 0.1)
+        guard settings.format.isVideo, settings.maxMegabytes == nil, duration > 0 else { return }
+        let length = min(total, 3.0)
+        let centers = total <= 9 ? [start + total / 2] : [1.0 / 6, 0.5, 5.0 / 6].map { start + total * $0 }
+        let windows = total <= 9 ? [CMTimeRange(start: CMTime(seconds: start, preferredTimescale: 600), duration: CMTime(seconds: total, preferredTimescale: 600))]
+            : centers.map { CMTimeRange(start: CMTime(seconds: $0 - length / 2, preferredTimescale: 600), duration: CMTime(seconds: length, preferredTimescale: 600)) }
+        var bytes = 0, seconds = 0.0
+        for window in windows {
+            if Task.isCancelled { return }
+            let file = FileManager.default.temporaryDirectory.appendingPathComponent("melies-estimate-\(UUID().uuidString).mp4")
+            defer { try? FileManager.default.removeItem(at: file) }
+            guard (try? await VideoExport.run(asset: asset, range: window, crop: cropRect, points: zoomPoints, annotations: annotations, clicks: showClicks ? ClickSet.current(for: cursor) : nil, includeAudio: false, settings: settings, to: file)) != nil else { return }
+            bytes += MP4Writer.fileSize(file)
+            seconds += window.duration.seconds
+        }
+        guard seconds > 0, !Task.isCancelled else { return }
+        measuredMB = Double(bytes) / seconds * total / 1_000_000 + (hasAudio && includeAudio ? 0.016 * total : 0)
+    }
+
     // MARK: Drag file
 
     /// Bumped on every edit, so a file exported ahead of time can be told from a stale one.

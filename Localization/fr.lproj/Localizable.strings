@@ -212,3 +212,4 @@
 "trk.lost" = "Objet sorti ou masqué : l'annotation s'arrête là";
 "exp.other" = "Autre...";
 "exp.hevc.note" = "HEVC (H.265) donne des fichiers environ 40 % plus petits. Twitter/X et certaines apps peuvent le refuser.";
+"exp.estimating" = "Estimation de la taille...";

@@ -88,6 +88,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in OnboardingWindowController.shared.show() }
         }
 
+        // Debug: MELIES_ESTIMATE_TEST=video prints the measured size estimate and the real export size.
+        if let path = ProcessInfo.processInfo.environment["MELIES_ESTIMATE_TEST"] {
+            Task { @MainActor in
+                let model = EditorModel(url: URL(fileURLWithPath: path))
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                await model.measureEstimate()
+                let file = FileManager.default.temporaryDirectory.appendingPathComponent("melies-est-check.mp4")
+                _ = await model.export(to: file, quiet: true)
+                print("ESTIMATE measured=\(model.measuredMB.map { String(format: "%.2f", $0) } ?? "nil") MB real=\(String(format: "%.2f", Double(MP4Writer.fileSize(file)) / 1e6)) MB")
+                exit(0)
+            }
+        }
         // Debug: track the box at (100,120) size 120 in a 640x360 video, print the final offset, quit.
         if let path = ProcessInfo.processInfo.environment["MELIES_TRACK_TEST"] {
             Task {

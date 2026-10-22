@@ -212,3 +212,4 @@
 "trk.lost" = "Oggetto uscito o coperto: l'annotazione termina qui";
 "exp.other" = "Altro...";
 "exp.hevc.note" = "HEVC (H.265) riduce i file di circa il 40%. Twitter/X e alcune app potrebbero rifiutarlo.";
+"exp.estimating" = "Stima della dimensione...";
