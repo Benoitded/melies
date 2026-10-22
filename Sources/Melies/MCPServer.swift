@@ -41,6 +41,15 @@ final class MCPServer: ObservableObject {
     }
 
     private var listener: NWListener?
+    private lazy var recordingController: RecordingController = {
+        let controller = RecordingController(
+            layout: LiveScreenLayout(), confirmer: AlertConfirmer(), backend: LiveRecordingBackend(),
+            isExportRunning: { EditorWindowController.shared.session.model?.busy ?? false },
+            clientName: { [weak self] in self?.clientName })
+        controller.onAutoStop = { outcome in Toast.show(L("mcprec.autostop", Int(outcome.duration))) }
+        return controller
+    }()
+
     private lazy var mcp: MCPProtocol = {
         var protocolHandler = MCPProtocol(tools: EditorTools(
             model: { EditorWindowController.shared.session.model },
@@ -48,7 +57,8 @@ final class MCPServer: ObservableObject {
                 guard let target = url ?? LatestRecording.find() else { return nil }
                 EditorWindowController.shared.open(target)
                 return target
-            }
+            },
+            recording: recordingController
         ))
         protocolHandler.onActivity = { [weak self] activity in self?.record(activity) }
         return protocolHandler
