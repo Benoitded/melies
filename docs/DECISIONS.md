@@ -107,3 +107,19 @@ pendant la saisie de texte (`isEditingText`), sinon taper "a" lancerait l'outil 
 L'accueil est une fenêtre `NSGlassEffectView` : le contenu reste plat dessus (pas de verre sur
 du verre). L'icône est un fichier Icon Composer `Resources/Melies.icon` (fond dégradé, pellicule,
 bouton lecture en verre) compilé par `actool` en `Assets.car` plus un `.icns` de secours.
+
+## Annuler / rétablir par séquences (2026-10-22)
+
+Un instantané de l'état éditable (annotations, points de zoom, recadrage, début et fin du trim) est
+empilé au premier changement d'une séquence. Les changements espacés de moins de 0,6 s forment une
+même séquence, donc un glissé, un curseur ou une frappe = une seule étape. Pas d'enregistrement à
+chaque geste dans le code : un `didSet` sur ces cinq propriétés suffit. La navigation (tête de
+lecture, sélection, zoom du canvas) n'est pas dans l'historique. Pendant la saisie d'un texte,
+Cmd+Z appartient au champ de texte.
+
+## Leçons du test à la souris (2026-10-22)
+
+- Une annotation créée sous la tête de lecture à son tout début était invisible (fondu d'entrée à
+  0). L'éditeur affiche maintenant les objets pleinement quand la lecture est en pause.
+- Le champ de texte n'était pas actif juste après la création d'un texte : les lettres tapées
+  déclenchaient des raccourcis (I, O, A, V...). Le focus est pris à l'apparition du panneau.

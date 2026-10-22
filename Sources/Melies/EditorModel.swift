@@ -28,6 +28,8 @@ final class EditorModel: ObservableObject {
     /// True while a text field has the keyboard, so single-key shortcuts must stay quiet.
     @Published var isEditingText = false
     @Published var textFocusTick = 0
+    /// A new text annotation asks for the keyboard; the panel takes it as soon as it appears.
+    var wantsTextFocus = false
     /// Set while an annotation drag is in progress, so panning the canvas does not also run.
     var annotationGestureActive = false
     var cursor: CursorTrack?
@@ -418,7 +420,10 @@ final class EditorModel: ObservableObject {
         updateAnnotation(id, remember: true, change)
     }
 
-    func requestTextFocus() { textFocusTick += 1 }
+    func requestTextFocus() {
+        wantsTextFocus = true
+        textFocusTick += 1
+    }
 
     // MARK: Crop
 

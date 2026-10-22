@@ -46,7 +46,7 @@ struct AnnotationLane: View {
                             .fill(a.color.color.opacity(selected ? 0.95 : 0.7))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                    .stroke(selected ? Color.white : Color.black.opacity(0.25), lineWidth: selected ? 2 : 1)
+                                    .stroke(selected ? Color.accentColor : Color.black.opacity(0.25), lineWidth: selected ? 2.5 : 1)
                             )
                             .overlay(alignment: .leading) {
                                 Image(systemName: icon(a.kind))

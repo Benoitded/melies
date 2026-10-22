@@ -31,9 +31,17 @@ struct AnnotationPanel: View {
                 .tip(L("ann.delete"), trailing: true)
             }
             .onChange(of: textFocused) { _, focused in model.isEditingText = focused }
-            .onChange(of: model.textFocusTick) { _, _ in textFocused = true }
+            .onChange(of: model.textFocusTick) { _, _ in takeFocusIfRequested() }
+            .onAppear { takeFocusIfRequested() }
             .onDisappear { model.isEditingText = false }
         }
+    }
+
+    /// Focus the text field after the panel (and the field inside it) exist.
+    private func takeFocusIfRequested() {
+        guard model.wantsTextFocus else { return }
+        model.wantsTextFocus = false
+        DispatchQueue.main.async { textFocused = true }
     }
 
     private func colors(_ a: Annotation) -> some View {
