@@ -298,6 +298,27 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
 
     func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation { .copy }
 
+    /// Like Shottr: while the file is being dragged the editor steps aside, so it never covers where the file is
+    /// going (the app behind it, the desktop, a chat window). It comes back when the drag ends, wherever it ends.
+    func draggingSession(_ session: NSDraggingSession, willBeginAt screenPoint: NSPoint) {
+        guard let window else { return }
+        window.ignoresMouseEvents = true // transparent to the pointer too, or it would still catch the drop
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.12
+            window.animator().alphaValue = 0
+        }
+    }
+
+    func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
+        guard let window else { return }
+        window.ignoresMouseEvents = false
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.18
+            window.animator().alphaValue = 1
+        }
+        if operation != [] { model?.status = L("status.dragged") }
+    }
+
     // MARK: NSFilePromiseProviderDelegate (the export runs only when the destination asks for the file)
 
     func filePromiseProvider(_ provider: NSFilePromiseProvider, fileNameForType fileType: String) -> String {

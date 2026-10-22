@@ -50,7 +50,12 @@ xcrun actool Resources/Melies.icon --compile "$APP/Contents/Resources" \
   --app-icon Melies --include-all-app-icons \
   --output-partial-info-plist "$STAGE/icon-partial.plist" > /dev/null
 
-# Localizations (en, fr, it, es)
+# Localizations (en, fr, it, es). A single bad line makes macOS ignore a whole file and the app shows raw keys:
+# check the syntax here, before it ships.
+for strings in Localization/*.lproj/*.strings; do
+  plutil -lint "$strings" >/dev/null || { echo "Invalid strings file: $strings"; exit 1; }
+done
+# Copy the localizations
 cp -RX Localization/*.lproj "$APP/Contents/Resources/"
 
 # Sparkle (automatic updates): the framework lives next to the executable's Frameworks folder.
