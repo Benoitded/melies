@@ -280,3 +280,30 @@
 "frame.preset.white" = "Blanco";
 "frame.preset.gray" = "Gris";
 "frame.preset.black" = "Negro";
+
+// Captions
+"cap.title" = "Subtítulos";
+"cap.show" = "Mostrar en la exportación";
+"cap.language" = "Idioma";
+"cap.generate" = "Generar subtítulos";
+"cap.regenerate" = "Generar de nuevo";
+"cap.cancel" = "Cancelar";
+"cap.cancelled" = "Generación cancelada.";
+"cap.local" = "Solo en este Mac";
+"cap.position" = "Posición";
+"cap.position.bottom" = "Abajo";
+"cap.position.top" = "Arriba";
+"cap.size" = "Tamaño";
+"cap.background" = "Fondo en píldora";
+"cap.delete" = "Eliminar esta línea";
+"cap.clear" = "Eliminar todo";
+"cap.srt" = "Exportar .srt";
+"cap.srt.empty" = "No hay subtítulos en el rango conservado.";
+"cap.srt.saved" = "%@ guardado";
+"cap.err.noaudio" = "Este vídeo no tiene pista de audio, no hay nada que subtitular.";
+"cap.err.permission" = "El reconocimiento de voz no está permitido. Actívalo para Méliès en Ajustes del Sistema > Privacidad y seguridad > Reconocimiento de voz.";
+"cap.err.unsupported" = "El reconocimiento de voz en el dispositivo no está disponible en este Mac.";
+"cap.err.language" = "El modelo en el dispositivo para este idioma no está instalado. Méliès nunca usa la red: añade el idioma en Ajustes del Sistema > Teclado > Dictado y vuelve a intentarlo.";
+"cap.err.nospeech" = "No se encontró voz en el audio.";
+"cap.err.failed" = "No se pudieron generar los subtítulos.";
+"cap.err.nolocale" = "No hay ningún idioma instalado en el dispositivo. Méliès nunca envía audio a un servidor: añade un idioma en Ajustes del Sistema > Teclado > Dictado.";
