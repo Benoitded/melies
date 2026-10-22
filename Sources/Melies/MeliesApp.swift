@@ -153,6 +153,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // Debug: MELIES_COLORPANEL_TEST=1 with MELIES_OPEN=file checks that a color picked in the system panel reaches the annotation.
+        if ProcessInfo.processInfo.environment["MELIES_COLORPANEL_TEST"] != nil,
+           let input = ProcessInfo.processInfo.environment["MELIES_OPEN"] {
+            Task { @MainActor in
+                EditorWindowController.shared.open(URL(fileURLWithPath: input))
+                try? await Task.sleep(for: .seconds(1.5))
+                guard let m = EditorWindowController.shared.session.model else { print("[color] no model"); NSApp.terminate(nil); return }
+                m.annotations = demoAnnotations()
+                m.selectAnnotation(m.annotations[0].id)
+                ColorPanelBridge.shared.open(initial: m.annotations[0].color) { color in
+                    m.updateSelectedAnnotation { $0.color = color }
+                }
+                let panel = NSColorPanel.shared
+                print("[color] panel visible: \(panel.isVisible), before: g=\(m.annotations[0].color.g)")
+                panel.color = NSColor(srgbRed: 0.1, green: 0.8, blue: 0.2, alpha: 1)
+                ColorPanelBridge.shared.colorChanged(panel) // what a user pick triggers
+                print("[color] after pick: r=\(m.annotations[0].color.r) g=\(m.annotations[0].color.g) b=\(m.annotations[0].color.b)")
+                NSApp.terminate(nil)
+            }
+        }
+
         // Debug: MELIES_COMBINE_TEST=out.mp4 MELIES_OPEN=a.mp4 MELIES_COMBINE_B=b.mp4 [MELIES_COMBINE_LAYOUT=sideBySide|stacked|pip]
         let combineEnv = ProcessInfo.processInfo.environment
         if let out = combineEnv["MELIES_COMBINE_TEST"], let a = combineEnv["MELIES_OPEN"], let b = combineEnv["MELIES_COMBINE_B"] {
