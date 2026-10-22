@@ -31,7 +31,7 @@ struct RGBA: Codable, Equatable {
     }
 }
 
-enum AnnotationKind: String, Codable { case arrow, text, rect, spotlight, blur }
+enum AnnotationKind: String, Codable, CaseIterable { case arrow, text, rect, spotlight, blur }
 enum ArrowStyle: String, CaseIterable, Codable { case block, line, double }
 enum RectStyle: String, CaseIterable, Codable { case rounded, square, soft, solid }
 enum FontStyle: String, CaseIterable, Codable { case sans, rounded, serif, mono, hand }

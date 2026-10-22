@@ -235,9 +235,54 @@ struct AdvancedTab: View {
                 }
                 .labeledContent(" ")
             }
+            MCPSettings()
         }
         .formStyle(.columns)
         .padding(24)
         .frame(width: 560)
+    }
+}
+
+/// Optional: lets an AI app drive the editor. Everything stays off until the user turns it on.
+private struct MCPSettings: View {
+    @ObservedObject private var server = MCPServer.shared
+    @State private var enabled = MCPServer.enabled
+    @State private var copied = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(L("set.adv.mcp.label"), isOn: $enabled)
+                .onChange(of: enabled) { _, on in server.setEnabled(on) }
+            Text(L("set.adv.mcp.hint"))
+                .font(.callout).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let failure = server.failure {
+                Text(L("set.adv.mcp.failed", failure)).font(.callout).foregroundStyle(.red)
+            } else if enabled && server.running {
+                Label(L("set.adv.mcp.running", server.url), systemImage: "circle.fill")
+                    .font(.callout).textSelection(.enabled)
+                    .symbolRenderingMode(.palette).foregroundStyle(.green, .primary)
+                Text(L("set.adv.mcp.steps"))
+                    .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Button(L("set.adv.mcp.copy_cmd")) { copy(server.claudeCodeCommand) }
+                    Button(L("set.adv.mcp.copy_url")) { copy(server.urlWithKey) }
+                }
+                HStack {
+                    Button(L("set.adv.mcp.copy_json")) { copy(server.jsonConfig) }
+                    Button(L("set.adv.mcp.new_key")) { server.regenerateToken() }
+                    if copied { Text(L("set.adv.mcp.copied")).foregroundStyle(.secondary) }
+                }
+            }
+        }
+        .labeledContent(L("set.adv.mcp"))
+    }
+
+    private func copy(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        copied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
     }
 }

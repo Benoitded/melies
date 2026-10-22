@@ -181,9 +181,23 @@ final class EditorModel: ObservableObject {
             inBurst = true
         }
         burstWork?.cancel()
+        if grouping { return } // the group closes the step itself
         let work = DispatchWorkItem { [weak self] in self?.endBurst() }
         burstWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: work)
+    }
+
+    private var grouping = false
+
+    /// Everything changed between `beginUndoGroup` and `endUndoGroup` is one undo step (one turn of the AI).
+    func beginUndoGroup() {
+        endBurst()
+        grouping = true
+    }
+
+    func endUndoGroup() {
+        grouping = false
+        endBurst()
     }
 
     private func endBurst() {

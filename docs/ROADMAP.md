@@ -29,6 +29,12 @@
 - [x] Audio : son du système et micro pendant l'enregistrement, son gardé ou coupé à l'export
 - [ ] Zoom auto sur le curseur pendant l'enregistrement
 
+## IA (voir `docs/AI.md`)
+- [x] Couche d'outils d'édition (façade JSON sur `EditorModel`)
+- [x] Serveur MCP local (optionnel, désactivé par défaut)
+- [ ] Outils d'enregistrement d'écran
+- [ ] Panneau de chat avec clé API
+
 ## Plus tard
 - [ ] Distribution : hardened runtime, signature Developer ID, notarisation, DMG, GitHub Releases
 - [ ] Mise à jour automatique (Sparkle, flux signé sur GitHub Releases)

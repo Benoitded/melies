@@ -110,6 +110,17 @@
 "set.adv.ontop.label" = "Always on top";
 "set.adv.welcome" = "Welcome guide";
 "set.adv.welcome.button" = "Show…";
+"set.adv.mcp" = "MCP server (AI)";
+"set.adv.mcp.label" = "Let an AI app drive the editor";
+"set.adv.mcp.hint" = "Off by default. Lets Claude Code, Claude Desktop or Cursor edit the open video through a local server only this Mac can reach, protected by a secret key.";
+"set.adv.mcp.running" = "Running on %@";
+"set.adv.mcp.failed" = "Could not start: %@";
+"set.adv.mcp.copy_cmd" = "Copy Claude Code command";
+"set.adv.mcp.copy_json" = "Copy JSON config";
+"set.adv.mcp.new_key" = "New key";
+"set.adv.mcp.copied" = "Copied";
+"set.adv.mcp.steps" = "1. Copy the command below.\n2. Paste it in a terminal: Claude Code is now connected.\n3. Ask for an edit, e.g. “zoom on the button at 0:12”. The AI can open your latest recording itself.";
+"set.adv.mcp.copy_url" = "Copy URL (other apps)";
 "toast.recorded" = "Recording saved";
 "menu.reopen" = "Reopen Méliès";
 "menu.more" = "More";

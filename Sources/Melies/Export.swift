@@ -98,15 +98,8 @@ final class FrameCompositor: NSObject, AVVideoCompositing {
 enum VideoExport {
     static let fps: Int32 = 30
 
-    /// `crop` is normalized (0...1) in the upright frame, origin top-left.
-    static func run(asset: AVAsset, range: CMTimeRange, crop: CGRect? = nil, points: [ZoomPoint] = [], annotations: [Annotation] = [], clicks: ClickSet? = nil, includeAudio: Bool = true, settings: ExportSettings = .current, control: ExportControl? = nil, to url: URL) async throws {
-        guard let track = try await asset.loadTracks(withMediaType: .video).first else {
-            throw ExportError.noVideoTrack
-        }
-        let natural = try await track.load(.naturalSize)
-        let preferred = try await track.load(.preferredTransform)
-        let assetDuration = try await asset.load(.duration)
-
+    /// Where everything goes for one export: crop, output size, padding. Also used to draw single frames.
+    static func makePlan(natural: CGSize, preferred: CGAffineTransform, crop: CGRect?, points: [ZoomPoint], annotations: [Annotation], clicks: ClickSet?, settings: ExportSettings) -> RenderPlan {
         let oriented = natural.applying(preferred)
         let srcW = abs(oriented.width)
         let srcH = abs(oriented.height)
@@ -131,7 +124,7 @@ enum VideoExport {
         outW = (outW / 2).rounded(.up) * 2
         outH = (outH / 2).rounded(.up) * 2
 
-        let plan = RenderPlan(
+        return RenderPlan(
             orientation: orientation(for: preferred),
             uprightSize: CGSize(width: srcW, height: srcH),
             base: base,
@@ -141,6 +134,18 @@ enum VideoExport {
             annotations: annotations,
             clicks: clicks
         )
+    }
+
+    /// `crop` is normalized (0...1) in the upright frame, origin top-left.
+    static func run(asset: AVAsset, range: CMTimeRange, crop: CGRect? = nil, points: [ZoomPoint] = [], annotations: [Annotation] = [], clicks: ClickSet? = nil, includeAudio: Bool = true, settings: ExportSettings = .current, control: ExportControl? = nil, to url: URL) async throws {
+        guard let track = try await asset.loadTracks(withMediaType: .video).first else {
+            throw ExportError.noVideoTrack
+        }
+        let natural = try await track.load(.naturalSize)
+        let preferred = try await track.load(.preferredTransform)
+        let assetDuration = try await asset.load(.duration)
+
+        let plan = makePlan(natural: natural, preferred: preferred, crop: crop, points: points, annotations: annotations, clicks: clicks, settings: settings)
 
         let composition = AVMutableVideoComposition()
         composition.customVideoCompositorClass = FrameCompositor.self
