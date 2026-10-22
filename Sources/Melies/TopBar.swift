@@ -180,9 +180,12 @@ struct Tooltip: View {
         }
         .font(.system(size: 13))
         .multilineTextAlignment(.leading)
+        .lineLimit(5)
         // A short label stays on one line; a sentence wraps in a narrow box instead of one very long strip.
-        .frame(maxWidth: title.count > 36 ? 250 : nil, alignment: .leading)
-        .fixedSize(horizontal: title.count <= 36, vertical: true)
+        // Proposing an ideal width (not just a max) keeps the box at 250 pt even when the host view is narrow,
+        // otherwise the text wraps one letter per line inside a button-wide overlay.
+        .frame(idealWidth: title.count > 36 ? 250 : nil, maxWidth: title.count > 36 ? 250 : nil, alignment: .leading)
+        .fixedSize(horizontal: true, vertical: true)
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .glassEffect(.regular, in: title.count > 36 ? AnyShape(RoundedRectangle(cornerRadius: 16, style: .continuous)) : AnyShape(Capsule()))
