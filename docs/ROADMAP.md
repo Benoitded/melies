@@ -22,6 +22,7 @@
 - [ ] Priorities from the competitor study: see `docs/COMPETITORS.md`
 - [x] Animated zooms: camera points (level, speed, style), automatic centering on the recorded cursor, identical preview and export
 - [x] Cmd+Z / Cmd+Shift+Z (undo / redo: annotations, zooms, crop, trim)
+- [x] Background, margins, rounded corners and shadow around the picture (gradient or solid presets), identical preview and export
 
 ## v3
 - [x] Drag handle: the optimized MP4 can be dropped into any app
