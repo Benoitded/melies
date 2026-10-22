@@ -42,8 +42,10 @@ enum ObjectTracker {
         defer { reader.cancelReading() }
 
         var template: [Float] = []
+        var templateBlur: [Float] = []
         var tw = 0, th = 0, originX = 0, originY = 0
         var x = 0, y = 0
+        var vx = 0, vy = 0 // last movement per frame, to look where a fast scroll is going
         var samples: [TrackSample] = []
         var badSince: Double?
         let span = max(to - from, 0.001)
@@ -51,6 +53,7 @@ enum ObjectTracker {
         while let buffer = output.copyNextSampleBuffer() {
             try Task.checkCancellation()
             guard let pixels = CMSampleBufferGetImageBuffer(buffer), let frame = luma(of: pixels) else { continue }
+            let soft = blurred(frame)
             let t = CMSampleBufferGetPresentationTimeStamp(buffer).seconds
 
             if template.isEmpty {
@@ -59,13 +62,15 @@ enum ObjectTracker {
                 tw = max(min(Int((box.width * Double(frame.width)).rounded()), frame.width - originX), 4)
                 th = max(min(Int((box.height * Double(frame.height)).rounded()), frame.height - originY), 4)
                 template = patch(of: frame, x: originX, y: originY, w: tw, h: th)
+                templateBlur = patch(of: soft, x: originX, y: originY, w: tw, h: th)
                 x = originX; y = originY
                 samples.append(TrackSample(t: t, dx: 0, dy: 0))
                 continue
             }
 
-            let (bx, by, score) = bestMatch(of: template, tw: tw, th: th, in: frame, around: (x, y))
+            let (bx, by, score) = bestMatch(of: template, blurTemplate: templateBlur, tw: tw, th: th, in: frame, blurFrame: soft, around: (x + vx, y + vy))
             // Touching a frame edge it was not on at the start means it is leaving the frame.
+            if ProcessInfo.processInfo.environment["MELIES_TRACK_DEBUG"] != nil { FileHandle.standardError.write(Data("t=\(String(format: "%.3f", t)) pos=(\(bx),\(by)) from=(\(x),\(y)) score=\(String(format: "%.2f", score)) frame=\(frame.width)x\(frame.height)\n".utf8)) }
             let leaving = (bx <= 0 && originX > 0) || (by <= 0 && originY > 0)
                 || (bx >= frame.width - tw && originX < frame.width - tw)
                 || (by >= frame.height - th && originY < frame.height - th)
@@ -76,11 +81,16 @@ enum ObjectTracker {
                 continue
             }
             badSince = nil
+            vx = bx - x; vy = by - y
             x = bx; y = by
             // Follow slow appearance changes without drifting away from the original look.
             if score < lostThreshold * 0.3 {
                 let now = patch(of: frame, x: x, y: y, w: tw, h: th)
-                for i in template.indices { template[i] += (now[i] - template[i]) * 0.08 }
+                let nowBlur = patch(of: soft, x: x, y: y, w: tw, h: th)
+                for i in template.indices {
+                    template[i] += (now[i] - template[i]) * 0.08
+                    templateBlur[i] += (nowBlur[i] - templateBlur[i]) * 0.08
+                }
             }
             samples.append(TrackSample(
                 t: t,
@@ -103,14 +113,45 @@ enum ObjectTracker {
         let ow = w / f, oh = h / f
         var data = [UInt8](repeating: 0, count: ow * oh)
         let src = base.assumingMemoryBound(to: UInt8.self)
+        // Average each f x f block: picking one pixel in f would alias thin text and break matching on scrolls.
+        let area = f * f
         for j in 0..<oh {
-            let row = src + j * f * stride
             for i in 0..<ow {
-                let p = row + i * f * 4 // BGRA
-                data[j * ow + i] = UInt8((Int(p[0]) * 29 + Int(p[1]) * 150 + Int(p[2]) * 77) >> 8)
+                var sum = 0
+                for dj in 0..<f {
+                    let row = src + (j * f + dj) * stride + i * f * 4
+                    for di in 0..<f {
+                        let p = row + di * 4 // BGRA
+                        sum += (Int(p[0]) * 29 + Int(p[1]) * 150 + Int(p[2]) * 77) >> 8
+                    }
+                }
+                data[j * ow + i] = UInt8(sum / area)
             }
         }
         return Luma(width: ow, height: oh, data: data)
+    }
+
+    /// A softened copy (box blur, radius 3): on fine text the sharp match is a 1 px wide dip, so the coarse
+    /// search runs on this one, where the dip is wide enough not to be stepped over.
+    private static func blurred(_ frame: Luma) -> Luma {
+        let r = 3, w = frame.width, h = frame.height
+        var tmp = [Float](repeating: 0, count: w * h)
+        var out = [UInt8](repeating: 0, count: w * h)
+        for j in 0..<h {
+            for i in 0..<w {
+                var sum: Float = 0
+                for k in -r...r { sum += Float(frame.data[j * w + min(max(i + k, 0), w - 1)]) }
+                tmp[j * w + i] = sum / Float(2 * r + 1)
+            }
+        }
+        for j in 0..<h {
+            for i in 0..<w {
+                var sum: Float = 0
+                for k in -r...r { sum += tmp[min(max(j + k, 0), h - 1) * w + i] }
+                out[j * w + i] = UInt8(sum / Float(2 * r + 1))
+            }
+        }
+        return Luma(width: w, height: h, data: out)
     }
 
     private static func patch(of frame: Luma, x: Int, y: Int, w: Int, h: Int) -> [Float] {
@@ -119,26 +160,28 @@ enum ObjectTracker {
         return out
     }
 
-    /// Where the template fits best in the frame, searching around the last position (coarse, then fine).
+    /// Where the template fits best in the frame, searching around the predicted position:
+    /// coarse on the blurred images, then fine on the sharp ones.
     /// Returns the top-left position and the difference relative to the region's contrast.
-    private static func bestMatch(of template: [Float], tw: Int, th: Int, in frame: Luma, around p: (Int, Int)) -> (Int, Int, Double) {
+    private static func bestMatch(of template: [Float], blurTemplate: [Float], tw: Int, th: Int, in frame: Luma, blurFrame: Luma,
+                                  around p: (Int, Int)) -> (Int, Int, Double) {
         let maxX = frame.width - tw, maxY = frame.height - th
         guard maxX >= 0, maxY >= 0 else { return (p.0, p.1, 9) }
-        let radiusX = max(frame.width / 8, 12), radiusY = max(frame.height / 6, 12)
+        let radiusX = max(frame.width / 6, 12), radiusY = max(frame.height / 3, 12)
         let sampleStep = max(1, Int(Double(tw * th).squareRoot() / 28))
         // Differences are judged against how much the region itself varies, so a plain area is not "matched" by chance.
         let mean = template.reduce(0, +) / Float(template.count)
         let contrast = Double(template.reduce(0) { $0 + abs($1 - mean) } / Float(template.count))
         let denom = max(contrast, 8)
 
-        func cost(_ ox: Int, _ oy: Int, step: Int, stop: Double) -> Double {
+        func cost(_ t: [Float], _ f: Luma, _ ox: Int, _ oy: Int, step: Int, stop: Double) -> Double {
             var sum: Double = 0, count = 0
             var j = 0
             while j < th {
-                let rowT = j * tw, rowF = (oy + j) * frame.width + ox
+                let rowT = j * tw, rowF = (oy + j) * f.width + ox
                 var i = 0
                 while i < tw {
-                    sum += Double(abs(template[rowT + i] - Float(frame.data[rowF + i])))
+                    sum += Double(abs(t[rowT + i] - Float(f.data[rowF + i])))
                     count += 1
                     i += step
                 }
@@ -148,26 +191,27 @@ enum ObjectTracker {
             return sum / (Double(max(count, 1)) * denom)
         }
 
-        var best = (x: min(max(p.0, 0), maxX), y: min(max(p.1, 0), maxY), score: 9.0)
-        best.score = cost(best.x, best.y, step: sampleStep, stop: 9)
-        let coarse = 2
-        var oy = max(p.1 - radiusY, 0)
-        while oy <= min(p.1 + radiusY, maxY) {
-            var ox = max(p.0 - radiusX, 0)
-            while ox <= min(p.0 + radiusX, maxX) {
-                let c = cost(ox, oy, step: sampleStep, stop: best.score)
+        let cx = min(max(p.0, 0), maxX), cy = min(max(p.1, 0), maxY)
+        var best = (x: cx, y: cy, score: cost(blurTemplate, blurFrame, cx, cy, step: sampleStep, stop: 9))
+        let coarse = 3
+        var oy = max(cy - radiusY, 0)
+        while oy <= min(cy + radiusY, maxY) {
+            var ox = max(cx - radiusX, 0)
+            while ox <= min(cx + radiusX, maxX) {
+                let c = cost(blurTemplate, blurFrame, ox, oy, step: sampleStep, stop: best.score)
                 if c < best.score { best = (ox, oy, c) }
                 ox += coarse
             }
             oy += coarse
         }
-        // Fine pass around the coarse winner, with every pixel of the template (every 2nd for big ones).
-        let fineStep = max(1, sampleStep / 2)
-        var fine = best
-        for oy in max(best.y - coarse, 0)...min(best.y + coarse, maxY) {
-            for ox in max(best.x - coarse, 0)...min(best.x + coarse, maxX) {
-                let c = cost(ox, oy, step: fineStep, stop: fine.score)
-                if c < fine.score { fine = (ox, oy, c) }
+        // Fine pass on the sharp images around the coarse winner (and the unmoved position, in case nothing moved).
+        var fine = (x: best.x, y: best.y, score: 9.0)
+        for centre in [(best.x, best.y), (cx, cy)] {
+            for oy in max(centre.1 - coarse, 0)...min(centre.1 + coarse, maxY) {
+                for ox in max(centre.0 - coarse, 0)...min(centre.0 + coarse, maxX) {
+                    let c = cost(template, frame, ox, oy, step: max(1, sampleStep / 2), stop: fine.score)
+                    if c < fine.score { fine = (ox, oy, c) }
+                }
             }
         }
         return (fine.x, fine.y, fine.score)
