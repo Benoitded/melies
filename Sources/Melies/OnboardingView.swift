@@ -8,7 +8,13 @@ struct OnboardingView: View {
     let done: () -> Void
 
     /// Debug: MELIES_FORCE_MISSING=1 shows the permission step even when it is already granted.
-    private static let forceMissing = ProcessInfo.processInfo.environment["MELIES_FORCE_MISSING"] != nil
+    private static let forceMissing: Bool = {
+        #if DEBUG || MELIES_HOOKS
+        return ProcessInfo.processInfo.environment["MELIES_FORCE_MISSING"] != nil
+        #else
+        return false
+        #endif
+    }()
 
     @State private var allowed = !forceMissing && CGPreflightScreenCaptureAccess()
     @State private var openedSettings = false

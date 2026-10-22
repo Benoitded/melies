@@ -284,7 +284,9 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
     }
 
     private func alert(_ title: String, _ text: String) {
+#if DEBUG || MELIES_HOOKS
         if ProcessInfo.processInfo.environment["MELIES_RECORD_TEST"] != nil { print("[record] alert: \(title) | \(text)"); return }
+#endif
         let a = NSAlert()
         a.messageText = title
         a.informativeText = text

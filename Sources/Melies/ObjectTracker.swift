@@ -14,7 +14,13 @@ enum ObjectTracker {
     }
 
     /// MELIES_TRACK_DEBUG=1 prints every match to stderr. Read once: it used to copy the whole environment at every frame.
-    private static let debugTrace = ProcessInfo.processInfo.environment["MELIES_TRACK_DEBUG"] != nil
+    private static let debugTrace: Bool = {
+        #if DEBUG || MELIES_HOOKS
+        return ProcessInfo.processInfo.environment["MELIES_TRACK_DEBUG"] != nil
+        #else
+        return false
+        #endif
+    }()
 
     /// Mean luma difference, relative to the contrast of the region, above which it is considered gone
     /// (about 0 for a perfect match, about 1.1 for unrelated content).

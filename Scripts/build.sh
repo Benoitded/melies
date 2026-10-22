@@ -4,6 +4,7 @@
 #   MELIES_SIGN_IDENTITY  signing identity (default: the first "Apple Development", else ad hoc)
 #   MELIES_HARDENED=1     hardened runtime + secure timestamp (needed for notarization)
 #   MELIES_OUT=dir        leave Melies.app in dir and do not install or quit the running app
+#   MELIES_HOOKS=1        keep the MELIES_* test hooks in the release build (never for a release)
 # The bundle is assembled and signed in a temp dir, away from Spotlight and Finder, which
 # otherwise race with codesign by writing stray attributes into the bundle.
 set -euo pipefail
@@ -29,7 +30,10 @@ case "$(xcode-select -p 2>/dev/null)" in
     ;;
 esac
 
-swift build -c release --force-resolved-versions
+# MELIES_HOOKS=1 keeps the test hooks (MELIES_* environment variables) in a release build, for local checks only.
+EXTRA=()
+[ "${MELIES_HOOKS:-0}" = "1" ] && EXTRA=(-Xswiftc -DMELIES_HOOKS)
+swift build -c release --force-resolved-versions ${EXTRA[@]+"${EXTRA[@]}"}
 BIN=$(swift build -c release --force-resolved-versions --show-bin-path)
 
 STAGE=$(mktemp -d "${TMPDIR:-/tmp}/melies-build.XXXXXX")
