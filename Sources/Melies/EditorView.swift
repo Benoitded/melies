@@ -134,7 +134,18 @@ struct EditorView: View {
                     if let status = model.status {
                         Text(status).font(.callout).foregroundStyle(.secondary).lineLimit(1)
                     }
-                    if model.busy { ProgressView().controlSize(.small) }
+                    if model.busy {
+                        if model.exportProgress > 0 {
+                            ProgressView(value: model.exportProgress).progressViewStyle(.linear).frame(width: 70)
+                        } else {
+                            ProgressView().controlSize(.small)
+                        }
+                        Button { model.cancelExport() } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .tip(L("tip.cancel_export"), trailing: true)
+                    }
                     Spacer()
                     if model.hasAudio {
                         Button { model.includeAudio.toggle() } label: {

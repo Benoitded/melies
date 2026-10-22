@@ -214,3 +214,5 @@
 "exp.hevc.note" = "HEVC (H.265) donne des fichiers environ 40 % plus petits. Twitter/X et certaines apps peuvent le refuser.";
 "exp.estimating" = "Estimation de la taille...";
 "exp.estimate.range" = "Entre %@ et %@ Mo selon le contenu. Fixe une taille maximale pour un résultat exact.";
+"status.cancelled" = "Export annulé";
+"tip.cancel_export" = "Annuler l'export (Échap)";

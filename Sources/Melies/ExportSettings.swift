@@ -49,12 +49,25 @@ struct ExportSettings: Equatable {
     }
 }
 
+/// Lets the UI follow and cancel a running export. Safe to call from the encoder queues.
+final class ExportControl: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+    private let onProgress: @Sendable (Double) -> Void
+
+    init(onProgress: @escaping @Sendable (Double) -> Void) { self.onProgress = onProgress }
+
+    var isCancelled: Bool { lock.lock(); defer { lock.unlock() }; return cancelled }
+    func cancel() { lock.lock(); cancelled = true; lock.unlock() }
+    func report(_ fraction: Double) { onProgress(min(max(fraction, 0), 1)) }
+}
+
 // MARK: MP4 written with a chosen bitrate
 
 enum MP4Writer {
     /// Reads the composed frames (and the mixed sound) and writes an H.264 / AAC MP4 at `bitrate`.
     static func write(asset: AVAsset, range: CMTimeRange, track: AVAssetTrack, composition: AVVideoComposition,
-                      canvas: CGSize, bitrate: Int, hevc: Bool = false, audioTracks: [AVAssetTrack], audioMix: AVAudioMix?, to url: URL) async throws {
+                      canvas: CGSize, bitrate: Int, hevc: Bool = false, audioTracks: [AVAssetTrack], audioMix: AVAudioMix?, control: ExportControl? = nil, to url: URL) async throws {
         try? FileManager.default.removeItem(at: url)
         let reader = try AVAssetReader(asset: asset)
         reader.timeRange = range
@@ -109,13 +122,22 @@ enum MP4Writer {
 
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             let group = DispatchGroup()
+            let total = max(range.duration.seconds, 0.001)
             func pump(_ input: AVAssetWriterInput, _ output: AVAssetReaderOutput, _ label: String) {
                 group.enter()
                 let queue = DispatchQueue(label: "melies.export.\(label)")
                 input.requestMediaDataWhenReady(on: queue) {
                     while input.isReadyForMoreMediaData {
+                        if control?.isCancelled == true {
+                            input.markAsFinished()
+                            group.leave()
+                            return
+                        }
                         if let sample = output.copyNextSampleBuffer() {
                             input.append(sample)
+                            if label == "video" {
+                                control?.report((CMSampleBufferGetPresentationTimeStamp(sample).seconds - range.start.seconds) / total)
+                            }
                         } else {
                             input.markAsFinished()
                             group.leave()
@@ -129,6 +151,12 @@ enum MP4Writer {
             group.notify(queue: .global()) { continuation.resume() }
         }
 
+        if control?.isCancelled == true {
+            reader.cancelReading()
+            writer.cancelWriting()
+            try? FileManager.default.removeItem(at: url)
+            throw CancellationError()
+        }
         await writer.finishWriting()
         if writer.status != .completed { throw writer.error ?? ExportError.noVideoTrack }
     }
@@ -144,21 +172,21 @@ enum MP4Writer {
 enum GIFWriter {
     /// Writes an animated GIF, shrinking width and frame rate until it fits `maxMegabytes` (if any).
     static func write(asset: AVAsset, range: CMTimeRange, track: AVAssetTrack, composition: AVVideoComposition,
-                      canvas: CGSize, maxMegabytes: Int?, to url: URL) async throws {
+                      canvas: CGSize, maxMegabytes: Int?, control: ExportControl? = nil, to url: URL) async throws {
         let attempts: [(width: CGFloat, fps: Double)] = maxMegabytes == nil
             ? [(800, 15)]
             : [(720, 15), (600, 12), (480, 12), (400, 10), (320, 8), (256, 6), (200, 5), (160, 4), (128, 3)]
         for attempt in attempts {
             let width = min(attempt.width, canvas.width)
             let size = try await writeOnce(asset: asset, range: range, track: track, composition: composition,
-                                           canvas: canvas, width: width, fps: attempt.fps, to: url)
+                                           canvas: canvas, width: width, fps: attempt.fps, control: control, to: url)
             if let mb = maxMegabytes, size > mb * 1_000_000 { continue }
             return
         }
     }
 
     private static func writeOnce(asset: AVAsset, range: CMTimeRange, track: AVAssetTrack, composition: AVVideoComposition,
-                                  canvas: CGSize, width: CGFloat, fps: Double, to url: URL) async throws -> Int {
+                                  canvas: CGSize, width: CGFloat, fps: Double, control: ExportControl?, to url: URL) async throws -> Int {
         try? FileManager.default.removeItem(at: url)
         let reader = try AVAssetReader(asset: asset)
         reader.timeRange = range
@@ -176,12 +204,14 @@ enum GIFWriter {
         var frames: [CGImage] = []
         var next = 0
         while let sample = output.copyNextSampleBuffer() {
+            if control?.isCancelled == true { reader.cancelReading(); throw CancellationError() }
             let time = CMSampleBufferGetPresentationTimeStamp(sample).seconds - range.start.seconds
             guard next < total, time >= Double(next) / fps - 0.0001, let buffer = CMSampleBufferGetImageBuffer(sample) else { continue }
             let image = CIImage(cvPixelBuffer: buffer).transformed(by: CGAffineTransform(scaleX: scale, y: scale))
             if let cg = context.createCGImage(image, from: image.extent) {
                 frames.append(cg)
                 next += 1
+                control?.report(Double(next) / Double(total))
             }
         }
         guard let last = frames.last else { throw ExportError.noVideoTrack }

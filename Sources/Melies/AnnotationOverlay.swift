@@ -14,6 +14,7 @@ struct AnnotationOverlay: View {
         case textClick
     }
     @State private var mode: Mode?
+    @State private var lastHere: CGPoint?
 
     private var source: CGSize { model.sourceSize }
     private var scale: CGFloat { video.width / max(region.width * source.width, 1) }
@@ -120,6 +121,8 @@ struct AnnotationOverlay: View {
             .onEnded { value in
                 finish(value)
                 mode = nil
+                lastHere = nil
+                model.spaceHeld = false
                 model.annotationGestureActive = false
             }
     }
@@ -156,7 +159,20 @@ struct AnnotationOverlay: View {
         }
         switch mode {
         case .create(let id, _):
-            model.updateAnnotation(id) { $0.p2 = here }
+            // Space held: move the whole shape with the pointer (start point included), like the capture selection.
+            let previous = lastHere ?? here
+            lastHere = here
+            if model.spaceHeld {
+                model.updateAnnotation(id) { a in
+                    var dx = here.x - previous.x, dy = here.y - previous.y
+                    dx = min(max(dx, -min(a.p1.x, a.p2.x)), 1 - max(a.p1.x, a.p2.x))
+                    dy = min(max(dy, -min(a.p1.y, a.p2.y)), 1 - max(a.p1.y, a.p2.y))
+                    a.p1 = CGPoint(x: a.p1.x + dx, y: a.p1.y + dy)
+                    a.p2 = CGPoint(x: a.p2.x + dx, y: a.p2.y + dy)
+                }
+            } else {
+                model.updateAnnotation(id) { $0.p2 = here }
+            }
         case .edit(let id, let part, let original):
             let dx = value.translation.width / video.width * region.width
             let dy = value.translation.height / video.height * region.height

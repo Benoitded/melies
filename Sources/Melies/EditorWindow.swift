@@ -19,8 +19,14 @@ final class EditorWindowController {
     /// They stay quiet while a text field is being edited, and with Cmd, Option or Control (those are menu items).
     private func installKeyMonitor() {
         guard keyMonitor == nil else { return }
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
-            MainActor.assumeIsolated { (self?.handleKey(event) ?? false) ? nil : event }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] event in
+            MainActor.assumeIsolated {
+                if event.type == .keyUp {
+                    if event.keyCode == 49 { self?.session.model?.spaceHeld = false }
+                    return event
+                }
+                return (self?.handleKey(event) ?? false) ? nil : event
+            }
         }
     }
 
@@ -35,8 +41,11 @@ final class EditorWindowController {
         let shift = event.modifierFlags.contains(.shift)
 
         switch event.keyCode {
-        case 49: model.togglePlay(); return true                                  // Space
+        case 49:                                                                  // Space
+            if model.annotationGestureActive { model.spaceHeld = true; return true } // moves the shape being drawn
+            model.togglePlay(); return true
         case 53:                                                                  // Esc
+            if model.busy { model.cancelExport(); return true }
             if model.cropMode { model.cancelCrop() }
             else if model.tool != .select { model.setTool(.select) }
             else if model.selectedAnnotationID != nil { model.selectAnnotation(nil) }
