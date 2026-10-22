@@ -96,13 +96,14 @@ struct EditorView: View {
                     let playerH = video.height / max(region.height, 0.0001)
                     ZStack {
                         Checkerboard()
+                        if model.frame.enabled { FramePanel(style: model.frame, video: video) }
                         ZStack(alignment: .topLeading) {
                             PlayerView(player: model.player)
                                 .frame(width: playerW, height: playerH)
                                 .offset(x: -region.minX * playerW, y: -region.minY * playerH)
                         }
                         .frame(width: video.width, height: video.height, alignment: .topLeading)
-                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: model.frame.enabled ? CGFloat(model.frame.radius) * video.width : 0, style: .circular))
                         .position(x: video.midX, y: video.midY)
                         if !model.annotations.isEmpty || model.tool != .select || (model.showClicks && model.hasClicks), !model.cropMode, model.selectedPoint == nil {
                             AnnotationOverlay(model: model, video: video, region: region)
@@ -185,6 +186,7 @@ struct EditorView: View {
                         .buttonBorderShape(.circle)
                         .tip(model.includeAudio ? L("tip.audio.on") : L("tip.audio.off"), trailing: true)
                     }
+                    FrameOptionsButton(model: model)
                     ExportOptionsButton(model: model)
                 }
                 .padding(.horizontal, 16)
@@ -215,5 +217,23 @@ private struct ExportOptionsButton: View {
         .buttonBorderShape(.circle)
         .tip(L("exp.title"), trailing: true)
         .popover(isPresented: $open, arrowEdge: .top) { ExportOptionsView(model: model) }
+    }
+}
+
+private struct FrameOptionsButton: View {
+    @ObservedObject var model: EditorModel
+    @State private var open = false
+
+    var body: some View {
+        Button { open.toggle() } label: {
+            Image(systemName: model.frame.enabled ? "rectangle.inset.filled" : "rectangle.dashed")
+                .font(.system(size: 12))
+                .frame(width: 20, height: 20)
+        }
+        .buttonStyle(.glass)
+        .clickCursor()
+        .buttonBorderShape(.circle)
+        .tip(L("frame.title"), trailing: true)
+        .popover(isPresented: $open, arrowEdge: .top) { FrameOptionsView(model: model) }
     }
 }

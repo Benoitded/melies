@@ -252,3 +252,19 @@
 "toast.norecording" = "Aucun enregistrement trouvé dans %@";
 "toast.toosmall" = "Trop petit : dessine au moins 40 × 40";
 "rec.perm.open" = "Ouvrir les Réglages Système";
+
+"frame.title" = "Arrière-plan";
+"frame.margin" = "Marges";
+"frame.radius" = "Coins arrondis";
+"frame.shadow" = "Ombre";
+"frame.preset.aurora" = "Aurore";
+"frame.preset.sunset" = "Coucher de soleil";
+"frame.preset.ocean" = "Océan";
+"frame.preset.mint" = "Menthe";
+"frame.preset.lavender" = "Lavande";
+"frame.preset.night" = "Nuit";
+"frame.preset.graphite" = "Graphite";
+"frame.preset.snow" = "Neige";
+"frame.preset.white" = "Blanc";
+"frame.preset.gray" = "Gris";
+"frame.preset.black" = "Noir";

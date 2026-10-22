@@ -252,3 +252,19 @@
 "toast.norecording" = "No recording found in %@";
 "toast.toosmall" = "Too small: draw at least 40 × 40";
 "rec.perm.open" = "Open System Settings";
+
+"frame.title" = "Background";
+"frame.margin" = "Margin";
+"frame.radius" = "Rounded corners";
+"frame.shadow" = "Shadow";
+"frame.preset.aurora" = "Aurora";
+"frame.preset.sunset" = "Sunset";
+"frame.preset.ocean" = "Ocean";
+"frame.preset.mint" = "Mint";
+"frame.preset.lavender" = "Lavender";
+"frame.preset.night" = "Night";
+"frame.preset.graphite" = "Graphite";
+"frame.preset.snow" = "Snow";
+"frame.preset.white" = "White";
+"frame.preset.gray" = "Gray";
+"frame.preset.black" = "Black";
