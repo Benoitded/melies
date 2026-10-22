@@ -61,8 +61,6 @@
 "onb.title" = "Méliès deve poter registrare lo schermo";
 "onb.sub" = "Attivalo nell'elenco, tutto qui.";
 "onb.open" = "Apri Impostazioni";
-"onb.relaunch_hint" = "Già attivo? A volte macOS chiede di riavviare.";
-"onb.relaunch" = "Riavvia";
 "onb.ready" = "È tutto pronto";
 "onb.rec_row" = "Registra, poi ferma";
 "onb.editor_row" = "Apri l'editor";
@@ -233,3 +231,5 @@
 "set.adv.version" = "Versione %@";
 "zoom.auto" = "Auto dai clic";
 "zoom.auto.tip" = "Zoom su ogni clic fatto durante la registrazione";
+"onb.waiting" = "In attesa dell'interruttore…";
+"onb.restarting" = "Fatto, Méliès si riavvia…";

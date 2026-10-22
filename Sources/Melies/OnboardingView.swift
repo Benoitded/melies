@@ -12,6 +12,7 @@ struct OnboardingView: View {
 
     @State private var allowed = !forceMissing && CGPreflightScreenCaptureAccess()
     @State private var openedSettings = false
+    @State private var restarting = false
     private let poll = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -27,7 +28,10 @@ struct OnboardingView: View {
         .padding(.bottom, 30)
         .frame(width: 440)
         .onReceive(poll) { _ in
-            if !Self.forceMissing { allowed = CGPreflightScreenCaptureAccess() }
+            guard !Self.forceMissing else { return }
+            allowed = CGPreflightScreenCaptureAccess()
+            // Switched on in Settings but this process still says no: a fresh one will say yes, so restart by ourselves.
+            if !allowed, openedSettings, !restarting { Task { await restartIfGranted() } }
         }
         .animation(.easeInOut(duration: 0.25), value: allowed)
     }
@@ -53,11 +57,12 @@ struct OnboardingView: View {
                 .controlSize(.large)
 
                 if openedSettings {
-                    HStack(spacing: 6) {
-                        Text(L("onb.relaunch_hint")).foregroundStyle(.secondary)
-                        Button(L("onb.relaunch")) { relaunch() }.buttonStyle(.link)
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text(restarting ? L("onb.restarting") : L("onb.waiting")).foregroundStyle(.secondary)
                     }
                     .font(.callout)
+                    .transition(.opacity)
                 }
             }
         }
@@ -86,6 +91,23 @@ struct OnboardingView: View {
                 .padding(.horizontal, 11).padding(.vertical, 4)
                 .background(Capsule().fill(Color.primary.opacity(0.1)))
         }
+    }
+
+    /// Asks a fresh copy of the app whether the switch is on now; if so, relaunches into the new state.
+    private func restartIfGranted() async {
+        guard let executable = Bundle.main.executableURL else { return }
+        let granted = await Task.detached { () -> Bool in
+            let probe = Process()
+            probe.executableURL = executable
+            probe.arguments = ["--check-screen-access"]
+            guard (try? probe.run()) != nil else { return false }
+            probe.waitUntilExit()
+            return probe.terminationStatus == 0
+        }.value
+        guard granted, !restarting else { return }
+        restarting = true
+        try? await Task.sleep(for: .milliseconds(900)) // let the message be read
+        relaunch()
     }
 
     private func relaunch() {
@@ -180,7 +202,7 @@ final class OnboardingWindowController {
 
             // The whole window is a Liquid Glass surface.
             let glass = NSGlassEffectView()
-            glass.cornerRadius = 26
+            glass.cornerRadius = 0 // the window clips it (see useSharedGlassShape)
             glass.contentView = host
 
             let w = NSWindow(contentRect: .zero, styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
@@ -191,6 +213,7 @@ final class OnboardingWindowController {
             w.isOpaque = false
             w.backgroundColor = .clear
             w.contentView = glass
+            w.useSharedGlassShape()
             w.setContentSize(host.fittingSize)
             w.center()
             window = w

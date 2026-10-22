@@ -61,8 +61,6 @@
 "onb.title" = "Méliès doit pouvoir filmer l'écran";
 "onb.sub" = "Active-le dans la liste, c'est tout.";
 "onb.open" = "Ouvrir les Réglages";
-"onb.relaunch_hint" = "Déjà activé ? macOS demande parfois de relancer.";
-"onb.relaunch" = "Relancer";
 "onb.ready" = "C'est prêt";
 "onb.rec_row" = "Enregistrer, puis arrêter";
 "onb.editor_row" = "Ouvrir l'éditeur";
@@ -233,3 +231,5 @@
 "set.adv.version" = "Version %@";
 "zoom.auto" = "Auto depuis les clics";
 "zoom.auto.tip" = "Zoome sur chaque clic fait pendant l'enregistrement";
+"onb.waiting" = "J'attends l'interrupteur…";
+"onb.restarting" = "C'est bon, Méliès redémarre…";
