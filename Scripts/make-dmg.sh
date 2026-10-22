@@ -12,8 +12,8 @@ TMP=$(mktemp -d); trap 'hdiutil detach "$TMP/mnt" -quiet -force 2>/dev/null || t
 mkdir -p "$TMP/content/.background"
 ditto --noextattr --noqtn "$SRC/Melies.app" "$TMP/content/Melies.app"
 ln -s /Applications "$TMP/content/Applications"
-# MELIES_DMG_HINT="First launch: right-click the app, then Open" adds a small line (for builds that are not notarized).
-swift Scripts/dmg-background.swift "$TMP/content/.background/bg.png" "${MELIES_DMG_HINT:-}"
+# The small line under the window is for builds that are not notarized: set MELIES_DMG_HINT="" to hide it.
+swift Scripts/dmg-background.swift "$TMP/content/.background/bg.png" "${MELIES_DMG_HINT-First launch: right-click the app, then Open}"
 
 hdiutil create -quiet -volname "$VOL" -srcfolder "$TMP/content" -fs HFS+ -format UDRW -ov "$TMP/rw.dmg"
 mkdir "$TMP/mnt"

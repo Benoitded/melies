@@ -1,4 +1,4 @@
-// Draws the DMG window background: a flat neutral color and a thin arrow from the app to Applications.
+// Draws the DMG window background: a flat neutral color, a thin arrow from the app to Applications, a title and an optional small hint.
 // Usage: swift Scripts/dmg-background.swift out.png ["small hint line"]      (660x400 pt window, written at 2x)
 import AppKit
 
@@ -30,6 +30,7 @@ func draw(_ text: String, size: CGFloat, weight: NSFont.Weight, color: NSColor, 
     let w = s.size().width
     s.draw(at: NSPoint(x: (CGFloat(width) - w) / 2, y: centerY))
 }
+draw("Drag Méliès to Applications", size: 17, weight: .semibold, color: NSColor(calibratedWhite: 0.18, alpha: 1), centerY: CGFloat(height) - 70)
 if CommandLine.arguments.count > 2, !CommandLine.arguments[2].isEmpty {
     draw(CommandLine.arguments[2], size: 12, weight: .regular, color: NSColor(calibratedWhite: 0.42, alpha: 1), centerY: 38)
 }
