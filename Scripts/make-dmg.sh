@@ -34,8 +34,8 @@ tell application "Finder"
   set icon size of o to 128
   set text size of o to 13
   set background picture of o to (POSIX file "$TMP/mnt/.background/bg.png" as alias)
-  set position of item "Melies.app" of d to {180, 190}
-  set position of item "Applications" of d to {480, 190}
+  set position of item "Melies.app" of d to {180, 205}
+  set position of item "Applications" of d to {480, 205}
   update d without registering applications
   delay 1
   close w
