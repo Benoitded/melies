@@ -37,6 +37,13 @@ func demoEffects() -> [Annotation] {
 @MainActor
 enum DebugHooks {
     static func run() {
+        // Debug: MELIES_TOAST_TEST=1 shows the "no clicks" toast two seconds after launch.
+        if ProcessInfo.processInfo.environment["MELIES_TOAST_TEST"] != nil {
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                Toast.show(L("toast.noclicks"))
+            }
+        }
         // Debug: MELIES_AUTOZOOM_TEST=video fakes clicks at 1.0, 1.8 (close), 6.0 and 6.2 s and prints the zoom points.
         if let path = ProcessInfo.processInfo.environment["MELIES_AUTOZOOM_TEST"] {
             Task { @MainActor in

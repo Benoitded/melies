@@ -74,7 +74,7 @@ struct EditorView: View {
 
     private struct Loaded: View {
         @ObservedObject var session: EditorSession
-        @ObservedObject var model: EditorModel
+        var model: EditorModel
         @State private var lastDrag: CGSize = .zero
 
         private func updateCanvas(_ geo: GeometryProxy) {
@@ -96,13 +96,14 @@ struct EditorView: View {
                     let playerH = video.height / max(region.height, 0.0001)
                     ZStack {
                         Checkerboard()
+                        if model.frame.enabled { FramePanel(style: model.frame, video: video) }
                         ZStack(alignment: .topLeading) {
                             PlayerView(player: model.player)
                                 .frame(width: playerW, height: playerH)
                                 .offset(x: -region.minX * playerW, y: -region.minY * playerH)
                         }
                         .frame(width: video.width, height: video.height, alignment: .topLeading)
-                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: model.frame.enabled ? CGFloat(model.frame.radius) * video.width : 0, style: .circular))
                         .position(x: video.midX, y: video.midY)
                         if !model.annotations.isEmpty || model.tool != .select || (model.showClicks && model.hasClicks), !model.cropMode, model.selectedPoint == nil {
                             AnnotationOverlay(model: model, video: video, region: region)
@@ -152,7 +153,7 @@ struct EditorView: View {
                     .clickCursor()
                     .buttonBorderShape(.circle)
                     HStack(spacing: 5) {
-                        Text(timecode(max(model.current - model.start, 0)))
+                        ElapsedLabel(model: model)
                         Text("/").foregroundStyle(.tertiary)
                         Text(timecode(model.end - model.start)).foregroundStyle(.secondary)
                     }
@@ -185,6 +186,7 @@ struct EditorView: View {
                         .buttonBorderShape(.circle)
                         .tip(model.includeAudio ? L("tip.audio.on") : L("tip.audio.off"), trailing: true)
                     }
+                    FrameOptionsButton(model: model)
                     ExportOptionsButton(model: model)
                 }
                 .padding(.horizontal, 16)
@@ -193,15 +195,25 @@ struct EditorView: View {
             .padding(.bottom, 14)
         }
 
-        private func timecode(_ seconds: Double) -> String {
-            let s = max(seconds, 0)
-            return String(format: "%d:%02d.%d", Int(s) / 60, Int(s) % 60, Int((s * 10).truncatingRemainder(dividingBy: 10)))
-        }
+        private func timecode(_ seconds: Double) -> String { Timecode.format(seconds) }
     }
 }
 
+enum Timecode {
+    static func format(_ seconds: Double) -> String {
+        let s = max(seconds, 0)
+        return String(format: "%d:%02d.%d", Int(s) / 60, Int(s) % 60, Int((s * 10).truncatingRemainder(dividingBy: 10)))
+    }
+}
+
+/// Elapsed time in the kept range: the one label that follows the playhead, so it is its own view.
+private struct ElapsedLabel: View {
+    var model: EditorModel
+    var body: some View { Text(Timecode.format(max(model.current - model.start, 0))) }
+}
+
 private struct ExportOptionsButton: View {
-    @ObservedObject var model: EditorModel
+    var model: EditorModel
     @State private var open = false
 
     var body: some View {
@@ -215,5 +227,23 @@ private struct ExportOptionsButton: View {
         .buttonBorderShape(.circle)
         .tip(L("exp.title"), trailing: true)
         .popover(isPresented: $open, arrowEdge: .top) { ExportOptionsView(model: model) }
+    }
+}
+
+private struct FrameOptionsButton: View {
+    var model: EditorModel
+    @State private var open = false
+
+    var body: some View {
+        Button { open.toggle() } label: {
+            Image(systemName: model.frame.enabled ? "rectangle.inset.filled" : "rectangle.dashed")
+                .font(.system(size: 12))
+                .frame(width: 20, height: 20)
+        }
+        .buttonStyle(.glass)
+        .clickCursor()
+        .buttonBorderShape(.circle)
+        .tip(L("frame.title"), trailing: true)
+        .popover(isPresented: $open, arrowEdge: .top) { FrameOptionsView(model: model) }
     }
 }

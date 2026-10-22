@@ -41,6 +41,15 @@ final class MCPServer: ObservableObject {
     }
 
     private var listener: NWListener?
+    private lazy var recordingController: RecordingController = {
+        let controller = RecordingController(
+            layout: LiveScreenLayout(), confirmer: AlertConfirmer(), backend: LiveRecordingBackend(),
+            isExportRunning: { EditorWindowController.shared.session.model?.busy ?? false },
+            clientName: { [weak self] in self?.clientName })
+        controller.onAutoStop = { outcome in Toast.show(L("mcprec.autostop", Int(outcome.duration))) }
+        return controller
+    }()
+
     private lazy var mcp: MCPProtocol = {
         var protocolHandler = MCPProtocol(tools: EditorTools(
             model: { EditorWindowController.shared.session.model },
@@ -48,7 +57,8 @@ final class MCPServer: ObservableObject {
                 guard let target = url ?? LatestRecording.find() else { return nil }
                 EditorWindowController.shared.open(target)
                 return target
-            }
+            },
+            recording: recordingController
         ))
         protocolHandler.onActivity = { [weak self] activity in self?.record(activity) }
         return protocolHandler
@@ -151,8 +161,8 @@ final class MCPServer: ObservableObject {
     private static func loadToken() -> String {
         if let saved = TokenStore.read(), saved.count >= 32 { return saved }
         if let legacy = UserDefaults.standard.string(forKey: "mcpToken"), legacy.count >= 32 {
-            TokenStore.write(legacy)
-            UserDefaults.standard.removeObject(forKey: "mcpToken")
+            // The old copy goes only once the Keychain really holds the key.
+            if TokenStore.write(legacy) { UserDefaults.standard.removeObject(forKey: "mcpToken") }
             return legacy
         }
         let fresh = makeToken()
@@ -185,8 +195,9 @@ final class MCPServer: ObservableObject {
         switch request.method {
         case "POST":
             // One call at a time: two clients (or two calls) must not interleave their edits and undo steps.
-            await acquire()
+            guard await acquire() else { return .status(499, "Client Closed Request") } // gone while waiting
             defer { release() }
+            if Task.isCancelled { return .status(499, "Client Closed Request") }
             // A call that never ends (a tracking or export that hangs) must not block every later request:
             // after the deadline the long operations are cancelled so the call returns and the lock is released.
             let watchdog = Task { @MainActor in
@@ -210,14 +221,30 @@ final class MCPServer: ObservableObject {
     private static let toolDeadline = 120.0
 
     private var locked = false
-    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var waiters: [(id: UUID, continuation: CheckedContinuation<Bool, Never>)] = []
 
-    private func acquire() async {
-        if locked { await withCheckedContinuation { waiters.append($0) } } else { locked = true }
+    /// True once the lock is held. False when the caller was cancelled (its client disconnected) while waiting: a
+    /// dead connection must not run its mutating call later.
+    private func acquire() async -> Bool {
+        if !locked { locked = true; return true }
+        let id = UUID()
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+                if Task.isCancelled { continuation.resume(returning: false); return }
+                waiters.append((id, continuation))
+            }
+        } onCancel: {
+            Task { @MainActor in self.dropWaiter(id) }
+        }
+    }
+
+    private func dropWaiter(_ id: UUID) {
+        guard let index = waiters.firstIndex(where: { $0.id == id }) else { return }
+        waiters.remove(at: index).continuation.resume(returning: false)
     }
 
     private func release() {
-        if waiters.isEmpty { locked = false } else { waiters.removeFirst().resume() }
+        if waiters.isEmpty { locked = false } else { waiters.removeFirst().continuation.resume(returning: true) }
     }
 
     private func authorized(_ request: HTTPRequest) -> Bool {
@@ -341,16 +368,39 @@ final class HTTPConnection: @unchecked Sendable {
             switch HTTPRequest.parse(buffer) {
             case .some(.some(let request)):
                 idleTimeout?.cancel() // the request is complete; a long tool call is not idle
-                Task {
+                let work = Task {
                     let reply = await handler(request)
                     send(reply)
                 }
+                Self.lock.lock(); self.work = work; Self.lock.unlock()
+                watchPeer()
             case .some(.none):
                 send(.status(400, "Bad Request"))
             case .none:
                 if error != nil || finished { connection.cancel() } else { receive() }
             }
         }
+    }
+
+    private var work: Task<Void, Never>?
+
+    /// Once the request is in, listens only for the client going away (EOF or error): the pending call is then
+    /// cancelled, so it does not wait for a lock and run later for nobody.
+    private func watchPeer() {
+        connection.stateUpdateHandler = { [self] state in
+            switch state {
+            case .cancelled, .failed: cancelWork()
+            default: break
+            }
+        }
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 1) { [self] _, _, finished, error in
+            if finished || error != nil { cancelWork() }
+        }
+    }
+
+    private func cancelWork() {
+        Self.lock.lock(); let work = self.work; Self.lock.unlock()
+        work?.cancel()
     }
 
     private func send(_ reply: HTTPReply) {
@@ -374,11 +424,16 @@ private enum TokenStore {
         return String(data: data, encoding: .utf8)
     }
 
-    static func write(_ token: String) {
-        SecItemDelete(query as CFDictionary)
+    /// True once the key is really in the Keychain (the caller keeps any older copy until then).
+    @discardableResult
+    static func write(_ token: String) -> Bool {
+        let data = Data(token.utf8)
+        let update = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        if update == errSecSuccess { return true }
+        guard update == errSecItemNotFound else { return false }
         var item = query
-        item[kSecValueData as String] = Data(token.utf8)
+        item[kSecValueData as String] = data
         item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        SecItemAdd(item as CFDictionary, nil)
+        return SecItemAdd(item as CFDictionary, nil) == errSecSuccess
     }
 }

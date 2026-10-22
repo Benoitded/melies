@@ -39,26 +39,27 @@ smart zooms, cursor smoothing, backgrounds). Try it for real before deciding.
 | File drag-and-drop handle | done (the drop still needs trying) |
 | Target-size export, GIF | **done** (options panel: MP4 or GIF, maximum size, resolution) |
 | Export identical to preview | by construction (same drawing), to be tested on real cases |
-| Auto zoom from clicks | to do (clicks are recorded) |
-| Background, margins, rounded corners, shadow | to do |
+| Auto zoom from clicks | done (three strengths, glides between close zooms); quality against CleanShot X 5.0 not compared yet |
+| Background, margins, rounded corners, shadow | done (gradient or solid presets, identical preview and export) |
 | Webcam overlay | to do |
-| Countdown, pause, window or full screen | to do |
-| Object tracking for blur and arrows | requested, to do (Vision) |
+| Countdown | done (3, 5 or 10 s, optional) |
+| Pause, window or full-screen target | to do |
+| Object tracking for blur, spotlight, rectangle, text and arrows | done (pixel matching, both directions from the playhead; Vision was tried first and dropped) |
 | Key display | to do, never storing the typed text |
-| Developer signing and notarization | to do before any distribution |
+| Developer signing and notarization | signing works, first notarization pending |
 | Still screenshots (scrolling, OCR) | out of scope for now |
 
 ## Proposed roadmap
 
 1. ~~Target-size export and GIF~~: done. Still to decide: a one-click "Twitter / X" preset.
 2. **Recording and export reliability**: recovery of the last recording after a
-   crash, export progress and cancellation, testing of long recordings (10 min and more) with
-   audio, testing with each macOS release.
-3. **Auto zoom from clicks**, editable like the current zoom points.
+   crash, testing of long recordings (10 min and more) with audio, testing with each macOS release.
+   Export progress and cancellation (Esc) are done, and the first unit tests exist (`swift test`).
+3. ~~Auto zoom from clicks~~: done, editable like the other zoom points.
 4. **Background, margins, rounded corners, shadow**, with presets.
-5. **Object tracking** for blur, spotlight, rectangle, text and arrows.
-6. **Choice of target**: window, full screen, remembered area; countdown and pause.
-7. **macOS trust**: signing, notarization, automatic update, Homebrew.
+5. ~~Object tracking~~ for blur, spotlight, rectangle, text and arrows: done.
+6. **Choice of target**: window, full screen, remembered area; pause (the countdown is done).
+7. **macOS trust**: signing and automatic update (Sparkle) are in place; notarization and Homebrew are waiting for the first release.
 8. Webcam overlay; key display.
 
 ## What not to do

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Settings of the selected annotation, in the floating panel: color, thickness or size, style, font.
 struct AnnotationPanel: View {
-    @ObservedObject var model: EditorModel
+    var model: EditorModel
     @FocusState private var textFocused: Bool
 
     private let presets: [RGBA] = [.red, .yellow, .green, .blue, .white]

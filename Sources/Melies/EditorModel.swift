@@ -3,18 +3,19 @@ import AppKit
 import UniformTypeIdentifiers
 
 @MainActor
-final class EditorModel: ObservableObject {
+@Observable
+final class EditorModel {
     let url: URL
     let asset: AVURLAsset
     let player: AVPlayer
 
-    @Published var duration: Double = 0
-    @Published var start: Double = 0 { didSet { noteChange() } }
-    @Published var end: Double = 0 { didSet { noteChange() } }
-    @Published var current: Double = 0
-    @Published var isPlaying = false
-    @Published var busy = false
-    @Published var status: String? {
+    var duration: Double = 0
+    var start: Double = 0 { didSet { noteChange() } }
+    var end: Double = 0 { didSet { noteChange() } }
+    var current: Double = 0
+    var isPlaying = false
+    var busy = false
+    var status: String? {
         didSet {
             // "Copied", "Saved", "Export failed"... said once, then gone: a status line left for hours looks like a
             // current state. A running export keeps its message until it ends.
@@ -26,25 +27,27 @@ final class EditorModel: ObservableObject {
             }
         }
     }
-    private var statusClear: Task<Void, Never>?
+    @ObservationIgnored private var statusClear: Task<Void, Never>?
     /// Set when the file could not be opened as a video: the editor then explains it instead of showing an empty player.
-    @Published var loadError: String?
-    @Published var sourceSize: CGSize = .zero
-    @Published var fps: Double = 0
+    var loadError: String?
+    var sourceSize: CGSize = .zero
+    var fps: Double = 0
     /// Crop region, normalized (0...1) in the upright frame, origin top-left. nil means no crop.
-    @Published var cropRect: CGRect? { didSet { noteChange() } }
-    @Published var cropMode = false
+    var cropRect: CGRect? { didSet { noteChange() } }
+    var cropMode = false
     /// The video has an audio track; `includeAudio` decides whether the export keeps it.
-    @Published var hasAudio = false
+    var hasAudio = false
     /// Draw a ring at every recorded click (preview and export).
-    @Published var showClicks = ClickStyleStore.enabled
+    var showClicks = ClickStyleStore.enabled
     var hasClicks: Bool { !(cursor?.clicks.isEmpty ?? true) }
-    @Published var includeAudio = true { didSet { editRevision += 1 } }
-    @Published var thumbnails: [NSImage] = []
-    @Published var zoomPoints: [ZoomPoint] = [] { didSet { noteChange() } }
-    @Published var selectedPointID: UUID?
-    @Published var tool: Tool = .select
-    @Published var annotations: [Annotation] = [] {
+    var includeAudio = true { didSet { editRevision += 1 } }
+    /// Background, margins, rounded corners, shadow (shared with the export through UserDefaults).
+    var frame = FrameStyle.load() { didSet { frame.save(); editRevision += 1 } }
+    var thumbnails: [NSImage] = []
+    var zoomPoints: [ZoomPoint] = [] { didSet { noteChange() } }
+    var selectedPointID: UUID?
+    var tool: Tool = .select
+    var annotations: [Annotation] = [] {
         didSet {
             hasBlur = annotations.contains { $0.kind == .blur }
             noteChange()
@@ -52,46 +55,48 @@ final class EditorModel: ObservableObject {
         }
     }
     /// Cached: asked at every playback tick, so it must not scan the annotations each time.
-    private var hasBlur = false
-    @Published var selectedAnnotationID: UUID?
+    @ObservationIgnored private var hasBlur = false
+    var selectedAnnotationID: UUID?
     /// True while a text field has the keyboard, so single-key shortcuts must stay quiet.
-    @Published var isEditingText = false
-    @Published var textFocusTick = 0
+    var isEditingText = false
+    var textFocusTick = 0
     /// A new text annotation asks for the keyboard; the panel takes it as soon as it appears.
-    var wantsTextFocus = false
+    @ObservationIgnored var wantsTextFocus = false
     /// Set while an annotation drag is in progress, so panning the canvas does not also run.
-    var annotationGestureActive = false
+    @ObservationIgnored var annotationGestureActive = false
     /// Space held while drawing a shape: the drag moves the whole shape instead of resizing it.
-    var spaceHeld = false
+    @ObservationIgnored var spaceHeld = false
 
     // Preview of blur: the latest decoded frame, upright, taken from the player.
-    private var frameOutput: AVPlayerItemVideoOutput?
-    private var lastBuffer: CVPixelBuffer?
+    @ObservationIgnored private var frameOutput: AVPlayerItemVideoOutput?
+    @ObservationIgnored private var lastBuffer: CVPixelBuffer?
     // While paused the player does not hand out new frames, so the blur preview asks for the frame itself.
-    private var stillFrame: CIImage?
-    private var stillFrameTime = -1.0
-    private var stillRequestedTime = -1.0
-    private var stillRequestID = 0
-    private lazy var stillGenerator: AVAssetImageGenerator = {
+    /// Bumped when a still frame arrives: the blur preview (a Canvas) reads it to redraw while paused.
+    private(set) var frameRevision = 0
+    @ObservationIgnored private var stillFrame: CIImage?
+    @ObservationIgnored private var stillFrameTime = -1.0
+    @ObservationIgnored private var stillRequestedTime = -1.0
+    @ObservationIgnored private var stillRequestID = 0
+    @ObservationIgnored private lazy var stillGenerator: AVAssetImageGenerator = {
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
         generator.requestedTimeToleranceBefore = .zero
         generator.requestedTimeToleranceAfter = .zero
         return generator
     }()
-    private var orientation: CGImagePropertyOrientation = .up
+    @ObservationIgnored private var orientation: CGImagePropertyOrientation = .up
     static let previewContext = CIContext()
     var cursor: CursorTrack?
     /// Canvas zoom: 1 means "fit in the window". `pan` moves the video from its fitted center.
-    @Published var zoom: Double = 1
-    @Published var pan: CGSize = .zero
+    var zoom: Double = 1
+    var pan: CGSize = .zero
     /// Size and window position of the video canvas, kept up to date by the view.
-    var canvasSize: CGSize = .zero
-    var canvasOrigin: CGPoint = .zero
+    @ObservationIgnored var canvasSize: CGSize = .zero
+    @ObservationIgnored var canvasOrigin: CGPoint = .zero
 
-    private var timeObserver: Any?
-    private var shareDelegate: ShareDelegate?
-    private var frameDuration: Double = 1.0 / 30.0
+    @ObservationIgnored private var timeObserver: Any?
+    @ObservationIgnored private var shareDelegate: ShareDelegate?
+    @ObservationIgnored private var frameDuration: Double = 1.0 / 30.0
 
     init(url: URL) {
         self.url = url
@@ -112,6 +117,7 @@ final class EditorModel: ObservableObject {
 
     deinit {
         if let timeObserver { player.removeTimeObserver(timeObserver) }
+        if let old = dragFile { try? FileManager.default.removeItem(at: old.url.deletingLastPathComponent()) }
     }
 
     private func load() async {
@@ -186,10 +192,10 @@ final class EditorModel: ObservableObject {
 
     private var undoStack: [Snapshot] = []
     private var redoStack: [Snapshot] = []
-    private var committed = Snapshot()
+    @ObservationIgnored private var committed = Snapshot()
     private var inBurst = false
-    private var burstWork: DispatchWorkItem?
-    private var restoring = false
+    @ObservationIgnored private var burstWork: DispatchWorkItem?
+    @ObservationIgnored private var restoring = false
 
     var canUndo: Bool { !undoStack.isEmpty || inBurst }
     var canRedo: Bool { !redoStack.isEmpty }
@@ -216,7 +222,7 @@ final class EditorModel: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: work)
     }
 
-    private var grouping = false
+    @ObservationIgnored private var grouping = false
 
     /// Everything changed between `beginUndoGroup` and `endUndoGroup` is one undo step (one turn of the AI).
     func beginUndoGroup() {
@@ -277,7 +283,11 @@ final class EditorModel: ObservableObject {
     func fitRect(in size: CGSize) -> CGRect {
         let area = CGRect(origin: .zero, size: size)
         guard displaySize.width > 0, size.width > 0, size.height > 0 else { return area }
-        return AVMakeRect(aspectRatio: displaySize, insideRect: area)
+        guard frame.enabled else { return AVMakeRect(aspectRatio: displaySize, insideRect: area) }
+        // Framed: the picture plus its margins (a fraction of the picture width) fit inside the area.
+        let aspect = displaySize.width / displaySize.height, p = CGFloat(frame.padding)
+        let w = min(size.width / (1 + 2 * p), size.height / (1 / aspect + 2 * p))
+        return CGRect(x: area.midX - w / 2, y: area.midY - w / aspect / 2, width: w, height: w / aspect)
     }
 
     /// Where the video is drawn inside the canvas, including zoom and pan.
@@ -386,10 +396,10 @@ final class EditorModel: ObservableObject {
         guard let clicks = cursor?.clicks, !clicks.isEmpty else { return }
         cropMode = false
         let result = AutoZoom(strength: .saved, range: start...max(end, start + 0.1), base: baseRect).generate(from: clicks)
-        guard !result.points.isEmpty else { Toast.show(L("zoom.auto.none")); return }
+        guard !result.points.isEmpty else { status = L("zoom.auto.none"); return }
         zoomPoints = result.points
         selectPoint(nil)
-        Toast.show(L("zoom.auto.done", result.zooms, result.clicks))
+        status = L("zoom.auto.done", result.zooms, result.clicks)
     }
 
     /// Z: the first time, creates a zoom with a start and an end. Afterwards, adds a waypoint at the playhead.
@@ -505,12 +515,14 @@ final class EditorModel: ObservableObject {
 
     // MARK: Tracking
 
-    @Published var trackingID: UUID?
-    @Published var trackingProgress: Double = 0
-    @Published var trackingLost = false
+    var trackingID: UUID?
+    var trackingProgress: Double = 0
+    var trackingLost = false
     /// The path found so far, shown on the video while the analysis runs.
-    @Published var trackingTrail: [TrackSample] = []
-    private var trackingTask: Task<Void, Never>?
+    var trackingTrail: [TrackSample] = []
+    @ObservationIgnored private var trackingTask: Task<Void, Never>?
+    /// Identifies the current analysis: writes from an older, cancelled run (still winding down) are dropped.
+    @ObservationIgnored private var trackingRun = 0
 
     /// The region to follow, normalized in the upright frame (origin top left).
     private func trackBox(for a: Annotation) -> CGRect {
@@ -534,6 +546,8 @@ final class EditorModel: ObservableObject {
         let box = trackBox(for: a)
         // Started in the middle of the annotation: it is followed on both sides of the playhead.
         guard box.width > 0.005, box.height > 0.005, a.end - from > 0.1 || from - a.start > 0.1 else { return }
+        trackingRun += 1
+        let run = trackingRun
         trackingID = id
         trackingProgress = 0
         trackingLost = false
@@ -541,11 +555,11 @@ final class EditorModel: ObservableObject {
         let asset = self.asset
         trackingTask = Task { [weak self] in
             let result = try? await ObjectTracker.track(asset: asset, box: box, from: from, to: a.end, lowerBound: a.start, progress: { p in
-                Task { @MainActor [weak self] in self?.trackingProgress = p }
+                Task { @MainActor [weak self] in if self?.trackingRun == run { self?.trackingProgress = p } }
             }, onSample: { sample in
-                Task { @MainActor [weak self] in self?.trackingTrail.append(sample) }
+                Task { @MainActor [weak self] in if self?.trackingRun == run { self?.trackingTrail.append(sample) } }
             })
-            guard let self else { return }
+            guard let self, self.trackingRun == run else { return }
             if let result, !Task.isCancelled, !result.samples.isEmpty {
                 self.updateAnnotation(id) {
                     $0.track = result.samples
@@ -562,9 +576,9 @@ final class EditorModel: ObservableObject {
                 }
                 self.trackingLost = result.lost
                 if let lostAt = result.lostAt {
-                    Toast.show(L(result.offscreen ? "trk.toast.lost_offscreen" : "trk.toast.lost", String(format: "%.1f", lostAt)))
+                    status = L(result.offscreen ? "trk.toast.lost_offscreen" : "trk.toast.lost", String(format: "%.1f", lostAt))
                 } else {
-                    Toast.show(L("trk.toast.done"))
+                    status = L("trk.toast.done")
                 }
             }
             self.trackingID = nil
@@ -574,7 +588,9 @@ final class EditorModel: ObservableObject {
 
     func cancelTracking() {
         trackingTask?.cancel()
+        trackingRun += 1 // the old task may still run for a moment: its late writes are ignored
         trackingID = nil
+        trackingTrail = []
     }
 
     func clearTrack(_ id: UUID) {
@@ -640,7 +656,7 @@ final class EditorModel: ObservableObject {
             image = image.transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
             stillFrame = image
             stillFrameTime = time
-            objectWillChange.send() // redraw the overlay with the blur applied
+            frameRevision += 1 // redraw the overlay with the blur applied
         }
     }
 
@@ -657,7 +673,7 @@ final class EditorModel: ObservableObject {
         guard seconds.isFinite else { return }
         captureFrame()
         refreshStillFrame()
-        // @Published announces every assignment, even of the same value: only assign on a change, so the
+        // announces every assignment, even of the same value: only assign on a change, so the
         // views that watch these are not redrawn for nothing.
         if current != seconds { current = seconds }
         let playing = player.timeControlStatus == .playing
@@ -703,8 +719,8 @@ final class EditorModel: ObservableObject {
         )
     }
 
-    @Published var exportProgress: Double = 0
-    private var activeExport: ExportControl?
+    var exportProgress: Double = 0
+    @ObservationIgnored private var activeExport: ExportControl?
 
     func cancelExport() { activeExport?.cancel() }
 
@@ -738,7 +754,7 @@ final class EditorModel: ObservableObject {
 
     // MARK: Size estimate
 
-    @Published var measuredMB: Double?
+    var measuredMB: Double?
 
     /// Encodes three one-second samples of the result with the current settings and extrapolates the file size.
     /// A formula is wrong for screen recordings, which compress far below the average bitrate asked for.
@@ -768,8 +784,10 @@ final class EditorModel: ObservableObject {
 
     /// Bumped on every edit, so a file exported ahead of time can be told from a stale one.
     private(set) var editRevision = 0
-    private var dragFile: (key: String, url: URL)?
-    private var preparingKey: String?
+    @ObservationIgnored private var dragFile: (key: String, url: URL)?
+    @ObservationIgnored private var preparingKey: String?
+    /// A key whose export failed: not retried on every hover, only after the next edit changes the key.
+    @ObservationIgnored private var failedKey: String?
 
     private var dragKey: String {
         "\(editRevision)|\(ExportSettings.current)|\(showClicks)|\(includeAudio)"
@@ -779,16 +797,20 @@ final class EditorModel: ObservableObject {
     /// so the drag can carry a real file: browsers and chat apps do not accept file promises.
     func prepareDragFile() {
         let key = dragKey
-        guard dragFile?.key != key, preparingKey != key else { return }
+        guard dragFile?.key != key, preparingKey != key, failedKey != key else { return }
         preparingKey = key
         Task { @MainActor in
             let folder = FileManager.default.temporaryDirectory.appendingPathComponent("melies-drag-\(UUID().uuidString)")
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             let name = url.deletingPathExtension().lastPathComponent
             let file = folder.appendingPathComponent(name + "." + ExportSettings.current.fileExtension)
-            if await export(to: file, quiet: true) {
+            if await export(to: file, quiet: true), key == dragKey {
                 if let old = dragFile { try? FileManager.default.removeItem(at: old.url.deletingLastPathComponent()) }
                 dragFile = (key, file)
+            } else {
+                // Failed, or the edits moved on meanwhile: this file is useless, so the folder goes now.
+                if key == dragKey { failedKey = key }
+                try? FileManager.default.removeItem(at: folder)
             }
             if preparingKey == key { preparingKey = nil }
         }

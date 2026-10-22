@@ -8,12 +8,38 @@ Scripts/release.sh minor      # 0.1.1 -> 0.2.0
 Scripts/release.sh 1.0.0      # an exact version
 Scripts/release.sh --dry-run  # builds everything in dist/, publishes nothing
 Scripts/release.sh 0.1.1 --dry-run --skip-notarization  # fast DMG while Apple has not answered (Gatekeeper will warn)
+Scripts/release.sh --allow-unnotarized                   # publish even without notarization (tests only)
 ```
 
-The script bumps the version, builds and signs the app, makes the DMG, notarizes it, signs the update for
-Sparkle, writes `appcast.xml`, commits, tags and pushes, creates the GitHub release with the DMG and the
-appcast, then updates the Homebrew cask. Release notes are the commit subjects since the previous tag: one clear
-commit per task is enough.
+Options:
+
+| Option | Effect |
+|---|---|
+| `--dry-run` | Builds the app, DMG and `appcast.xml` in `dist/`; does not touch the repository or GitHub; restores the version file |
+| `--skip-notarization` | Does not submit to Apple (fast pre-release builds, Gatekeeper will warn) |
+| `--allow-unnotarized` | Lets a real publish go through with a DMG that is not notarized. Without it, the script refuses to publish one |
+
+The version argument is `patch` (default), `minor`, `major` or an exact `X.Y.Z`. Anything else is refused: the version
+must be three dot-separated numbers.
+
+What the script does, in order:
+
+1. Checks (real run only): clean working tree, branch `main`, `gh` logged in, tag not already used.
+2. Bumps `CFBundleShortVersionString` and `CFBundleVersion` in `Scripts/Info.plist` (restored if a step fails before the commit).
+3. Builds and signs the app with `Scripts/build.sh` (Developer ID and hardened runtime when the certificate exists,
+   found by its SHA-1 hash), then makes the DMG and signs it.
+4. Notarizes and staples the DMG only when BOTH prerequisites hold: a Developer ID identity was found, and the
+   `melies-notary` keychain profile check (`xcrun notarytool history --keychain-profile melies-notary`) succeeds. It then
+   checks the result: `stapler validate` and `spctl -a -t open` must both pass, otherwise the script stops. Without
+   either prerequisite the DMG stays unnotarized and a real release refuses to publish unless `--allow-unnotarized` is
+   passed (for tests only).
+5. Signs the update for Sparkle and writes `appcast.xml`. Release notes are the commit subjects since the previous
+   tag: one clear commit per task is enough.
+6. Publishes the release in an order that avoids a half release (this covers only the draft and tag steps):
+   commit locally, create the release as a **draft**, push the commit and the tag, then publish the draft. If
+   creating the draft fails, the local commit is undone; if the push fails, the draft and the tag are removed.
+7. Rewrites the Homebrew cask (version and sha256) in the tap and pushes it. A tap that is missing or cannot be
+   pushed only prints a warning; the release itself stays published (best effort: the cask update can fail after publication, so redo it by hand in the tap with the new version and sha256, then push).
 
 ```mermaid
 flowchart LR
@@ -28,7 +54,7 @@ flowchart LR
 ## Pre-release while Apple is slow
 
 Notarization can take hours the first time. To share a build before it is accepted, build a DMG without notarization
-(`--skip-notarization`) and publish it by hand as a GitHub **pre-release**. A pre-release is never "latest": automatic
+(`--dry-run --skip-notarization` writes it to `dist/updates/`) and publish it by hand as a GitHub **pre-release**. A pre-release is never "latest": automatic
 updates and Homebrew ignore it. People open it once with System Settings > Privacy & Security > "Open Anyway". The
 real release (notarized) replaces it later.
 
@@ -57,7 +83,8 @@ real release (notarized) replaces it later.
    While the repository is private nobody but you can receive updates.
 5. **Homebrew tap**: the repository `Benoitded/homebrew-melies` holds `Casks/melies.rb`. The release script
    rewrites it (version and sha256) after each release. Users install with
-   `brew install --cask Benoitded/melies/melies`. If the tap is missing the script only prints a warning.
+   `brew install --cask Benoitded/melies/melies`. If the tap is missing the script only prints a warning
+   (at the time of writing that repository could not be found: create it once before the first release).
 
 ## Where things are set
 
@@ -65,5 +92,7 @@ real release (notarized) replaces it later.
 |---|---|
 | Feed URL, public key, check frequency | `Scripts/Info.plist` (`SUFeedURL`, `SUPublicEDKey`, `SUScheduledCheckInterval`) |
 | Menu item, automatic setting | `Sources/Melies/Updater.swift`, Advanced tab |
-| Signing (hardened runtime, Sparkle inside out) | `Scripts/build.sh` |
+| Signing (hardened runtime, Sparkle inside out), microphone entitlement | `Scripts/build.sh`, `Scripts/Melies.entitlements` |
+| Language file syntax check (`plutil -lint`), Xcode detection | `Scripts/build.sh` |
+| Test hooks in a build (never for a real release) | `MELIES_HOOKS=1 Scripts/build.sh` |
 | Cask template | `Scripts/release.sh` (last step) |

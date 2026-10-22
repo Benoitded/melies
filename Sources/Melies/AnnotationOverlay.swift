@@ -3,7 +3,7 @@ import SwiftUI
 /// Draws the annotations over the video and handles creating, selecting, moving and reshaping them.
 /// `video` is the on-screen rectangle of the picture; `region` is the part of the source it shows.
 struct AnnotationOverlay: View {
-    @ObservedObject var model: EditorModel
+    var model: EditorModel
     let video: CGRect
     let region: CGRect   // normalized source coordinates
 
@@ -45,8 +45,10 @@ struct AnnotationOverlay: View {
     // MARK: View
 
     var body: some View {
+        let _ = model.frameRevision // also tracked here: the Canvas closure alone is not guaranteed to register the read
         ZStack(alignment: .topLeading) {
             Canvas { context, _ in
+                _ = model.frameRevision // a still frame arrived while paused: draw again with the blur applied
                 context.withCGContext { cg in
                     cg.saveGState()
                     cg.clip(to: video)
