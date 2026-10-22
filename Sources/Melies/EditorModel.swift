@@ -30,7 +30,15 @@ final class EditorModel: ObservableObject {
     @Published var zoomPoints: [ZoomPoint] = [] { didSet { noteChange() } }
     @Published var selectedPointID: UUID?
     @Published var tool: Tool = .select
-    @Published var annotations: [Annotation] = [] { didSet { noteChange(); refreshStillFrame() } }
+    @Published var annotations: [Annotation] = [] {
+        didSet {
+            hasBlur = annotations.contains { $0.kind == .blur }
+            noteChange()
+            refreshStillFrame()
+        }
+    }
+    /// Cached: asked at every playback tick, so it must not scan the annotations each time.
+    private var hasBlur = false
     @Published var selectedAnnotationID: UUID?
     /// True while a text field has the keyboard, so single-key shortcuts must stay quiet.
     @Published var isEditingText = false
@@ -594,15 +602,16 @@ final class EditorModel: ObservableObject {
 
     /// Keeps the newest frame for blur patches (only when a blur exists).
     private func captureFrame() {
-        guard let output = frameOutput, annotations.contains(where: { $0.kind == .blur }) else { return }
+        guard let output = frameOutput, hasBlur else { return }
         if let buffer = output.copyPixelBuffer(forItemTime: player.currentTime(), itemTimeForDisplay: nil) { lastBuffer = buffer }
     }
 
     /// Paused: fetch the exact frame under the playhead, once per position.
     private func refreshStillFrame() {
-        guard !isPlaying, annotations.contains(where: { $0.kind == .blur }), abs(current - stillRequestedTime) > 0.0005 else { return }
+        guard !isPlaying, hasBlur, abs(current - stillRequestedTime) > 0.0005 else { return }
         let time = current
         stillRequestedTime = time
+        stillGenerator.cancelAllCGImageGeneration() // scrubbing: drop the decodes nobody will look at
         stillRequestID += 1
         let id = stillRequestID
         Task { @MainActor in
@@ -628,8 +637,11 @@ final class EditorModel: ObservableObject {
         guard seconds.isFinite else { return }
         captureFrame()
         refreshStillFrame()
-        current = seconds
-        isPlaying = player.timeControlStatus == .playing
+        // @Published announces every assignment, even of the same value: only assign on a change, so the
+        // views that watch these are not redrawn for nothing.
+        if current != seconds { current = seconds }
+        let playing = player.timeControlStatus == .playing
+        if isPlaying != playing { isPlaying = playing }
         // Loop inside the trimmed range.
         if isPlaying, seconds >= end - 0.02 { seek(to: start) }
     }

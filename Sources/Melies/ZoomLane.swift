@@ -48,25 +48,11 @@ struct ZoomLane: View {
                     }
                     .offset(x: handleWidth + 4, y: bottom - 26)
                 } else {
-                    let samples = 160
-                    let curve = Path { p in
-                        for i in 0...samples {
-                            let t = total * Double(i) / Double(samples)
-                            let scale = ZoomCamera.state(at: t, points: model.zoomPoints).scale
-                            let point = CGPoint(x: x(t), y: y(scale))
-                            if i == 0 { p.move(to: point) } else { p.addLine(to: point) }
-                        }
-                    }
-                    Path { p in
-                        p.addPath(curve)
-                        p.addLine(to: CGPoint(x: x(total), y: bottom))
-                        p.addLine(to: CGPoint(x: x(0), y: bottom))
-                        p.closeSubpath()
-                    }
-                    .fill(Color.accentColor.opacity(0.16))
-                    .allowsHitTesting(false)
-                    curve
-                        .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
+                    // The curve only depends on the points and the size: it is its own view, compared by value,
+                    // so playback (which changes the playhead 60 times a second) does not recompute 160 samples.
+                    ZoomCurve(points: model.zoomPoints, duration: total, usable: usable, handleWidth: handleWidth,
+                              top: top, bottom: bottom, maxScale: maxScale)
+                        .equatable()
                         .allowsHitTesting(false)
                 }
 
@@ -238,6 +224,41 @@ struct ZoomRegionOverlay: View {
                     }
                     .onEnded { _ in part = nil }
             )
+        }
+    }
+}
+
+/// The zoom level over time, drawn as a filled curve. Equatable: redrawn only when its inputs change.
+private struct ZoomCurve: View, Equatable {
+    let points: [ZoomPoint]
+    let duration: Double
+    let usable: CGFloat
+    let handleWidth: CGFloat
+    let top: CGFloat
+    let bottom: CGFloat
+    let maxScale: Double
+
+    private static let samples = 160
+
+    var body: some View {
+        let x = { (t: Double) -> CGFloat in handleWidth + usable * CGFloat(t / duration) }
+        let y = { (scale: Double) -> CGFloat in bottom - CGFloat(log(scale) / log(maxScale)) * (bottom - top) }
+        let curve = Path { p in
+            for i in 0...Self.samples {
+                let t = duration * Double(i) / Double(Self.samples)
+                let point = CGPoint(x: x(t), y: y(ZoomCamera.state(at: t, points: points).scale))
+                if i == 0 { p.move(to: point) } else { p.addLine(to: point) }
+            }
+        }
+        ZStack {
+            Path { p in
+                p.addPath(curve)
+                p.addLine(to: CGPoint(x: x(duration), y: bottom))
+                p.addLine(to: CGPoint(x: x(0), y: bottom))
+                p.closeSubpath()
+            }
+            .fill(Color.accentColor.opacity(0.16))
+            curve.stroke(Color.accentColor, style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
         }
     }
 }
