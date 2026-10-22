@@ -116,6 +116,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 exit(0)
             }
         }
+        // Debug: MELIES_CURSOR_SNAPSHOT=out.png writes the selection cursor, 8x, on a light and a dark background.
+        if let out = ProcessInfo.processInfo.environment["MELIES_CURSOR_SNAPSHOT"] {
+            let cursor = SelectionCursor.crosshairRing.image
+            let tile = NSSize(width: cursor.size.width * 8, height: cursor.size.height * 8)
+            let sheet = NSImage(size: NSSize(width: tile.width * 3, height: tile.height), flipped: false) { _ in
+                for (i, color) in [NSColor.white, NSColor(white: 0.12, alpha: 1), NSColor(calibratedRed: 0.2, green: 0.5, blue: 0.9, alpha: 1)].enumerated() {
+                    let rect = NSRect(x: CGFloat(i) * tile.width, y: 0, width: tile.width, height: tile.height)
+                    color.setFill(); rect.fill()
+                    cursor.draw(in: rect)
+                }
+                return true
+            }
+            if let tiff = sheet.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff), let png = rep.representation(using: .png, properties: [:]) {
+                try? png.write(to: URL(fileURLWithPath: out))
+            }
+            exit(0)
+        }
         // Debug: MELIES_ESTIMATE_TEST=video prints the measured size estimate and the real export size.
         if let path = ProcessInfo.processInfo.environment["MELIES_ESTIMATE_TEST"] {
             Task { @MainActor in

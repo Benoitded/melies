@@ -27,7 +27,7 @@ private final class SelectorView: NSView {
     }
 
     override func resetCursorRects() {
-        addCursorRect(bounds, cursor: spaceHeld ? .closedHand : .crosshair)
+        addCursorRect(bounds, cursor: spaceHeld ? .closedHand : SelectionCursor.crosshairRing)
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -120,6 +120,9 @@ enum RegionSelector {
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
             window.makeFirstResponder(view)
+            // The cross-and-ring is there from the first moment, before any click or mouse move.
+            window.invalidateCursorRects(for: view)
+            SelectionCursor.crosshairRing.set()
         }
     }
 }
