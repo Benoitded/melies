@@ -67,10 +67,9 @@ else
   MELIES_OUT="$DIST/stage" Scripts/build.sh
 fi
 
-# DMG: the app next to an Applications shortcut.
+# DMG: styled window (background, arrow, Applications shortcut), see Scripts/make-dmg.sh.
 DMG="$DIST/updates/Melies-$VERSION.dmg"
-ln -s /Applications "$DIST/stage/Applications"
-hdiutil create -quiet -volname "Méliès" -srcfolder "$DIST/stage" -format UDZO -ov "$DMG"
+Scripts/make-dmg.sh "$DIST/stage" "$DMG"
 [ -n "$DEVID" ] && codesign --force --sign "$DEVID" --timestamp "$DMG"
 
 NOTARIZED=0
