@@ -1,6 +1,6 @@
 # AI in Méliès
 
-Idea: let an AI edit the video (and later record the screen) on request, through three paths that
+Idea: let an AI edit the video (and record the screen for a demo) on request, through three paths that
 share the same tool layer.
 
 **Everything is optional**: nothing changes until the user enables the feature (MCP server off
@@ -38,14 +38,33 @@ Editing tools:
 | `undo` / `redo` | |
 | `export(path?)` | exports the trimmed range with the app's export settings; returns file, size, resolution, duration |
 
-Recording tools (to do, wired to `ScreenRecorder`):
+Recording tools (done, same MCP server; logic in `RecordingControl.swift`, real screen parts in `RecordingLive.swift`):
 
 | Tool | Role |
 |---|---|
-| `start_recording(region?, window?, audio?)` / `stop_recording` | the editor opens on the result |
-| `get_screenshot` | the screen, to target an area or verify |
-| `list_windows` | target a window |
-| `wait(seconds)` | let it run while the user does their demo |
+| `get_screen_layout` | displays (id, name, frame in points, scale, `has_mouse`) and visible windows (id, app name, bounds, display). No window titles, no Méliès windows. Marked as untrusted data |
+| `start_recording(display?, x, y, width, height \| window, audio?, max_seconds?, countdown?)` | records a region (points, relative to the top left of the display) or a window (its bounds plus an 8 pt margin, clamped to the display). `audio`: `none` (default), `microphone`, `system`, `both`. `max_seconds`: 1 to 600, default 120. `countdown`: 0 to 10 s, default 0 |
+| `stop_recording` | stops; the editor opens on the file; returns `file`, `duration_seconds`, `has_clicks` / `auto_zoom_available`, `stopped_by` (`client`, `time_limit`, `user`). Also returns a recording that already ended by itself |
+| `get_recording_status` | `idle`, `waiting_for_user_confirmation`, `recording` (elapsed, region, audio) or `stopping` |
+
+Intended flow, only when the user explicitly asked to record: `get_screen_layout`, `start_recording`, do the demo with
+the client's own tools (Méliès does not drive the mouse or keyboard), `stop_recording`, then `get_state` and edit
+(`add_zoom_segment`, `add_annotation`, `set_trim`...) and `export`.
+
+Safety model (this is the user's screen):
+- Every `start_recording` shows a native dialog naming the client and the region, with Allow and Deny only. Return
+  means Deny, there is no "always allow", and it denies by itself after 30 s. The text says the AI app will see the
+  recording. Nothing is captured before a click on Allow. Names shown in it are stripped of control characters and
+  shortened, so a client or an app cannot fake extra lines.
+- Validation happens before the dialog: region at least 40 x 40 points and inside the display, one recording at a
+  time (a recording started by the user counts), refused while an export runs.
+- The red menu bar timer and the dimming overlay stay, the shortcut and the red button stop it. It stops by itself at
+  `max_seconds` (default 120, never more than 600). Méliès windows are never in the video.
+- Needs the Screen Recording permission like any recording; without it the call fails with a clear error. Microphone
+  access is asked on first use when `audio` includes the microphone.
+- Everything stays behind the existing MCP checks (off by default, loopback, key, Host and Origin). No network access
+  was added. The AI activity badge shows during these tools like during the others.
+- `get_screen_layout` text (app names) is untrusted: the tool descriptions and the server instructions say so.
 
 Out of scope: driving the mouse and keyboard (Accessibility permission, far more risk).
 
@@ -82,9 +101,9 @@ A button in `TopBar` opens a panel on the right: message thread, input field, st
 
 ## Guardrails (apply to both)
 
-- Recording started by the AI: the overlay stays visible, a toast announces the start, default maximum duration
-  (5 min), Esc and the stop button always cut it. Confirmation before each `start_recording`, with an
-  "always allow" option in the settings.
+- Recording started by the AI: the overlay and the red timer stay visible, default maximum duration 2 min (600 s at
+  most), the red button and the shortcut always cut it. Confirmation before each `start_recording`, with no
+  "always allow" option (see the safety model above).
 - Privacy: frames and screenshots go to the provider (chat) or to the MCP client. Notice on
   first use, reduced resolution, option to capture only one window.
 - MCP: localhost only, token required, off by default.
