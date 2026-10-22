@@ -67,7 +67,7 @@ git clone https://github.com/Benoitded/melies && cd melies
 Scripts/build.sh && open ~/Applications/Melies.app
 ```
 
-This needs Xcode 26 or later. The script signs with your "Apple Development" certificate if you have one, so
+This needs the full **Xcode 26 or later** (install it from the App Store; the Command Line Tools alone are not enough and fail with "plugin for module 'SwiftUIMacros' not found"). If Xcode is installed but `xcode-select -p` points elsewhere, the script finds it by itself. The script signs with your "Apple Development" certificate if you have one, so
 macOS does not ask for permissions again after every build. To publish a version, see
 [`docs/RELEASING.md`](docs/RELEASING.md).
 

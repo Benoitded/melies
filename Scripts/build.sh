@@ -9,6 +9,25 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# SwiftUI macros (@State, #Preview...) ship with Xcode.app, not with the Command Line Tools: building with the
+# tools alone fails with "plugin for module 'SwiftUIMacros' not found". Use Xcode when it is installed.
+case "$(xcode-select -p 2>/dev/null)" in
+  *.app/Contents/Developer) ;;
+  *)
+    XCODE=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort | tail -1)
+    if [ -n "$XCODE" ]; then
+      export DEVELOPER_DIR="$XCODE/Contents/Developer"
+      echo "Using $XCODE (xcode-select points to the Command Line Tools)."
+    else
+      echo "Méliès needs Xcode 26 or later (the full app, not only the Command Line Tools)."
+      echo "  1. Install Xcode from the App Store or https://developer.apple.com/xcode/"
+      echo "  2. Open it once and accept the license, then run:"
+      echo "     sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"
+      exit 1
+    fi
+    ;;
+esac
+
 swift build -c release
 BIN=$(swift build -c release --show-bin-path)
 
