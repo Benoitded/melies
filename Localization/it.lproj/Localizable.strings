@@ -185,3 +185,10 @@
 "tip.strength" = "Intensità";
 "blur.pixelate" = "Pixelizza";
 "blur.gaussian" = "Sfocatura";
+"set.audio" = "Audio";
+"set.audio.mic" = "Microfono";
+"set.audio.system" = "Audio di sistema";
+"tip.audio.on" = "L'audio viene mantenuto nell'esportazione";
+"tip.audio.off" = "L'audio è disattivato nell'esportazione";
+"rec.mic.denied" = "L'accesso al microfono è disattivato";
+"rec.mic.denied.text" = "La registrazione continua senza la tua voce. Attivalo in Impostazioni di Sistema > Privacy e sicurezza > Microfono.";

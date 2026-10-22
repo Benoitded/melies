@@ -21,7 +21,8 @@
 
 ## v3
 - [x] Deux vidéos côte à côte, empilées, ou en incrustation (fenêtre « Combiner », résultat rouvert dans l'éditeur)
-- [ ] Zoom auto sur le curseur pendant l'enregistrement, audio système et micro
+- [x] Audio : son du système et micro pendant l'enregistrement, son gardé ou coupé à l'export
+- [ ] Zoom auto sur le curseur pendant l'enregistrement
 
 ## Plus tard
 - [ ] Signature et notarisation si distribution

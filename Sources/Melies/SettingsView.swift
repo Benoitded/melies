@@ -10,6 +10,8 @@ struct GeneralTab: View {
     @AppStorage("watchedFolder") private var watchedFolder = ""
     @AppStorage("openEditorAfterRecording") private var openAfterRecording = true
     @AppStorage("closeAfterAction") private var closeAfterAction = true
+    @AppStorage("recordMicrophone") private var recordMicrophone = false
+    @AppStorage("recordSystemAudio") private var recordSystemAudio = false
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
@@ -37,6 +39,14 @@ struct GeneralTab: View {
                             .frame(width: 270, alignment: .leading)
                     }
                 }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Toggle(L("set.audio.mic"), isOn: $recordMicrophone)
+                    Toggle(L("set.audio.system"), isOn: $recordSystemAudio)
+                }
+                .labeledContent(L("set.audio"))
 
                 Divider()
 
