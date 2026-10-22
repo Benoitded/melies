@@ -210,3 +210,4 @@
 "tip.track.clear" = "Arrêter le suivi";
 "tip.track.cancel" = "Annuler l'analyse";
 "trk.lost" = "Objet sorti ou masqué : l'annotation s'arrête là";
+"exp.other" = "Autre...";

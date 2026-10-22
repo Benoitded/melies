@@ -210,3 +210,4 @@
 "tip.track.clear" = "Stop following";
 "tip.track.cancel" = "Stop analysis";
 "trk.lost" = "Object left the frame: annotation ends there";
+"exp.other" = "Other...";
