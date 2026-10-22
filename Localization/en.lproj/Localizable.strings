@@ -213,10 +213,8 @@
 "exp.estimate.limit" = "The file stays under %d MB: the quality adapts.";
 "exp.estimate.gif" = "A GIF is large. Set a maximum size to keep it light.";
 "exp.estimate.gif_limit" = "The GIF stays under %d MB: width and frame rate shrink if needed.";
-"tip.track" = "Follow the object";
 "tip.track.clear" = "Stop following";
 "tip.track.cancel" = "Stop analysis";
-"trk.lost" = "Object left the frame: annotation ends there";
 "exp.other" = "Other...";
 "exp.hevc.note" = "HEVC (H.265) makes files about 40% smaller. Twitter/X and some apps may not accept it.";
 "exp.estimating" = "Estimating the size...";
@@ -245,3 +243,14 @@
 "ai.working" = "%@ is editing…";
 "ai.done" = "%@ is done";
 "export.failed" = "The export could not be written. Check the free space and try again.";
+"trk.button" = "Track object";
+"tip.track" = "Sticks this annotation to what is under it, from the playhead on. Put the playhead where the object is clearly visible, then press.";
+"trk.state.done" = "Followed %@ s";
+"trk.state.done.tip" = "Followed from %@ s to %@ s";
+"trk.state.lost" = "Lost at %@ s";
+"trk.why.offscreen" = "The object left the frame, so the annotation stops there.";
+"trk.why.changed" = "What was under the annotation was covered or changed, so it stops there. Move the playhead to where it is visible again and press the refresh arrow.";
+"trk.retrack" = "Track again from the playhead";
+"trk.toast.lost" = "Object covered or changed at %@ s: the annotation ends there";
+"trk.toast.lost_offscreen" = "Object left the frame at %@ s: the annotation ends there";
+"trk.toast.done" = "Tracking done";

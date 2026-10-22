@@ -9,6 +9,7 @@ enum ObjectTracker {
         var samples: [TrackSample]
         /// When the region was lost before `to`, nil if it was followed to the end.
         var lostAt: Double?
+        var offscreen = false
         var lost: Bool { lostAt != nil }
     }
 
@@ -28,7 +29,8 @@ enum ObjectTracker {
     /// `progress` is called with 0...1 from a background queue. Throws CancellationError when cancelled.
     static func track(
         asset: AVAsset, box: CGRect, from: Double, to: Double,
-        progress: @escaping @Sendable (Double) -> Void
+        progress: @escaping @Sendable (Double) -> Void,
+        onSample: (@Sendable (TrackSample) -> Void)? = nil
     ) async throws -> Result {
         guard let video = try await asset.loadTracks(withMediaType: .video).first else { return Result(samples: [], lostAt: nil) }
         let composition = try await AVMutableVideoComposition.videoComposition(withPropertiesOf: asset)
@@ -51,6 +53,7 @@ enum ObjectTracker {
         var vx = 0, vy = 0 // last movement per frame, to look where a fast scroll is going
         var samples: [TrackSample] = []
         var badSince: Double?
+        var badOffscreen = false
         let span = max(to - from, 0.001)
 
         while let buffer = output.copyNextSampleBuffer() {
@@ -67,7 +70,9 @@ enum ObjectTracker {
                 template = patch(of: frame, x: originX, y: originY, w: tw, h: th)
                 templateBlur = patch(of: soft, x: originX, y: originY, w: tw, h: th)
                 x = originX; y = originY
-                samples.append(TrackSample(t: t, dx: 0, dy: 0))
+                let first = TrackSample(t: t, dx: 0, dy: 0)
+                samples.append(first)
+                onSample?(first)
                 continue
             }
 
@@ -79,8 +84,8 @@ enum ObjectTracker {
                 || (by >= frame.height - th && originY < frame.height - th)
             if score > lostThreshold || leaving {
                 // Tolerate a couple of noisy frames (a flash, a compression glitch) before giving up.
-                if badSince == nil { badSince = t }
-                if t - (badSince ?? t) > 0.12 { return Result(samples: samples, lostAt: badSince) }
+                if badSince == nil { badSince = t; badOffscreen = leaving }
+                if t - (badSince ?? t) > 0.12 { return Result(samples: samples, lostAt: badSince, offscreen: badOffscreen) }
                 continue
             }
             badSince = nil
@@ -95,11 +100,13 @@ enum ObjectTracker {
                     templateBlur[i] += (nowBlur[i] - templateBlur[i]) * 0.08
                 }
             }
-            samples.append(TrackSample(
+            let sample = TrackSample(
                 t: t,
                 dx: Double(x - originX) / Double(frame.width),
                 dy: Double(y - originY) / Double(frame.height)
-            ))
+            )
+            samples.append(sample)
+            onSample?(sample)
             progress(min(max((t - from) / span, 0), 1))
         }
         return Result(samples: samples, lostAt: nil)

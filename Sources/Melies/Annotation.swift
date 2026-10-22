@@ -62,6 +62,14 @@ struct Annotation: Identifiable, Equatable {
     /// at `trackStart`. Empty when the annotation is not tracked. Before `trackStart` it stays where it was drawn.
     var track: [TrackSample] = []
     var trackStart: Double = 0
+    /// Set when tracking stopped before the end of the annotation: when, and why.
+    var trackLoss: TrackLoss?
+}
+
+struct TrackLoss: Equatable {
+    var at: Double
+    /// True when the object left the frame, false when it was covered or the picture changed.
+    var offscreen: Bool
 }
 
 struct TrackSample: Equatable {

@@ -213,10 +213,8 @@
 "exp.estimate.limit" = "Le fichier reste sous %d Mo : la qualité s'adapte.";
 "exp.estimate.gif" = "Un GIF est lourd. Fixe une taille maximale pour le garder léger.";
 "exp.estimate.gif_limit" = "Le GIF reste sous %d Mo : la largeur et la fluidité baissent si besoin.";
-"tip.track" = "Suivre l'objet";
 "tip.track.clear" = "Arrêter le suivi";
 "tip.track.cancel" = "Annuler l'analyse";
-"trk.lost" = "Objet sorti ou masqué : l'annotation s'arrête là";
 "exp.other" = "Autre...";
 "exp.hevc.note" = "HEVC (H.265) donne des fichiers environ 40 % plus petits. Twitter/X et certaines apps peuvent le refuser.";
 "exp.estimating" = "Estimation de la taille...";
@@ -245,3 +243,14 @@
 "ai.working" = "%@ modifie la vidéo…";
 "ai.done" = "%@ a fini";
 "export.failed" = "L'export n'a pas pu être écrit. Vérifie l'espace libre et réessaie.";
+"trk.button" = "Suivre l'objet";
+"tip.track" = "Colle cette annotation à ce qu'il y a dessous, à partir de la tête de lecture. Place la tête de lecture là où l'objet est bien visible, puis clique.";
+"trk.state.done" = "Suivi sur %@ s";
+"trk.state.done.tip" = "Suivi de %@ s à %@ s";
+"trk.state.lost" = "Perdu à %@ s";
+"trk.why.offscreen" = "L'objet est sorti du cadre : l'annotation s'arrête là.";
+"trk.why.changed" = "Ce qui était sous l'annotation a été masqué ou a changé : elle s'arrête là. Place la tête de lecture là où il est de nouveau visible et clique sur la flèche de relance.";
+"trk.retrack" = "Refaire le suivi à partir de la tête de lecture";
+"trk.toast.lost" = "Objet masqué ou changé à %@ s : l'annotation s'arrête là";
+"trk.toast.lost_offscreen" = "Objet sorti du cadre à %@ s : l'annotation s'arrête là";
+"trk.toast.done" = "Suivi terminé";

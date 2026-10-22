@@ -213,10 +213,8 @@
 "exp.estimate.limit" = "Il file resta sotto %d MB: la qualità si adatta.";
 "exp.estimate.gif" = "Una GIF è pesante. Imposta una dimensione massima per tenerla leggera.";
 "exp.estimate.gif_limit" = "La GIF resta sotto %d MB: larghezza e fluidità si riducono se serve.";
-"tip.track" = "Segui l'oggetto";
 "tip.track.clear" = "Interrompi il tracciamento";
 "tip.track.cancel" = "Annulla analisi";
-"trk.lost" = "Oggetto uscito o coperto: l'annotazione termina qui";
 "exp.other" = "Altro...";
 "exp.hevc.note" = "HEVC (H.265) riduce i file di circa il 40%. Twitter/X e alcune app potrebbero rifiutarlo.";
 "exp.estimating" = "Stima della dimensione...";
@@ -245,3 +243,14 @@
 "ai.working" = "%@ sta modificando…";
 "ai.done" = "%@ ha finito";
 "export.failed" = "Impossibile scrivere l'esportazione. Controlla lo spazio libero e riprova.";
+"trk.button" = "Segui l'oggetto";
+"tip.track" = "Incolla questa annotazione a ciò che c'è sotto, dalla testina in poi. Metti la testina dove l'oggetto è ben visibile, poi premi.";
+"trk.state.done" = "Seguito per %@ s";
+"trk.state.done.tip" = "Seguito da %@ s a %@ s";
+"trk.state.lost" = "Perso a %@ s";
+"trk.why.offscreen" = "L'oggetto è uscito dall'inquadratura: l'annotazione si ferma qui.";
+"trk.why.changed" = "Ciò che era sotto l'annotazione è stato coperto o è cambiato: si ferma qui. Sposta la testina dove è di nuovo visibile e premi la freccia di ripetizione.";
+"trk.retrack" = "Segui di nuovo dalla testina";
+"trk.toast.lost" = "Oggetto coperto o cambiato a %@ s: l'annotazione termina qui";
+"trk.toast.lost_offscreen" = "Oggetto uscito dall'inquadratura a %@ s: l'annotazione termina qui";
+"trk.toast.done" = "Tracciamento completato";

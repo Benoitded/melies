@@ -507,6 +507,8 @@ final class EditorModel: ObservableObject {
     @Published var trackingID: UUID?
     @Published var trackingProgress: Double = 0
     @Published var trackingLost = false
+    /// The path found so far, shown on the video while the analysis runs.
+    @Published var trackingTrail: [TrackSample] = []
     private var trackingTask: Task<Void, Never>?
 
     /// The region to follow, normalized in the upright frame (origin top left).
@@ -533,22 +535,36 @@ final class EditorModel: ObservableObject {
         trackingID = id
         trackingProgress = 0
         trackingLost = false
+        trackingTrail = []
         let asset = self.asset
         trackingTask = Task { [weak self] in
-            let result = try? await ObjectTracker.track(asset: asset, box: box, from: from, to: a.end) { p in
+            let result = try? await ObjectTracker.track(asset: asset, box: box, from: from, to: a.end, progress: { p in
                 Task { @MainActor [weak self] in self?.trackingProgress = p }
-            }
+            }, onSample: { sample in
+                Task { @MainActor [weak self] in self?.trackingTrail.append(sample) }
+            })
             guard let self else { return }
             if let result, !Task.isCancelled, !result.samples.isEmpty {
                 self.updateAnnotation(id) {
                     $0.track = result.samples
                     $0.trackStart = from
                     // Gone from the frame (scrolled out, covered): the annotation disappears with it.
-                    if let lostAt = result.lostAt { $0.end = max(lostAt, from + 0.2) }
+                    if let lostAt = result.lostAt {
+                        $0.end = max(lostAt, from + 0.2)
+                        $0.trackLoss = TrackLoss(at: lostAt, offscreen: result.offscreen)
+                    } else {
+                        $0.trackLoss = nil
+                    }
                 }
                 self.trackingLost = result.lost
+                if let lostAt = result.lostAt {
+                    Toast.show(L(result.offscreen ? "trk.toast.lost_offscreen" : "trk.toast.lost", String(format: "%.1f", lostAt)))
+                } else {
+                    Toast.show(L("trk.toast.done"))
+                }
             }
             self.trackingID = nil
+            self.trackingTrail = []
         }
     }
 
@@ -558,7 +574,7 @@ final class EditorModel: ObservableObject {
     }
 
     func clearTrack(_ id: UUID) {
-        updateAnnotation(id) { $0.track = []; $0.trackStart = 0 }
+        updateAnnotation(id) { $0.track = []; $0.trackStart = 0; $0.trackLoss = nil }
         trackingLost = false
     }
 

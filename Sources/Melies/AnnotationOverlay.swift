@@ -67,6 +67,8 @@ struct AnnotationOverlay: View {
                 selection(for: a.moved(at: model.current)).allowsHitTesting(false)
             }
 
+            if let a = model.selectedAnnotation { trail(for: a).allowsHitTesting(false) }
+
             Color.clear
                 .contentShape(Rectangle())
                 .gesture(drag)
@@ -78,6 +80,39 @@ struct AnnotationOverlay: View {
                     }
                 }
                 .pointerStyle(cursor)
+        }
+    }
+
+    /// The path the tracker found, drawn on the video: a dotted line from where tracking started (green) to
+    /// where it ended (white, or a red cross when the object was lost). Grows live during the analysis.
+    @ViewBuilder
+    private func trail(for a: Annotation) -> some View {
+        let samples = model.trackingID == a.id ? model.trackingTrail : a.track
+        if samples.count > 1 {
+            let origin: CGPoint = {
+                switch a.kind {
+                case .arrow: return a.p2
+                case .text: return a.p1
+                default: return CGPoint(x: (a.p1.x + a.p2.x) / 2, y: (a.p1.y + a.p2.y) / 2)
+                }
+            }()
+            let points = samples.map { toView(CGPoint(x: origin.x + $0.dx, y: origin.y + $0.dy)) }
+            Path { p in
+                p.move(to: points[0])
+                for point in points.dropFirst() { p.addLine(to: point) }
+            }
+            .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, dash: [0.5, 6]))
+            Circle().fill(Color.green).overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+                .frame(width: 10, height: 10).position(points[0])
+            if a.trackLoss != nil, model.trackingID != a.id, let end = points.last {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 15)).foregroundStyle(.white, .red)
+                    .shadow(color: .black.opacity(0.3), radius: 1.5, y: 1)
+                    .position(end)
+            } else if let end = points.last {
+                Circle().fill(Color.white).overlay(Circle().stroke(Color.accentColor, lineWidth: 1.5))
+                    .frame(width: 8, height: 8).position(end)
+            }
         }
     }
 

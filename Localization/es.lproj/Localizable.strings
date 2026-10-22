@@ -213,10 +213,8 @@
 "exp.estimate.limit" = "El archivo queda por debajo de %d MB: la calidad se adapta.";
 "exp.estimate.gif" = "Un GIF pesa mucho. Fija un tamaño máximo para mantenerlo ligero.";
 "exp.estimate.gif_limit" = "El GIF queda por debajo de %d MB: el ancho y la fluidez bajan si hace falta.";
-"tip.track" = "Seguir el objeto";
 "tip.track.clear" = "Dejar de seguir";
 "tip.track.cancel" = "Cancelar análisis";
-"trk.lost" = "Objeto fuera o tapado: la anotación termina ahí";
 "exp.other" = "Otro...";
 "exp.hevc.note" = "HEVC (H.265) reduce los archivos un 40 % aproximadamente. Twitter/X y algunas apps pueden rechazarlo.";
 "exp.estimating" = "Estimando el tamaño...";
@@ -245,3 +243,14 @@
 "ai.working" = "%@ está editando…";
 "ai.done" = "%@ ha terminado";
 "export.failed" = "No se pudo escribir la exportación. Comprueba el espacio libre e inténtalo de nuevo.";
+"trk.button" = "Seguir objeto";
+"tip.track" = "Pega esta anotación a lo que hay debajo, desde el cabezal en adelante. Pon el cabezal donde el objeto se vea bien y pulsa.";
+"trk.state.done" = "Seguido %@ s";
+"trk.state.done.tip" = "Seguido de %@ s a %@ s";
+"trk.state.lost" = "Perdido a %@ s";
+"trk.why.offscreen" = "El objeto salió del encuadre: la anotación se detiene ahí.";
+"trk.why.changed" = "Lo que había bajo la anotación quedó tapado o cambió: se detiene ahí. Mueve el cabezal a donde vuelva a verse y pulsa la flecha de repetir.";
+"trk.retrack" = "Seguir de nuevo desde el cabezal";
+"trk.toast.lost" = "Objeto tapado o cambiado a %@ s: la anotación termina ahí";
+"trk.toast.lost_offscreen" = "Objeto fuera del encuadre a %@ s: la anotación termina ahí";
+"trk.toast.done" = "Seguimiento terminado";
