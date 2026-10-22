@@ -59,14 +59,21 @@ struct AnnotationLane: View {
                                     .padding(.leading, 17)
                             }
                             .overlay(alignment: .leading) {
-                                // Tracked: where the target is taken from (line + dot) and how far it was followed.
+                                // Tracked: the followed span is lighter, with a target icon where it starts and,
+                                // when the object was lost, a red cross where it stopped.
                                 if a.isTracked, let last = a.track.last {
                                     let from = x(min(max(a.trackStart, a.start), a.end)) - x(a.start)
                                     let followed = max(x(min(last.t, a.end)) - x(a.start) - from, 0)
                                     ZStack(alignment: .leading) {
-                                        Rectangle().fill(.white.opacity(0.28)).frame(width: followed)
-                                        Rectangle().fill(.white.opacity(0.95)).frame(width: 2)
-                                        Circle().fill(.white).frame(width: 7, height: 7).offset(x: -2.5, y: -7)
+                                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                            .fill(.white.opacity(0.30)).frame(width: followed)
+                                        Image(systemName: "scope").font(.system(size: 9, weight: .bold)).foregroundStyle(.white)
+                                            .padding(.leading, 3)
+                                        if a.trackLoss != nil {
+                                            Image(systemName: "xmark.circle.fill").font(.system(size: 12))
+                                                .foregroundStyle(.white, .red)
+                                                .offset(x: max(followed - 8, 0))
+                                        }
                                     }
                                     .frame(height: rowHeight - 4)
                                     .offset(x: from)

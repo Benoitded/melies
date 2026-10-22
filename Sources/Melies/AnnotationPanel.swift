@@ -42,34 +42,48 @@ struct AnnotationPanel: View {
         }
     }
 
-    /// Follow the object under the annotation: idle, analyzing (click cancels), or tracked (click clears).
+    /// Follow the object under the annotation. Three states, each said in words:
+    /// idle ("Track object"), analyzing (progress and cancel), tracked (how long, or where and why it was lost).
     @ViewBuilder
     private func trackButton(_ a: Annotation) -> some View {
         let analyzing = model.trackingID == a.id
-        Button {
-            if analyzing { model.cancelTracking() }
-            else if a.isTracked { model.clearTrack(a.id) }
-            else { model.startTracking(a.id) }
-        } label: {
-            ZStack {
-                if analyzing {
-                    Circle().stroke(.quaternary, lineWidth: 2)
-                    Circle().trim(from: 0, to: max(model.trackingProgress, 0.04))
-                        .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                    Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).foregroundStyle(.secondary)
-                } else {
-                    Image(systemName: a.isTracked ? "scope" : "viewfinder")
-                        .font(.system(size: 13))
-                        .foregroundStyle(a.isTracked ? Color.accentColor : .secondary)
+        HStack(spacing: 6) {
+            if analyzing {
+                ProgressView(value: model.trackingProgress).progressViewStyle(.linear).frame(width: 64)
+                Text("\(Int(model.trackingProgress * 100)) %").font(.system(size: 11).monospacedDigit()).foregroundStyle(.secondary)
+                    .frame(width: 34, alignment: .leading)
+                Button { model.cancelTracking() } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
                 }
+                .buttonStyle(.plain).clickCursor().tip(L("tip.track.cancel"), trailing: true)
+            } else if a.isTracked {
+                let from = a.trackStart
+                let to = a.track.last?.t ?? from
+                if let loss = a.trackLoss {
+                    Label(L("trk.state.lost", String(format: "%.1f", loss.at)), systemImage: "exclamationmark.triangle.fill")
+                        .font(.system(size: 11, weight: .medium)).foregroundStyle(.orange)
+                        .tip(L(loss.offscreen ? "trk.why.offscreen" : "trk.why.changed"), trailing: true)
+                } else {
+                    Label(L("trk.state.done", String(format: "%.1f", max(to - from, 0))), systemImage: "checkmark.circle.fill")
+                        .font(.system(size: 11, weight: .medium)).foregroundStyle(.green)
+                        .tip(L("trk.state.done.tip", String(format: "%.1f", from), String(format: "%.1f", to)), trailing: true)
+                }
+                Button { model.clearTrack(a.id); model.startTracking(a.id) } label: {
+                    Image(systemName: "arrow.clockwise").font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain).clickCursor().tip(L("trk.retrack"), trailing: true)
+                Button { model.clearTrack(a.id) } label: {
+                    Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain).clickCursor().tip(L("tip.track.clear"), trailing: true)
+            } else {
+                Button { model.startTracking(a.id) } label: {
+                    Label(L("trk.button"), systemImage: "scope").font(.system(size: 12, weight: .medium))
+                }
+                .buttonStyle(.glass).buttonBorderShape(.capsule).controlSize(.small).clickCursor()
+                .tip(L("tip.track"), trailing: true)
             }
-            .frame(width: analyzing ? 16 : 26, height: analyzing ? 16 : 26)
-            .frame(width: 26, height: 26).contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .clickCursor()
-        .tip(analyzing ? L("tip.track.cancel") : a.isTracked ? (model.trackingLost ? L("trk.lost") : L("tip.track.clear")) : L("tip.track"), trailing: true)
     }
 
     private func range(for kind: AnnotationKind) -> ClosedRange<Double> {
