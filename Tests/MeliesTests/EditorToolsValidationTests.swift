@@ -140,7 +140,9 @@ final class EditorToolsValidationTests: XCTestCase {
 
     func testEveryToolFailsWithAMessageWhenNoVideoIsOpen() async {
         let tools = nothingOpen()
-        for tool in EditorTools.definitions where tool.name != "open_video" {
+        // The recording tools work without an open video, so they are covered in RecordingControlTests.
+        let withoutVideo: Set<String> = ["open_video", "get_screen_layout", "start_recording", "stop_recording", "get_recording_status"]
+        for tool in EditorTools.definitions where !withoutVideo.contains(tool.name) {
             let r = await tools.run(tool.name, [:])
             XCTAssertTrue(r.failed, tool.name)
             XCTAssertTrue(r.output.text.contains("open_video"), "\(tool.name): \(r.output.text)")
