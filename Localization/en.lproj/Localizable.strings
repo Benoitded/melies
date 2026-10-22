@@ -252,3 +252,15 @@
 "toast.norecording" = "No recording found in %@";
 "toast.toosmall" = "Too small: draw at least 40 × 40";
 "rec.perm.open" = "Open System Settings";
+"mcprec.title" = "%@ wants to record your screen";
+"mcprec.text" = "Area: %@\nAudio: %@\nMaximum duration: %d s\n\nThe AI app will see this recording, and everything visible in this area while it records. Nothing is recorded unless you click Allow.";
+"mcprec.region" = "%@, %d × %d points at (%d, %d)";
+"mcprec.allow" = "Allow";
+"mcprec.deny" = "Deny";
+"mcprec.target.window" = "Window of %@ (%@)";
+"mcprec.target.display" = "Screen area (%@)";
+"mcprec.audio.none" = "none";
+"mcprec.audio.microphone" = "microphone";
+"mcprec.audio.system" = "system sound";
+"mcprec.audio.both" = "microphone and system sound";
+"mcprec.autostop" = "Recording stopped automatically after %d s";
