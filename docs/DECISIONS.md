@@ -361,3 +361,16 @@ framework, macOS 26) and never with a server.
   The preview and the export call the same `CaptionRenderer.draw`. Captions are session only (not saved with the video).
 - **Permission:** `NSSpeechRecognitionUsageDescription` is declared (English, plus localized `InfoPlist.strings`). The
   hardened runtime needs no extra entitlement for speech recognition.
+
+## Combine: "Record now" for video 2 (2026-10-22)
+
+Choice: the Video 2 slot can record the clip on the spot. The dialog is ordered out (its model keeps video 1, layout,
+corner and size), the normal flow runs (selector, optional count-down, menu bar button), and the file becomes Video 2
+instead of opening the editor. Cancel or a failed start brings the dialog back unchanged.
+
+How: `ScreenRecorder.recordForCombine(completion:)` plus `CombineCapture`, a pure state machine (unit tested). Only the
+recording started by `begin(forCombine:)` is adopted, by its recording UUID, so an AI recording (`startForAI`) or a
+manual shortcut recording is never captured by a pending request, and the AI path is untouched. A second request is
+refused, and the button is disabled with a tooltip while anything is recording. Audio follows the usual Settings (system
+sound, microphone) and the existing audio handling of the combine export. Real capture and window ordering are not
+covered by unit tests.
