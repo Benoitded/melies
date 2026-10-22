@@ -1,20 +1,20 @@
-# Contraintes vidéo Twitter (et pourquoi une vidéo de 2 Mo est refusée)
+# Twitter video constraints (and why a 2 MB video is rejected)
 
-Cas réel (2026-10-20) : enregistrement QuickTime de 1280x316, 240 fps.
-Refusé alors qu'il ne pesait que 1,9 Mo.
+Real case (2026-10-20): QuickTime recording of 1280x316, 240 fps.
+Rejected even though it weighed only 1.9 MB.
 
-Causes :
-- Ratio 4:1, alors que Twitter accepte de 1:3 à 3:1.
-- 240 fps, alors que 60 fps est le maximum.
+Causes:
+- 4:1 ratio, whereas Twitter accepts from 1:3 to 3:1.
+- 240 fps, whereas 60 fps is the maximum.
 
-Ce que fait l'export Méliès :
-- H.264 dans un MP4, yuv420p, `faststart`
+What the Méliès export does:
+- H.264 in an MP4, yuv420p, `faststart`
 - 30 fps
-- largeur max 1920
-- bandes noires ajoutées si le ratio sort de 1:3 à 3:1 (sans rogner)
-- résultat sur le cas ci-dessus : 1280x432, 30 fps, 129 Ko
+- max width 1920
+- black bars added if the ratio falls outside 1:3 to 3:1 (without cropping)
+- result on the case above: 1280x432, 30 fps, 129 KB
 
-Équivalent ffmpeg, pour vérifier :
+ffmpeg equivalent, to check:
 
 ```bash
 ffmpeg -i in.mov -vf "fps=30,pad=1280:432:(ow-iw)/2:(oh-ih)/2:color=black" \

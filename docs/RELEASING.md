@@ -1,51 +1,61 @@
-# Publier une version
+# Publishing a version
 
-Une commande, depuis `main` propre :
+One command, from a clean `main`:
 
 ```bash
 Scripts/release.sh            # 0.1.0 -> 0.1.1
 Scripts/release.sh minor      # 0.1.1 -> 0.2.0
-Scripts/release.sh 1.0.0      # une version précise
-Scripts/release.sh --dry-run  # construit tout dans dist/, ne publie rien
+Scripts/release.sh 1.0.0      # an exact version
+Scripts/release.sh --dry-run  # builds everything in dist/, publishes nothing
 ```
 
-Le script monte la version, construit et signe l'app, fait le DMG, notarise, signe la mise à jour pour Sparkle,
-écrit `appcast.xml`, commit + tag + push, puis crée la release GitHub avec le DMG et l'appcast. Les notes de
-version sont les sujets de commit depuis le tag précédent : un commit clair par tâche suffit.
+The script bumps the version, builds and signs the app, makes the DMG, notarizes it, signs the update for
+Sparkle, writes `appcast.xml`, commits, tags and pushes, creates the GitHub release with the DMG and the
+appcast, then updates the Homebrew cask. Release notes are the commit subjects since the previous tag: one clear
+commit per task is enough.
 
 ```mermaid
 flowchart LR
-  R[release.sh] --> V[Version +1] --> B[Build + signature]
-  B --> D[DMG] --> N[Notarisation + agrafage]
-  N --> S[Signature Sparkle + appcast.xml]
-  S --> G[Tag + release GitHub]
-  G --> U[Les apps installées proposent la mise à jour]
+  R[release.sh] --> V[Version +1] --> B[Build + signing]
+  B --> D[DMG] --> N[Notarization + stapling]
+  N --> S[Sparkle signature + appcast.xml]
+  S --> G[Tag + GitHub release]
+  G --> H[Homebrew cask updated]
+  G --> U[Installed apps offer the update]
 ```
 
-## Réglage unique
+## One-time setup
 
-1. **Certificat** : Xcode > Réglages > Comptes > Gérer les certificats > « + » > *Developer ID Application*.
-   Sans lui, le script construit quand même (signé en développement) mais l'app n'ouvrira pas sans avertissement
-   sur un autre Mac.
-2. **Notarisation** : crée un mot de passe d'app sur appleid.apple.com, puis, dans ton Terminal :
+1. **Certificate**: Xcode > Settings > Accounts > Manage Certificates > "+" > *Developer ID Application*.
+   Without it the script still builds (signed for development) but the app will not open without a warning on
+   another Mac. The script finds the certificate by its SHA-1 hash, not its name: names with accents get mangled
+   when passed through the shell.
+2. **Notarization**: create an app-specific password at account.apple.com, then, in your own Terminal:
    ```bash
-   xcrun notarytool store-credentials melies-notary --apple-id TON_EMAIL --team-id 72P93X96LA
+   xcrun notarytool store-credentials melies-notary --apple-id YOUR_APPLE_ID_EMAIL --team-id YOUR_TEAM_ID
    ```
-   (le mot de passe est demandé et reste dans le trousseau).
-3. **Clé Sparkle** : déjà générée dans le trousseau (« Private key for signing Sparkle updates »).
-   **Sauvegarde-la** : sans elle, plus aucune mise à jour ne peut être signée pour les apps déjà installées :
+   (the password is prompted for and stays in the keychain; never paste it anywhere else).
+3. **Sparkle key**: generated once in the keychain ("Private key for signing Sparkle updates"). **Back it up**:
+   without it no update can be signed for already installed apps. Export it to a file, open the file in a text
+   editor (never print it in a shared terminal or chat), copy it into a password manager, then delete the file:
    ```bash
    .build/artifacts/sparkle/Sparkle/bin/generate_keys -x ~/Documents/melies-sparkle-key.backup
    ```
-   Garde ce fichier hors du dépôt (gestionnaire de mots de passe, disque chiffré).
-4. **Dépôt public** : l'app lit `appcast.xml` et télécharge le DMG sur GitHub sans identifiant. Tant que le
-   dépôt est privé, personne d'autre que toi ne peut recevoir de mise à jour : passe-le en public avant la
-   première release publique.
+   If the private key ever leaks, replace it before publishing: delete the keychain item
+   (`security delete-generic-password -s "https://sparkle-project.org" -a ed25519`), run `generate_keys` again, and
+   put the new public key in `Scripts/Info.plist` (`SUPublicEDKey`). Apps already released with the old key could
+   not be updated any more, so do this before the first release if you can.
+4. **Public repository**: the app reads `appcast.xml` and downloads the DMG from GitHub without credentials.
+   While the repository is private nobody but you can receive updates.
+5. **Homebrew tap**: the repository `Benoitded/homebrew-melies` holds `Casks/melies.rb`. The release script
+   rewrites it (version and sha256) after each release. Users install with
+   `brew install --cask Benoitded/melies/melies`. If the tap is missing the script only prints a warning.
 
-## Où ça se règle
+## Where things are set
 
-| Quoi | Où |
+| What | Where |
 |---|---|
-| URL du flux, clé publique, fréquence de vérification | `Scripts/Info.plist` (`SUFeedURL`, `SUPublicEDKey`, `SUScheduledCheckInterval`) |
-| Item de menu, réglage automatique | `Sources/Melies/Updater.swift`, onglet Avancé |
-| Signature (hardened runtime, Sparkle inside-out) | `Scripts/build.sh` |
+| Feed URL, public key, check frequency | `Scripts/Info.plist` (`SUFeedURL`, `SUPublicEDKey`, `SUScheduledCheckInterval`) |
+| Menu item, automatic setting | `Sources/Melies/Updater.swift`, Advanced tab |
+| Signing (hardened runtime, Sparkle inside out) | `Scripts/build.sh` |
+| Cask template | `Scripts/release.sh` (last step) |

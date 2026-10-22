@@ -1,25 +1,25 @@
-# Référence Shottr
+# Shottr reference
 
-On reprend les conventions d'usage (raccourcis, flux), pas le code, le nom,
-l'icône ni les textes de Shottr.
+We take over usage conventions (shortcuts, flow), not the code, name,
+icon or text of Shottr.
 
-## Flux
+## Flow
 
-Capture, l'éditeur s'ouvre tout de suite dessus, tout se fait au clavier,
-puis copier ou enregistrer et fermer. Fenêtre légère, barre d'outils compacte.
+Capture, the editor opens right on it, everything is done from the keyboard,
+then copy or save and close. Lightweight window, compact toolbar.
 
-## Raccourcis de Shottr repris ou adaptés (doc publique)
+## Shottr shortcuts adopted or adapted (public docs)
 
-- Zoom : Cmd+1 ajuster, Cmd+0 100 %, Cmd+plus / moins, Z, pan à Espace+drag
-- Sélection : Enter valide le crop, Shift+drag carré, flèches 1 px,
-  Shift+flèches 10 px
-- Édition : Cmd+Z / Cmd+Shift+Z, Cmd+C / V / D, Opt+drag duplique
-- Fichier : Cmd+S enregistre, Cmd+Shift+S enregistrer sous, Cmd+Shift+O ouvrir,
-  Cmd+Shift+V charger depuis le presse-papiers
-- Outils : flèche, texte, rectangle, ovale, spotlight, blur, compteur,
-  loupe, règle, pipette
+- Zoom: Cmd+1 fit, Cmd+0 100%, Cmd+plus / minus, Z, pan with Space+drag
+- Selection: Enter confirms the crop, Shift+drag square, arrows 1 px,
+  Shift+arrows 10 px
+- Editing: Cmd+Z / Cmd+Shift+Z, Cmd+C / V / D, Opt+drag duplicates
+- File: Cmd+S saves, Cmd+Shift+S save as, Cmd+Shift+O open,
+  Cmd+Shift+V load from the clipboard
+- Tools: arrow, text, rectangle, oval, spotlight, blur, counter,
+  magnifier, ruler, color picker
 
-## Ce qu'on ajoute pour la vidéo
+## What we add for video
 
-Timeline avec trim, bouton d'export Twitter (ratio et fps corrigés),
-zones de zoom avec timing, côte à côte et picture-in-picture.
+Timeline with trim, Twitter export button (ratio and fps corrected),
+zoom zones with timing, side-by-side and picture-in-picture.

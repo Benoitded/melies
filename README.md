@@ -1,33 +1,86 @@
 # Méliès
 
-Petit éditeur vidéo pour Mac, dans la barre de menu, inspiré de Shottr.
-Un raccourci global ouvre l'éditeur sur ta dernière capture d'écran vidéo,
-tu rognes, et tu copies ou enregistres un MP4 que Twitter accepte.
+Screen recorder and small video editor for the Mac menu bar, inspired by Shottr.
+A global shortcut films a region of the screen, the editor opens straight on it, you trim and annotate, then
+copy or drag a light MP4 (or GIF) into any app, for example Twitter / X.
 
-Nom : Georges Méliès, inventeur du trucage et du montage à l'écran.
+Free, local (nothing leaves your Mac), Mac only. Named after Georges Méliès, the inventor of special effects
+and editing on screen.
 
-## État
+## Install
 
-Outil perso, Mac uniquement (macOS 26+), Swift / SwiftUI. Pas de signature
-ni de publication pour l'instant. Voir `docs/ROADMAP.md`.
-
-## Lancer
+### With Homebrew
 
 ```bash
+brew install --cask Benoitded/melies/melies
+```
+
+### From the DMG
+
+1. Download the latest `Melies-X.Y.Z.dmg` from [Releases](https://github.com/Benoitded/melies/releases).
+2. Open the DMG and drag **Méliès** into **Applications**.
+
+### First launch
+
+1. Open Méliès: a film icon appears in the menu bar.
+2. Allow **screen recording** when the app guides you (System Settings > Privacy & Security). The app restarts
+   by itself once the switch is on.
+   The **microphone** is only requested if you turn it on for a recording.
+
+Requirements: **macOS 26 (Tahoe) or later**. The app is signed and notarized by Apple. Updates arrive by
+themselves (menu bar menu > "Check for Updates...", or Settings > Advanced).
+
+## Getting started
+
+| Shortcut | Action |
+|---|---|
+| Cmd+Shift+6 | Draw the region and start recording; the same shortcut stops it (configurable) |
+| Cmd+Shift+E | Reopen the editor on the latest recording (configurable) |
+| Cmd+C / Cmd+S | Copy / save the optimized MP4 |
+
+The full list is in [`docs/SHORTCUTS.md`](docs/SHORTCUTS.md).
+
+## What the editor does
+
+- **Trim** the duration (I / O) and **crop** the frame (C).
+- **Animated zooms** (Z), placed automatically on recorded clicks if you want, with adjustable speed and style.
+- **Annotations**: arrow, text, rectangle, spotlight, blur or pixelation, with **object tracking** (a blur
+  follows scrolling text).
+- **Visible clicks**, **system sound** and **microphone**.
+- **Combine two videos**: side by side, stacked, or picture in picture.
+- **Export to a target size**: MP4 (H.264), the more compact HEVC, or GIF; from 360p to 1080p; any size limit
+  (1 MB and up) to fit Twitter / X, Slack and similar limits.
+- **Drag handle**: drag the result into a chat, an email or a browser.
+- Liquid Glass interface in **English, French, Italian and Spanish**.
+
+## Troubleshooting
+
+- *Recording does not start*: check System Settings > Privacy & Security > Screen & System Audio Recording,
+  then relaunch the app.
+- *No microphone sound*: turn the microphone on in the menu bar menu before recording, and accept the prompt.
+- *The app is blocked when opening*: right-click Méliès > Open (case of a non-notarized copy).
+
+## Build it yourself
+
+```bash
+git clone https://github.com/Benoitded/melies && cd melies
 Scripts/build.sh && open ~/Applications/Melies.app
 ```
 
-Le script signe avec ton certificat "Apple Development" s'il existe, ce qui
-évite que macOS redemande l'accès au Bureau à chaque build.
-
-Ouvrir directement une vidéo : `open -a ~/Applications/Melies.app fichier.mov`.
+This needs Xcode 26 or later. The script signs with your "Apple Development" certificate if you have one, so
+macOS does not ask for permissions again after every build. To publish a version, see
+[`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## Docs
 
-- `docs/DECISIONS.md` : pourquoi Swift, pourquoi ce nom, ce qu'on a écarté
-- `docs/SHORTCUTS.md` : raccourcis globaux et de l'éditeur
-- `docs/SHOTTR-REFERENCE.md` : ce qu'on reprend de Shottr (conventions, pas de code)
-- `docs/TWITTER-VIDEO.md` : contraintes vidéo de Twitter et ce que fait l'export
-- `docs/ROADMAP.md` : v1, v2, v3
-- `docs/COMPETITORS.md` : étude des concurrents et priorités
-- `docs/AI.md` : outils pour piloter l'éditeur par IA (MCP, chat, enregistrement)
+- [`docs/DECISIONS.md`](docs/DECISIONS.md): why Swift, what was ruled out, how tracking and export work
+- [`docs/SHORTCUTS.md`](docs/SHORTCUTS.md): global and editor shortcuts
+- [`docs/ROADMAP.md`](docs/ROADMAP.md): what is done and what is next
+- [`docs/COMPETITORS.md`](docs/COMPETITORS.md): study of the other tools
+- [`docs/TWITTER-VIDEO.md`](docs/TWITTER-VIDEO.md): Twitter / X video constraints and what the export does
+- [`docs/AI.md`](docs/AI.md): the optional AI layer (local MCP server)
+- [`docs/RELEASING.md`](docs/RELEASING.md): publishing a version and updates
+
+## License
+
+To be chosen before the repository is advertised (see `docs/ROADMAP.md`).
