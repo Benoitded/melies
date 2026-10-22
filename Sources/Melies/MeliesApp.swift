@@ -133,7 +133,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     try await VideoExport.run(asset: asset, range: CMTimeRange(start: .zero, duration: duration), points: points, annotations: notes, clicks: ClickSet.current(for: CursorTrack.load(for: URL(fileURLWithPath: input))), includeAudio: ProcessInfo.processInfo.environment["MELIES_EXPORT_MUTE"] == nil, settings: {
                         var st = ExportSettings()
                         let env = ProcessInfo.processInfo.environment
-                        if env["MELIES_EXPORT_FORMAT"] == "gif" { st.format = .gif }
+                        if let f = env["MELIES_EXPORT_FORMAT"].flatMap(ExportSettings.Format.init(rawValue:)) { st.format = f }
                         st.maxMegabytes = env["MELIES_EXPORT_MAXMB"].flatMap(Int.init)
                         return st
                     }(), to: URL(fileURLWithPath: out))

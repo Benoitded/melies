@@ -33,9 +33,13 @@ struct ExportOptionsView: View {
 
             Picker(L("exp.format"), selection: $format) {
                 Text("MP4").tag("mp4")
+                Text("HEVC").tag("hevc")
                 Text("GIF").tag("gif")
             }
             .pickerStyle(.segmented)
+            if format == "hevc" {
+                Text(L("exp.hevc.note")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
 
             LabeledContent(L("exp.size")) {
                 Picker("", selection: sizeSelection) {
@@ -64,10 +68,11 @@ struct ExportOptionsView: View {
 
             LabeledContent(L("exp.width")) {
                 Picker("", selection: $maxWidth) {
+                    Text("360p").tag(640)
+                    Text("480p").tag(854)
                     Text("720p").tag(1280)
                     Text("1080p").tag(1920)
                 }
-                .pickerStyle(.segmented)
                 .labelsHidden()
                 .frame(width: 130)
             }

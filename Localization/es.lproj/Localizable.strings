@@ -211,3 +211,4 @@
 "tip.track.cancel" = "Cancelar análisis";
 "trk.lost" = "Objeto fuera o tapado: la anotación termina ahí";
 "exp.other" = "Otro...";
+"exp.hevc.note" = "HEVC (H.265) reduce los archivos un 40 % aproximadamente. Twitter/X y algunas apps pueden rechazarlo.";

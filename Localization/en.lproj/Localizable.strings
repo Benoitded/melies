@@ -211,3 +211,4 @@
 "tip.track.cancel" = "Stop analysis";
 "trk.lost" = "Object left the frame: annotation ends there";
 "exp.other" = "Other...";
+"exp.hevc.note" = "HEVC (H.265) makes files about 40% smaller. Twitter/X and some apps may not accept it.";

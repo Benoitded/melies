@@ -6,15 +6,19 @@ import UniformTypeIdentifiers
 
 /// What the user chose for exports: MP4 or GIF, an optional size limit, and the maximum width.
 struct ExportSettings: Equatable {
-    enum Format: String, CaseIterable { case mp4, gif }
+    enum Format: String, CaseIterable {
+        case mp4, hevc, gif
+        var isVideo: Bool { self != .gif }
+    }
 
     var format: Format = .mp4
     /// nil means no limit.
     var maxMegabytes: Int?
     var maxWidth: Int = 1920
 
-    static let sizeChoices: [Int] = [8, 15, 25, 50, 100]
-    static let widthChoices: [Int] = [1280, 1920]
+    static let sizeChoices: [Int] = [1, 2, 3, 5, 8, 15, 25, 50, 100]
+    /// 360p, 480p, 720p, 1080p
+    static let widthChoices: [Int] = [640, 854, 1280, 1920]
 
     static var current: ExportSettings {
         let d = UserDefaults.standard
@@ -27,7 +31,7 @@ struct ExportSettings: Equatable {
         )
     }
 
-    var fileExtension: String { format.rawValue }
+    var fileExtension: String { format == .gif ? "gif" : "mp4" }
     var contentType: UTType { format == .gif ? .gif : .mpeg4Movie }
 
     /// Average video bitrate (bits per second) for a clip of `seconds` shown at `canvas` size.
@@ -38,8 +42,10 @@ struct ExportSettings: Equatable {
             let audioBits = hasAudio ? 128_000 * seconds : 0
             return Int(min(max((totalBits - audioBits) / seconds, 120_000), 20_000_000))
         }
-        let byPixels = Double(canvas.width * canvas.height) * 30 * 0.1
-        return Int(min(max(byPixels, 1_500_000), 16_000_000))
+        // H.265 needs about 40 % fewer bits for the same look.
+        let factor = format == .hevc ? 0.6 : 1
+        let byPixels = Double(canvas.width * canvas.height) * 30 * 0.1 * factor
+        return Int(min(max(byPixels, 1_500_000 * factor), 16_000_000))
     }
 }
 
@@ -48,7 +54,7 @@ struct ExportSettings: Equatable {
 enum MP4Writer {
     /// Reads the composed frames (and the mixed sound) and writes an H.264 / AAC MP4 at `bitrate`.
     static func write(asset: AVAsset, range: CMTimeRange, track: AVAssetTrack, composition: AVVideoComposition,
-                      canvas: CGSize, bitrate: Int, audioTracks: [AVAssetTrack], audioMix: AVAudioMix?, to url: URL) async throws {
+                      canvas: CGSize, bitrate: Int, hevc: Bool = false, audioTracks: [AVAssetTrack], audioMix: AVAudioMix?, to url: URL) async throws {
         try? FileManager.default.removeItem(at: url)
         let reader = try AVAssetReader(asset: asset)
         reader.timeRange = range
@@ -75,14 +81,13 @@ enum MP4Writer {
         let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
         writer.shouldOptimizeForNetworkUse = true
         let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: [
-            AVVideoCodecKey: AVVideoCodecType.h264,
+            AVVideoCodecKey: hevc ? AVVideoCodecType.hevc : AVVideoCodecType.h264,
             AVVideoWidthKey: Int(canvas.width), AVVideoHeightKey: Int(canvas.height),
             AVVideoCompressionPropertiesKey: [
                 AVVideoAverageBitRateKey: bitrate,
-                AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
                 AVVideoExpectedSourceFrameRateKey: 30,
                 AVVideoMaxKeyFrameIntervalKey: 60,
-            ],
+            ].merging(hevc ? [:] : [AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel]) { a, _ in a },
         ])
         videoInput.expectsMediaDataInRealTime = false
         writer.add(videoInput)
