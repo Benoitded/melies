@@ -13,15 +13,46 @@ final class MCPServer: ObservableObject {
     @Published private(set) var failure: String?
     @Published private(set) var token = MCPServer.loadToken()
 
-    private var listener: NWListener?
-    private lazy var mcp = MCPProtocol(tools: EditorTools(
-        model: { EditorWindowController.shared.session.model },
-        openVideo: { url in
-            guard let target = url ?? LatestRecording.find() else { return nil }
-            EditorWindowController.shared.open(target)
-            return target
+    // What the AI app is doing, for the Settings status and the badge in the editor.
+    @Published private(set) var clientName: String?
+    @Published private(set) var busyTool: String?
+    @Published private(set) var lastTool: String?
+    @Published private(set) var lastToolAt: Date?
+    @Published private(set) var rejectedAt: Date?
+    @Published private(set) var showBadge = false
+    private var badgeTask: Task<Void, Never>?
+
+    fileprivate func record(_ activity: MCPProtocol.Activity) {
+        switch activity {
+        case .client(let name): clientName = name
+        case .started(let tool):
+            busyTool = tool
+            showBadge = true
+            badgeTask?.cancel()
+        case .finished(let tool, _):
+            busyTool = nil
+            lastTool = tool
+            lastToolAt = Date()
+            badgeTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(3.5))
+                if !Task.isCancelled { self?.showBadge = false }
+            }
         }
-    ))
+    }
+
+    private var listener: NWListener?
+    private lazy var mcp: MCPProtocol = {
+        var protocolHandler = MCPProtocol(tools: EditorTools(
+            model: { EditorWindowController.shared.session.model },
+            openVideo: { url in
+                guard let target = url ?? LatestRecording.find() else { return nil }
+                EditorWindowController.shared.open(target)
+                return target
+            }
+        ))
+        protocolHandler.onActivity = { [weak self] activity in self?.record(activity) }
+        return protocolHandler
+    }()
 
     static var enabled: Bool {
         get { UserDefaults.standard.bool(forKey: "mcpEnabled") }
@@ -109,6 +140,7 @@ final class MCPServer: ObservableObject {
 
     /// A new token: clients configured with the old one stop working.
     func regenerateToken() {
+        clientName = nil; lastTool = nil; lastToolAt = nil; rejectedAt = nil
         token = Self.makeToken()
         UserDefaults.standard.set(token, forKey: "mcpToken")
     }
@@ -137,7 +169,10 @@ final class MCPServer: ObservableObject {
             guard allowed else { return .status(403, "Forbidden") }
         }
         guard request.path == "/mcp" else { return .status(404, "Not Found") }
-        guard authorized(request) else { return .status(401, "Unauthorized") }
+        guard authorized(request) else {
+            rejectedAt = Date() // shown in Settings: an app is trying with an old key
+            return .status(401, "Unauthorized")
+        }
         switch request.method {
         case "POST":
             // One call at a time: two clients (or two calls) must not interleave their edits and undo steps.

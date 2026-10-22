@@ -244,10 +244,12 @@ struct AdvancedTab: View {
 }
 
 /// Optional: lets an AI app drive the editor. Everything stays off until the user turns it on.
+/// The panel says what is going on: waiting, connected (and who), working (and on what), last action.
 private struct MCPSettings: View {
     @ObservedObject private var server = MCPServer.shared
     @State private var enabled = MCPServer.enabled
-    @State private var copied = false
+    @State private var copiedID: String?
+    @State private var everCopied = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -259,30 +261,86 @@ private struct MCPSettings: View {
             if let failure = server.failure {
                 Text(L("set.adv.mcp.failed", failure)).font(.callout).foregroundStyle(.red)
             } else if enabled && server.running {
-                Label(L("set.adv.mcp.running", server.url), systemImage: "circle.fill")
-                    .font(.callout).textSelection(.enabled)
-                    .symbolRenderingMode(.palette).foregroundStyle(.green, .primary)
-                Text(L("set.adv.mcp.steps"))
-                    .font(.callout)
-                    .fixedSize(horizontal: false, vertical: true)
+                status
+                Text(server.url).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                VStack(alignment: .leading, spacing: 5) {
+                    step(done: everCopied, L("set.adv.mcp.step1"))
+                    step(done: server.clientName != nil, L("set.adv.mcp.step2"))
+                    step(done: server.lastToolAt != nil, L("set.adv.mcp.step3"))
+                }
+                .padding(.vertical, 2)
                 HStack {
-                    Button(L("set.adv.mcp.copy_cmd")) { copy(server.claudeCodeCommand) }
-                    Button(L("set.adv.mcp.copy_url")) { copy(server.urlWithKey) }
+                    copyButton("cmd", L("set.adv.mcp.copy_cmd"), server.claudeCodeCommand)
+                    copyButton("url", L("set.adv.mcp.copy_url"), server.urlWithKey)
                 }
                 HStack {
-                    Button(L("set.adv.mcp.copy_json")) { copy(server.jsonConfig) }
-                    Button(L("set.adv.mcp.new_key")) { server.regenerateToken() }
-                    if copied { Text(L("set.adv.mcp.copied")).foregroundStyle(.secondary) }
+                    copyButton("json", L("set.adv.mcp.copy_json"), server.jsonConfig)
+                    Button(L("set.adv.mcp.new_key")) { server.regenerateToken(); everCopied = false }
                 }
             }
         }
         .labeledContent(L("set.adv.mcp"))
     }
 
-    private func copy(_ text: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
-        copied = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
+    /// One line that always tells the truth: refused, working, connected, or waiting.
+    @ViewBuilder
+    private var status: some View {
+        if let tool = server.busyTool {
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text(L("set.adv.mcp.working", server.clientName ?? L("ai.default_client"), pretty(tool)))
+                    .font(.callout).foregroundStyle(.green)
+            }
+        } else if let name = server.clientName {
+            VStack(alignment: .leading, spacing: 2) {
+                dot(.green, L("set.adv.mcp.connected", name))
+                if let tool = server.lastTool, let at = server.lastToolAt {
+                    TimelineView(.periodic(from: .now, by: 5)) { _ in
+                        Text(L("set.adv.mcp.last", pretty(tool), relative(at)))
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
+                }
+            }
+        } else {
+            dot(.orange, L("set.adv.mcp.waiting"))
+            if let refused = server.rejectedAt, Date().timeIntervalSince(refused) < 120 {
+                Text(L("set.adv.mcp.refused")).font(.callout).foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func dot(_ color: Color, _ text: String) -> some View {
+        Label(text, systemImage: "circle.fill")
+            .font(.callout)
+            .symbolRenderingMode(.palette).foregroundStyle(color, color)
+    }
+
+    private func step(done: Bool, _ text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: done ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(done ? Color.green : Color.secondary)
+            Text(text).foregroundStyle(done ? .secondary : .primary)
+        }
+        .font(.callout)
+        .animation(.easeInOut(duration: 0.2), value: done)
+    }
+
+    private func copyButton(_ id: String, _ title: String, _ text: String) -> some View {
+        Button(copiedID == id ? "✓ " + L("set.adv.mcp.copied") : title) {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+            copiedID = id
+            everCopied = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { if copiedID == id { copiedID = nil } }
+        }
+    }
+
+    private func pretty(_ tool: String) -> String { tool.replacingOccurrences(of: "_", with: " ") }
+
+    private func relative(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
