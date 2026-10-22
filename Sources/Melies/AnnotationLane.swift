@@ -11,22 +11,25 @@ struct AnnotationLane: View {
     private enum Drag { case move(grab: Double, length: Double), start, end }
     @State private var drag: Drag?
     @State private var hoveredID: UUID?
+    /// Rows are frozen while a bar is being dragged, so bars never swap places under the pointer.
+    @State private var frozenRows: [UUID: Int]?
 
-    /// Greedy row assignment so overlapping bars do not hide each other.
-    private var rows: [UUID: Int] {
+    /// Greedy row assignment so overlapping bars do not hide each other. Bars are placed in creation order
+    /// (not by start time), so retiming one bar does not make the rows trade places.
+    private var computedRows: [UUID: Int] {
         var result: [UUID: Int] = [:]
-        var ends: [Double] = []
-        for a in model.annotations.sorted(by: { $0.start < $1.start }) {
-            if let row = ends.firstIndex(where: { $0 <= a.start }) {
-                result[a.id] = row
-                ends[row] = a.end
-            } else {
-                result[a.id] = ends.count
-                ends.append(a.end)
-            }
+        var occupied: [[(start: Double, end: Double)]] = []
+        for a in model.annotations {
+            let free = occupied.firstIndex { row in row.allSatisfy { a.end <= $0.start || a.start >= $0.end } }
+            let index = free ?? occupied.count
+            if free == nil { occupied.append([]) }
+            occupied[index].append((a.start, a.end))
+            result[a.id] = index
         }
         return result
     }
+
+    private var rows: [UUID: Int] { frozenRows ?? computedRows }
 
     var rowCount: Int { (rows.values.max() ?? -1) + 1 }
 
@@ -65,6 +68,7 @@ struct AnnotationLane: View {
                                 DragGesture(minimumDistance: 0, coordinateSpace: .named(space))
                                     .onChanged { value in
                                         if drag == nil {
+                                            frozenRows = computedRows
                                             model.selectAnnotation(a.id)
                                             let edge: CGFloat = 12
                                             if value.startLocation.x - x(a.start) < edge { drag = .start }
@@ -81,7 +85,7 @@ struct AnnotationLane: View {
                                         case nil: break
                                         }
                                     }
-                                    .onEnded { _ in drag = nil }
+                                    .onEnded { _ in drag = nil; frozenRows = nil }
                             )
                     }
                 }

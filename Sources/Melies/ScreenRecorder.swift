@@ -19,6 +19,8 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
     private var busy = false
     private var overlay: RecordingOverlay?
     private var cursorSamples: [CursorTrack.Sample] = []
+    private var clickSamples: [CursorTrack.Click] = []
+    private var clickMonitor: Any?
     private var cursorTimer: Timer?
     private var captureRegion: CGRect = .zero
     private var captureScreen: NSScreen?
@@ -210,11 +212,28 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
     private func startCursorSampling(region: CGRect, screen: NSScreen) {
         cursorSamples = []
+        clickSamples = []
         captureRegion = region
         captureScreen = screen
         cursorTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.sampleCursor() }
         }
+        clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, let m = self.mouseInRegion() else { return }
+                self.clickSamples.append(CursorTrack.Click(t: Date().timeIntervalSince(self.startedAt), x: m.x, y: m.y))
+            }
+        }
+    }
+
+    /// Normalized position of the mouse in the recorded region, nil when it is outside.
+    private func mouseInRegion() -> (x: Double, y: Double)? {
+        guard let screen = captureScreen, captureRegion.width > 0 else { return nil }
+        let p = NSEvent.mouseLocation // bottom-left origin, global
+        let x = (p.x - screen.frame.minX - captureRegion.minX) / captureRegion.width
+        let y = (screen.frame.maxY - p.y - captureRegion.minY) / captureRegion.height
+        guard (0...1).contains(x), (0...1).contains(y) else { return nil }
+        return (x, y)
     }
 
     private func sampleCursor() {
@@ -228,8 +247,10 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
     private func stopCursorSampling() {
         cursorTimer?.invalidate()
         cursorTimer = nil
-        if !cursorSamples.isEmpty, let url = outputURL {
-            CursorTrack(samples: cursorSamples).save(for: url)
+        if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
+        clickMonitor = nil
+        if !cursorSamples.isEmpty || !clickSamples.isEmpty, let url = outputURL {
+            CursorTrack(samples: cursorSamples, clicks: clickSamples).save(for: url)
         }
     }
 

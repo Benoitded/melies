@@ -163,3 +163,56 @@ Un enregistrement peut avoir plusieurs pistes audio : l'export les mélange en u
 (`AVMutableAudioMix`), ou les met à zéro si le bouton son de l'éditeur est coupé. Piège de test :
 lancée directement depuis un terminal, l'app n'hérite pas de l'autorisation d'enregistrement d'écran
 (macOS l'attribue au programme parent) ; il faut la démarrer par `open -a` pour tester la capture.
+
+## Clics visibles (2026-10-22)
+
+Les clics sont enregistrés à côté de la position du curseur (`<nom>.cursor.json` devient un objet
+`{cursor, clicks}` ; l'ancien tableau simple se lit toujours). On ne dessine pas dans la vidéo
+d'origine : l'anneau est calculé au rendu, donc on peut l'allumer, l'éteindre, changer sa couleur et
+sa taille après coup, et il suit le recadrage et les zooms. Seuls les clics dans la zone enregistrée
+comptent. Le curseur lissé n'est pas fait : il faudrait enregistrer sans le vrai curseur et le
+redessiner, ce qui perd les formes (flèche, barre de texte, main).
+
+## Raccourcis clavier : écoute directe des touches (2026-10-22)
+
+Les raccourcis à une touche (V A T R S B C Z I O, Espace, flèches, Supprimer, Entrée, Échap) étaient
+portés par des boutons SwiftUI invisibles (opacité 0, taille 0) : ils ne recevaient aucune touche.
+Ils sont maintenant lus dans les événements clavier de la fenêtre de l'éditeur
+(`NSEvent.addLocalMonitorForEvents`), seulement quand elle est la fenêtre active, pas pendant la saisie
+d'un texte (le premier répondant est un éditeur de texte) et pas avec Cmd, Option ou Contrôle (ce sont des
+éléments de menu). Les lettres sont lues avec `charactersIgnoringModifiers`, donc indépendantes du clavier
+(AZERTY compris). Supprimer = Retour arrière (51) et Suppression avant (117).
+Piège de test : l'outil d'automatisation envoie les touches à une fenêtre en arrière-plan, qui n'est pas
+« active » ; pour tester, il faut d'abord activer l'app.
+
+## Flou à l'arrêt (2026-10-22)
+
+Le lecteur ne distribue plus d'images quand il est en pause, et l'observateur de temps ne tourne que
+pendant la lecture. L'aperçu du flou demande donc lui-même l'image exacte sous la tête de lecture
+(`AVAssetImageGenerator`) à l'ajout d'une annotation, à chaque déplacement et à la mise en pause.
+
+## Barres de timeline stables et poignée qui ne déplace pas la fenêtre (2026-10-22)
+
+- Les barres d'annotations étaient rangées par heure de début : retarder le début de la barre du haut la
+  faisait passer sous l'autre, et le glissé en cours tombait sur la mauvaise barre. Les lignes suivent
+  maintenant l'ordre de création, et sont gelées pendant un glissé.
+- La poignée de glisser-déposer est dans la zone de la barre de titre, où appuyer sur la souris déplace la
+  fenêtre. Elle est désormais une vue AppKit (`mouseDownCanMoveWindow = false`) qui lance un vrai glisser de
+  fichier « promis » (`NSFilePromiseProvider`) : le MP4 n'est exporté qu'au dépôt.
+
+## Export à taille cible et GIF (2026-10-22)
+
+L'export n'utilise plus le préréglage d'`AVAssetExportSession` (débit non réglable) : `AVAssetReader`
+lit les images composées (le même compositeur que l'aperçu), `AVAssetWriter` encode en H.264 à un
+**débit calculé** pour viser la taille choisie (93 % de la cible, moins le son à 128 kb/s). Si le fichier
+dépasse quand même, jusqu'à trois reprises avec un débit corrigé. Sans limite, le débit suit le nombre de
+pixels. Le GIF est écrit avec ImageIO ; avec une taille maximale, il essaie des largeurs et des cadences
+décroissantes (720 px à 15 i/s jusqu'à 128 px à 3 i/s) jusqu'à ce que le fichier tienne. Si rien ne tient,
+la taille réelle est affichée.
+
+Piège : `URL.resourceValues(forKeys: [.fileSizeKey])` met la valeur en cache sur l'objet URL ; relue après
+chaque essai, elle redonnait la taille du premier. La taille se lit maintenant avec
+`FileManager.attributesOfItem`.
+
+Le son est un seul flux AAC (les pistes système et micro sont mélangées) ; sans son, le fichier n'a pas
+de piste audio du tout.

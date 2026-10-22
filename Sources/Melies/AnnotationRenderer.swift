@@ -271,8 +271,8 @@ enum AnnotationRenderer {
 extension AnnotationRenderer {
     /// Overlay for the export: annotations drawn at output resolution, ready to composite over the frame.
     /// `region` is the visible part of the source (source pixels), `content` where it lands in the canvas.
-    static func overlay(_ list: [Annotation], at t: Double, source: CGSize, region: CGRect, content: CGRect, canvas: CGSize) -> CIImage? {
-        guard hasVisible(list, at: t) else { return nil }
+    static func overlay(_ list: [Annotation], clicks: ClickSet? = nil, at t: Double, source: CGSize, region: CGRect, content: CGRect, canvas: CGSize) -> CIImage? {
+        guard hasVisible(list, at: t) || (clicks?.isActive(at: t) ?? false) else { return nil }
         let width = Int(canvas.width), height = Int(canvas.height)
         guard let space = CGColorSpace(name: CGColorSpace.sRGB),
               let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: space,
@@ -286,6 +286,7 @@ extension AnnotationRenderer {
         ctx.scaleBy(x: k, y: k)
         ctx.translateBy(x: -region.minX, y: -region.minY)
         draw(list, at: t, in: ctx, source: source)
+        drawClicks(clicks, at: t, in: ctx, source: source)
         guard let image = ctx.makeImage() else { return nil }
         return CIImage(cgImage: image)
     }

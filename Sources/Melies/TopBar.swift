@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Shottr-style toolbar: actions, tools, then source info on the right.
 struct TopBar: View {
@@ -57,6 +58,10 @@ struct TopBar: View {
                         BarButton(symbol: "scissors", title: L("tip.trim"), shortcut: "(I / O)") {}
                         BarButton(symbol: "crop", title: L("tip.crop"), shortcut: "(C)", active: model.cropMode || model.cropRect != nil) {
                             model.toggleCrop()
+                        }
+                        BarButton(symbol: "cursorarrow.click.2", title: L("tip.clicks"), active: model.showClicks && model.hasClicks, disabled: !model.hasClicks) {
+                            model.showClicks.toggle()
+                            UserDefaults.standard.set(model.showClicks, forKey: "showClicks")
                         }
                         BarButton(symbol: "plus.magnifyingglass", title: L("tip.zoomanim"), shortcut: "(Z)", active: !model.zoomPoints.isEmpty) {
                             model.addZoom()
@@ -178,6 +183,8 @@ struct Tooltip: View {
 }
 
 /// Grab it and drop the optimized MP4 into any app (a message, a mail, the Finder, a web page).
+/// The handle sits in the title bar, where a mouse press normally moves the whole window, so the press and
+/// the drag are handled by an AppKit view that refuses to move the window and starts a real file drag.
 struct DragHandle: View {
     @ObservedObject var model: EditorModel
     @State private var hovering = false
@@ -190,15 +197,9 @@ struct DragHandle: View {
         }
         .frame(width: 50, height: 30)
         .background(Capsule().fill(Color.primary.opacity(hovering ? 0.1 : 0)))
-        .contentShape(Rectangle())
-        .onHover { hovering = $0 }
+        .overlay { DragSourceView(model: model, hovering: $hovering) }
         .pointerStyle(.grabIdle)
-        .onDrag {
-            model.dragProvider()
-        } preview: {
-            DragPreview(image: model.thumbnails.first)
-        }
-        .tip(L("tip.drag"))
+        .tip(L("tip.drag"), hovering: hovering)
     }
 
     /// Two columns of three dots, like a grab handle.
@@ -214,19 +215,93 @@ struct DragHandle: View {
     }
 }
 
-private struct DragPreview: View {
-    let image: NSImage?
+/// Invisible AppKit view over the handle: tracks hover, never moves the window, and begins the file drag.
+private struct DragSourceView: NSViewRepresentable {
+    let model: EditorModel
+    @Binding var hovering: Bool
 
-    var body: some View {
-        Group {
-            if let image {
-                Image(nsImage: image).resizable().scaledToFit()
-            } else {
-                Image(systemName: "film").font(.system(size: 28))
-            }
-        }
-        .frame(width: 140, height: 90)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.white.opacity(0.4), lineWidth: 1))
+    func makeNSView(context: Context) -> DragSourceNSView {
+        let view = DragSourceNSView()
+        view.model = model
+        view.onHover = { hovering = $0 }
+        return view
     }
+
+    func updateNSView(_ view: DragSourceNSView, context: Context) {
+        view.model = model
+        view.onHover = { hovering = $0 }
+    }
+}
+
+private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromiseProviderDelegate {
+    var model: EditorModel?
+    var onHover: ((Bool) -> Void)?
+    private var pressEvent: NSEvent?
+
+    /// The title bar moves the window on a mouse press; this view must not.
+    override var mouseDownCanMoveWindow: Bool { false }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
+    }
+
+    override func mouseEntered(with event: NSEvent) { onHover?(true) }
+    override func mouseExited(with event: NSEvent) { onHover?(false) }
+    override func mouseDown(with event: NSEvent) { pressEvent = event }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let press = pressEvent, model != nil,
+              hypot(event.locationInWindow.x - press.locationInWindow.x, event.locationInWindow.y - press.locationInWindow.y) > 3
+        else { return }
+        pressEvent = nil
+
+        let provider = NSFilePromiseProvider(fileType: ExportSettings.current.contentType.identifier, delegate: self)
+        let item = NSDraggingItem(pasteboardWriter: provider)
+        let size = NSSize(width: 140, height: 90)
+        let origin = convert(event.locationInWindow, from: nil)
+        item.setDraggingFrame(NSRect(x: origin.x - size.width / 2, y: origin.y - size.height / 2, width: size.width, height: size.height),
+                              contents: previewImage(size))
+        beginDraggingSession(with: [item], event: press, source: self)
+    }
+
+    /// The first frame of the video, with rounded corners.
+    private func previewImage(_ size: NSSize) -> NSImage {
+        let frame = model?.thumbnails.first
+        return NSImage(size: size, flipped: false) { rect in
+            let path = NSBezierPath(roundedRect: rect.insetBy(dx: 1, dy: 1), xRadius: 8, yRadius: 8)
+            path.addClip()
+            NSColor.black.setFill()
+            rect.fill()
+            frame?.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1)
+            NSColor.white.withAlphaComponent(0.5).setStroke()
+            path.lineWidth = 1
+            path.stroke()
+            return true
+        }
+    }
+
+    // MARK: NSDraggingSource
+
+    func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation { .copy }
+
+    // MARK: NSFilePromiseProviderDelegate (the export runs only when the destination asks for the file)
+
+    func filePromiseProvider(_ provider: NSFilePromiseProvider, fileNameForType fileType: String) -> String {
+        let name = model?.url.deletingPathExtension().lastPathComponent ?? "video"
+        return name + "." + ExportSettings.current.fileExtension
+    }
+
+    func filePromiseProvider(_ provider: NSFilePromiseProvider, writePromiseTo url: URL, completionHandler: @escaping (Error?) -> Void) {
+        guard let model else { completionHandler(ExportError.noVideoTrack); return }
+        Task { @MainActor in
+            let ok = await model.export(to: url)
+            if ok { model.status = L("status.dragged") }
+            completionHandler(ok ? nil : ExportError.noVideoTrack)
+        }
+    }
+
+    func operationQueue(for provider: NSFilePromiseProvider) -> OperationQueue { .main }
 }

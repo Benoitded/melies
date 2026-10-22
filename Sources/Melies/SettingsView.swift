@@ -12,6 +12,8 @@ struct GeneralTab: View {
     @AppStorage("closeAfterAction") private var closeAfterAction = true
     @AppStorage("recordMicrophone") private var recordMicrophone = false
     @AppStorage("recordSystemAudio") private var recordSystemAudio = false
+    @AppStorage("clickColor") private var clickColor = "yellow"
+    @AppStorage("clickSize") private var clickSize = 36.0
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
@@ -47,6 +49,22 @@ struct GeneralTab: View {
                     Toggle(L("set.audio.system"), isOn: $recordSystemAudio)
                 }
                 .labeledContent(L("set.audio"))
+
+                HStack(spacing: 14) {
+                    HStack(spacing: 8) {
+                        ForEach(ClickStyleStore.presets, id: \.name) { preset in
+                            Button { clickColor = preset.name } label: {
+                                Circle().fill(preset.color.color)
+                                    .overlay(Circle().stroke(Color.primary.opacity(0.25), lineWidth: 0.8))
+                                    .frame(width: 18, height: 18)
+                                    .overlay(Circle().stroke(Color.accentColor, lineWidth: clickColor == preset.name ? 2 : 0).padding(-3))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    WedgeSlider(value: $clickSize, range: 16...80, width: 110)
+                }
+                .labeledContent(L("set.clicks"))
 
                 Divider()
 

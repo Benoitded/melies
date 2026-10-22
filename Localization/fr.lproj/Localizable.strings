@@ -194,3 +194,15 @@
 "tip.audio.off" = "Le son est coupé à l'export";
 "rec.mic.denied" = "L'accès au micro est désactivé";
 "rec.mic.denied.text" = "L'enregistrement continue sans ta voix. Active-le dans Réglages Système > Confidentialité et sécurité > Microphone.";
+"tip.clicks" = "Afficher les clics";
+"set.clicks" = "Clics";
+"exp.title" = "Options d'export";
+"exp.format" = "Format";
+"exp.size" = "Taille maximale";
+"exp.nolimit" = "Sans limite";
+"exp.mb" = "Mo";
+"exp.width" = "Résolution";
+"exp.estimate" = "Environ %@ Mo";
+"exp.estimate.limit" = "Le fichier reste sous %d Mo : la qualité s'adapte.";
+"exp.estimate.gif" = "Un GIF est lourd. Fixe une taille maximale pour le garder léger.";
+"exp.estimate.gif_limit" = "Le GIF reste sous %d Mo : la largeur et la fluidité baissent si besoin.";

@@ -8,23 +8,28 @@ struct DelayedTip: ViewModifier {
     let shortcut: String?
     /// Anchor the tooltip to the right edge of the control, so it grows leftwards near the window edge.
     let trailing: Bool
+    /// When the control tracks hover itself (an AppKit view), pass its state here.
+    var hover: Bool?
 
     @State private var show = false
     @State private var task: Task<Void, Never>?
 
+    private func hoverChanged(_ inside: Bool) {
+        task?.cancel()
+        if inside {
+            task = Task {
+                try? await Task.sleep(for: .milliseconds(450))
+                if !Task.isCancelled { withAnimation(.easeOut(duration: 0.12)) { show = true } }
+            }
+        } else {
+            show = false
+        }
+    }
+
     func body(content: Content) -> some View {
         content
-            .onHover { inside in
-                task?.cancel()
-                if inside {
-                    task = Task {
-                        try? await Task.sleep(for: .milliseconds(450))
-                        if !Task.isCancelled { withAnimation(.easeOut(duration: 0.12)) { show = true } }
-                    }
-                } else {
-                    show = false
-                }
-            }
+            .onHover { inside in if hover == nil { hoverChanged(inside) } }
+            .onChange(of: hover ?? false) { _, inside in if hover != nil { hoverChanged(inside) } }
             .overlay(alignment: trailing ? .topTrailing : .topLeading) {
                 if show {
                     Tooltip(title: title, shortcut: shortcut)
@@ -38,8 +43,8 @@ struct DelayedTip: ViewModifier {
 }
 
 extension View {
-    func tip(_ title: String, shortcut: String? = nil, trailing: Bool = false) -> some View {
-        modifier(DelayedTip(title: title, shortcut: shortcut, trailing: trailing))
+    func tip(_ title: String, shortcut: String? = nil, trailing: Bool = false, hovering: Bool? = nil) -> some View {
+        modifier(DelayedTip(title: title, shortcut: shortcut, trailing: trailing, hover: hovering))
     }
 }
 

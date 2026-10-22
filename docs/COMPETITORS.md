@@ -37,7 +37,7 @@ zooms intelligents, lissage du curseur, fonds). À essayer en vrai avant de déc
 | Micro et son du système, son coupé ou gardé à l'export | fait (micro à tester) |
 | Combiner deux vidéos | fait (rare chez les concurrents lus, non cherché précisément) |
 | Poignée de glisser-déposer du fichier | fait (le dépôt reste à essayer) |
-| Export à taille cible, GIF | moteur fait et testé en ligne de commande, interface à faire |
+| Export à taille cible, GIF | **fait** (panneau d'options : MP4 ou GIF, taille maximale, résolution) |
 | Export identique à l'aperçu | par construction (même dessin), à tester sur des cas réels |
 | Zoom auto à partir des clics | à faire (les clics sont enregistrés) |
 | Fond, marges, coins arrondis, ombre | à faire |
@@ -50,7 +50,7 @@ zooms intelligents, lissage du curseur, fonds). À essayer en vrai avant de déc
 
 ## Feuille de route proposée
 
-1. **Export à taille cible et GIF** (interface, estimation de taille, préréglage Twitter) : en cours.
+1. ~~Export à taille cible et GIF~~ : fait. Reste un préréglage « Twitter / X » en un clic, à décider.
 2. **Fiabilité de l'enregistrement et de l'export** : récupération du dernier enregistrement après un
    plantage, progression et annulation de l'export, test de longs enregistrements (10 min et plus) avec
    audio, test à chaque version de macOS.

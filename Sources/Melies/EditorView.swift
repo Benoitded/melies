@@ -26,43 +26,13 @@ struct EditorView: View {
         }
     }
 
-    /// Invisible buttons that carry the Shottr-style keyboard shortcuts.
+    /// Keys are handled by `EditorWindowController` (see its key monitor); only Cmd+Shift+O stays here.
     private var shortcuts: some View {
-        Group {
-            Button("") {
-                if let model = session.model {
-                    if model.cropMode { model.cancelCrop(); return }
-                    if model.tool != .select { model.setTool(.select); return }
-                    if model.selectedAnnotationID != nil { model.selectAnnotation(nil); return }
-                    if model.selectedPointID != nil { model.selectPoint(nil); return }
-                }
-                close()
-            }.keyboardShortcut(.escape, modifiers: [])
-            Button("") { session.chooseFile() }.keyboardShortcut("o", modifiers: [.command, .shift])
-            // Single-key shortcuts stay quiet while a text field has the keyboard.
-            if let model = session.model, !model.isEditingText {
-                Button("") { model.togglePlay() }.keyboardShortcut(.space, modifiers: [])
-                Button("") { model.setTool(.select) }.keyboardShortcut("v", modifiers: [])
-                Button("") { model.setTool(.arrow) }.keyboardShortcut("a", modifiers: [])
-                Button("") { model.setTool(.text) }.keyboardShortcut("t", modifiers: [])
-                Button("") { model.setTool(.rect) }.keyboardShortcut("r", modifiers: [])
-                Button("") { model.setTool(.spotlight) }.keyboardShortcut("s", modifiers: [])
-                Button("") { model.setTool(.blur) }.keyboardShortcut("b", modifiers: [])
-                Button("") { model.toggleCrop() }.keyboardShortcut("c", modifiers: [])
-                Button("") { model.addZoom() }.keyboardShortcut("z", modifiers: [])
-                Button("") { model.deleteSelected() }.keyboardShortcut(.delete, modifiers: [])
-                Button("") { if model.cropMode { model.confirmCrop() } }.keyboardShortcut(.return, modifiers: [])
-                Button("") { model.setIn() }.keyboardShortcut("i", modifiers: [])
-                Button("") { model.setOut() }.keyboardShortcut("o", modifiers: [])
-                Button("") { model.step(frames: -1) }.keyboardShortcut(.leftArrow, modifiers: [])
-                Button("") { model.step(frames: 1) }.keyboardShortcut(.rightArrow, modifiers: [])
-                Button("") { model.step(frames: -10) }.keyboardShortcut(.leftArrow, modifiers: [.shift])
-                Button("") { model.step(frames: 10) }.keyboardShortcut(.rightArrow, modifiers: [.shift])
-            }
-        }
-        .opacity(0)
-        .frame(width: 0, height: 0)
-        .accessibilityHidden(true)
+        Button("") { session.chooseFile() }
+            .keyboardShortcut("o", modifiers: [.command, .shift])
+            .opacity(0)
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
     }
 
     private struct Empty: View {
@@ -111,7 +81,7 @@ struct EditorView: View {
                         .frame(width: video.width, height: video.height, alignment: .topLeading)
                         .clipped()
                         .position(x: video.midX, y: video.midY)
-                        if !model.annotations.isEmpty || model.tool != .select, !model.cropMode, model.selectedPoint == nil {
+                        if !model.annotations.isEmpty || model.tool != .select || (model.showClicks && model.hasClicks), !model.cropMode, model.selectedPoint == nil {
                             AnnotationOverlay(model: model, video: video, region: region)
                         }
                         if model.cropMode || (model.cropRect != nil && !model.previewingCamera) {
@@ -162,6 +132,7 @@ struct EditorView: View {
                     }
                     .font(.system(size: 12).monospacedDigit())
                     Spacer()
+                    ExportOptionsButton(model: model)
                     if model.hasAudio {
                         Button { model.includeAudio.toggle() } label: {
                             Image(systemName: model.includeAudio ? "speaker.wave.2.fill" : "speaker.slash.fill")
@@ -186,5 +157,22 @@ struct EditorView: View {
             let s = max(seconds, 0)
             return String(format: "%d:%02d.%d", Int(s) / 60, Int(s) % 60, Int((s * 10).truncatingRemainder(dividingBy: 10)))
         }
+    }
+}
+
+private struct ExportOptionsButton: View {
+    @ObservedObject var model: EditorModel
+    @State private var open = false
+
+    var body: some View {
+        Button { open.toggle() } label: {
+            Image(systemName: "slider.horizontal.3")
+                .font(.system(size: 12))
+                .frame(width: 20, height: 20)
+        }
+        .buttonStyle(.glass)
+        .buttonBorderShape(.circle)
+        .tip(L("exp.title"), trailing: true)
+        .popover(isPresented: $open, arrowEdge: .top) { ExportOptionsView(model: model) }
     }
 }

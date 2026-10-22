@@ -120,7 +120,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     let duration = try await asset.load(.duration)
                     let demoKind = ProcessInfo.processInfo.environment["MELIES_ANNOTATION_DEMO"]
                     let notes = demoKind == "fx" ? demoEffects() : (demoKind != nil ? demoAnnotations() : [])
-                    try await VideoExport.run(asset: asset, range: CMTimeRange(start: .zero, duration: duration), points: points, annotations: notes, includeAudio: ProcessInfo.processInfo.environment["MELIES_EXPORT_MUTE"] == nil, to: URL(fileURLWithPath: out))
+                    try await VideoExport.run(asset: asset, range: CMTimeRange(start: .zero, duration: duration), points: points, annotations: notes, clicks: ClickSet.current(for: CursorTrack.load(for: URL(fileURLWithPath: input))), includeAudio: ProcessInfo.processInfo.environment["MELIES_EXPORT_MUTE"] == nil, settings: {
+                        var st = ExportSettings()
+                        let env = ProcessInfo.processInfo.environment
+                        if env["MELIES_EXPORT_FORMAT"] == "gif" { st.format = .gif }
+                        st.maxMegabytes = env["MELIES_EXPORT_MAXMB"].flatMap(Int.init)
+                        return st
+                    }(), to: URL(fileURLWithPath: out))
                     print("[export] done")
                 } catch { print("[export] failed: \(error)") }
                 NSApp.terminate(nil)
@@ -194,6 +200,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 try? await Task.sleep(for: .seconds(seconds))
                 await ScreenRecorder.shared.stopNow()
                 print("[record] stopped")
+                NSApp.terminate(nil)
+            }
+        }
+
+        // Debug: MELIES_BLUR_DEBUG=1 with MELIES_OPEN=file reports whether the paused blur preview gets its frame.
+        if ProcessInfo.processInfo.environment["MELIES_BLUR_DEBUG"] != nil, let input = ProcessInfo.processInfo.environment["MELIES_OPEN"] {
+            Task { @MainActor in
+                EditorWindowController.shared.open(URL(fileURLWithPath: input))
+                try? await Task.sleep(for: .seconds(1.5))
+                guard let m = EditorWindowController.shared.session.model else { print("[blur] no model"); NSApp.terminate(nil); return }
+                let id = m.addAnnotation(.blur, at: CGPoint(x: 0.2, y: 0.2))
+                m.updateAnnotation(id) { $0.p2 = CGPoint(x: 0.6, y: 0.7) }
+                for i in 1...4 {
+                    try? await Task.sleep(for: .seconds(0.5))
+                    print("[blur] t+\(Double(i) * 0.5)s: frame=\(m.currentFrameImage != nil) playing=\(m.isPlaying) current=\(m.current)")
+                }
+                if let frame = m.currentFrameImage, let a = m.annotations.first {
+                    let patch = AnnotationRenderer.blurPatch(of: frame, for: a, source: m.sourceSize)
+                    print("[blur] patch: \(patch != nil), source=\(m.sourceSize), frame extent=\(frame.extent)")
+                }
+                NSApp.terminate(nil)
+            }
+        }
+
+        // Debug: MELIES_SETTINGS_EXPORT=out-without-extension with MELIES_OPEN=file exports through the model, as copy and save do.
+        if let outBase = ProcessInfo.processInfo.environment["MELIES_SETTINGS_EXPORT"], let input = ProcessInfo.processInfo.environment["MELIES_OPEN"] {
+            Task { @MainActor in
+                EditorWindowController.shared.open(URL(fileURLWithPath: input))
+                try? await Task.sleep(for: .seconds(1.5))
+                guard let model = EditorWindowController.shared.session.model else { print("[settings] no model"); NSApp.terminate(nil); return }
+                let settings = ExportSettings.current
+                let file = URL(fileURLWithPath: outBase + "." + settings.fileExtension)
+                let ok = await model.export(to: file)
+                print("[settings] format=\(settings.format.rawValue) maxMB=\(settings.maxMegabytes.map(String.init) ?? "none") width=\(settings.maxWidth) ok=\(ok) bytes=\(MP4Writer.fileSize(file))")
                 NSApp.terminate(nil)
             }
         }

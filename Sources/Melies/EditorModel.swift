@@ -22,12 +22,15 @@ final class EditorModel: ObservableObject {
     @Published var cropMode = false
     /// The video has an audio track; `includeAudio` decides whether the export keeps it.
     @Published var hasAudio = false
+    /// Draw a ring at every recorded click (preview and export).
+    @Published var showClicks = ClickStyleStore.enabled
+    var hasClicks: Bool { !(cursor?.clicks.isEmpty ?? true) }
     @Published var includeAudio = true
     @Published var thumbnails: [NSImage] = []
     @Published var zoomPoints: [ZoomPoint] = [] { didSet { noteChange() } }
     @Published var selectedPointID: UUID?
     @Published var tool: Tool = .select
-    @Published var annotations: [Annotation] = [] { didSet { noteChange() } }
+    @Published var annotations: [Annotation] = [] { didSet { noteChange(); refreshStillFrame() } }
     @Published var selectedAnnotationID: UUID?
     /// True while a text field has the keyboard, so single-key shortcuts must stay quiet.
     @Published var isEditingText = false
@@ -40,6 +43,18 @@ final class EditorModel: ObservableObject {
     // Preview of blur: the latest decoded frame, upright, taken from the player.
     private var frameOutput: AVPlayerItemVideoOutput?
     private var lastBuffer: CVPixelBuffer?
+    // While paused the player does not hand out new frames, so the blur preview asks for the frame itself.
+    private var stillFrame: CIImage?
+    private var stillFrameTime = -1.0
+    private var stillRequestedTime = -1.0
+    private var stillRequestID = 0
+    private lazy var stillGenerator: AVAssetImageGenerator = {
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = .zero
+        return generator
+    }()
     private var orientation: CGImagePropertyOrientation = .up
     static let previewContext = CIContext()
     var cursor: CursorTrack?
@@ -474,8 +489,26 @@ final class EditorModel: ObservableObject {
         if let buffer = output.copyPixelBuffer(forItemTime: player.currentTime(), itemTimeForDisplay: nil) { lastBuffer = buffer }
     }
 
+    /// Paused: fetch the exact frame under the playhead, once per position.
+    private func refreshStillFrame() {
+        guard !isPlaying, annotations.contains(where: { $0.kind == .blur }), abs(current - stillRequestedTime) > 0.0005 else { return }
+        let time = current
+        stillRequestedTime = time
+        stillRequestID += 1
+        let id = stillRequestID
+        Task { @MainActor in
+            guard let result = try? await stillGenerator.image(at: CMTime(seconds: time, preferredTimescale: 600)), id == stillRequestID else { return }
+            var image = CIImage(cgImage: result.image)
+            image = image.transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
+            stillFrame = image
+            stillFrameTime = time
+            objectWillChange.send() // redraw the overlay with the blur applied
+        }
+    }
+
     /// The last frame as an upright image with its origin at 0,0.
     var currentFrameImage: CIImage? {
+        if !isPlaying, let still = stillFrame, abs(stillFrameTime - current) < 0.01 { return still }
         guard let buffer = lastBuffer else { return nil }
         var image = CIImage(cvPixelBuffer: buffer).oriented(orientation)
         image = image.transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
@@ -485,6 +518,7 @@ final class EditorModel: ObservableObject {
     private func tick(_ seconds: Double) {
         guard seconds.isFinite else { return }
         captureFrame()
+        refreshStillFrame()
         current = seconds
         isPlaying = player.timeControlStatus == .playing
         // Loop inside the trimmed range.
@@ -495,11 +529,13 @@ final class EditorModel: ObservableObject {
         let t = min(max(seconds, 0), duration)
         current = t
         player.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+        refreshStillFrame()
     }
 
     func togglePlay() {
         if player.timeControlStatus == .playing {
             player.pause()
+            refreshStillFrame()
         } else {
             if current >= end - 0.02 || current < start { seek(to: start) }
             player.play()
@@ -532,7 +568,7 @@ final class EditorModel: ObservableObject {
         player.pause()
         defer { busy = false }
         do {
-            try await VideoExport.run(asset: asset, range: range, crop: cropRect, points: zoomPoints, annotations: annotations, includeAudio: includeAudio, to: destination)
+            try await VideoExport.run(asset: asset, range: range, crop: cropRect, points: zoomPoints, annotations: annotations, clicks: showClicks ? ClickSet.current(for: cursor) : nil, includeAudio: includeAudio, to: destination)
             return true
         } catch {
             status = L("status.fail", error.localizedDescription)
@@ -551,12 +587,12 @@ final class EditorModel: ObservableObject {
         let provider = NSItemProvider()
         let name = url.deletingPathExtension().lastPathComponent
         provider.suggestedName = name
-        provider.registerFileRepresentation(forTypeIdentifier: UTType.mpeg4Movie.identifier, fileOptions: [], visibility: .all) { completion in
+        provider.registerFileRepresentation(forTypeIdentifier: ExportSettings.current.contentType.identifier, fileOptions: [], visibility: .all) { completion in
             let progress = Progress(totalUnitCount: 1)
             Task { @MainActor in
                 let folder = FileManager.default.temporaryDirectory.appendingPathComponent("melies-drag-\(UUID().uuidString)")
                 try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                let file = folder.appendingPathComponent(name + ".mp4")
+                let file = folder.appendingPathComponent(name + "." + ExportSettings.current.fileExtension)
                 if await self.export(to: file) {
                     self.status = L("status.dragged")
                     completion(file, false, nil)
@@ -573,7 +609,7 @@ final class EditorModel: ObservableObject {
     /// Cmd+C: export to a temp file, then put that file on the pasteboard.
     func copy() async {
         let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("melies-\(Int(Date().timeIntervalSince1970)).mp4")
+            .appendingPathComponent("melies-\(Int(Date().timeIntervalSince1970)).\(ExportSettings.current.fileExtension)")
         guard await export(to: tmp) else { return }
         let pb = NSPasteboard.general
         pb.clearContents()
@@ -585,7 +621,7 @@ final class EditorModel: ObservableObject {
     /// Export to a temp file and show the system share sheet.
     func share(from view: NSView?) async {
         let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("melies-\(Int(Date().timeIntervalSince1970)).mp4")
+            .appendingPathComponent("melies-\(Int(Date().timeIntervalSince1970)).\(ExportSettings.current.fileExtension)")
         guard await export(to: tmp), let view else { return }
         status = L("status.share_ready", sizeLabel(tmp))
         let picker = NSSharingServicePicker(items: [tmp])
@@ -601,11 +637,12 @@ final class EditorModel: ObservableObject {
     /// Cmd+S: export next to the original, never overwriting.
     func save() async {
         let folder = url.deletingLastPathComponent()
-        let base = url.deletingPathExtension().lastPathComponent + "-twitter"
-        var target = folder.appendingPathComponent(base + ".mp4")
+        let ext = ExportSettings.current.fileExtension
+        let base = url.deletingPathExtension().lastPathComponent + "-optimized"
+        var target = folder.appendingPathComponent(base + "." + ext)
         var n = 2
         while FileManager.default.fileExists(atPath: target.path) {
-            target = folder.appendingPathComponent("\(base)-\(n).mp4")
+            target = folder.appendingPathComponent("\(base)-\(n).\(ext)")
             n += 1
         }
         guard await export(to: target) else { return }
