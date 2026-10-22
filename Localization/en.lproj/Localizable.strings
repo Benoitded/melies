@@ -192,3 +192,5 @@
 "tip.audio.off" = "Sound is muted in the export";
 "rec.mic.denied" = "Microphone access is off";
 "rec.mic.denied.text" = "Recording goes on without your voice. Turn it on in System Settings > Privacy & Security > Microphone.";
+"tip.clicks" = "Show clicks";
+"set.clicks" = "Clicks";

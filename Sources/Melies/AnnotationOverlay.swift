@@ -54,6 +54,7 @@ struct AnnotationOverlay: View {
                                                      source: source, animated: model.isPlaying, ciContext: EditorModel.previewContext)
                     }
                     AnnotationRenderer.draw(model.annotations, at: model.current, in: cg, source: source, animated: model.isPlaying)
+                    if model.showClicks { AnnotationRenderer.drawClicks(ClickSet.current(for: model.cursor), at: model.current, in: cg, source: source) }
                     cg.restoreGState()
                 }
             }

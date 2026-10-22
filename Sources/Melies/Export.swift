@@ -16,6 +16,7 @@ struct RenderPlan {
     var content: CGRect          // where the picture sits inside the canvas, top-left origin
     var points: [ZoomPoint]
     var annotations: [Annotation] = []
+    var clicks: ClickSet?
 
     /// Draws the frame for `time` (asset time, seconds) from the raw source image.
     func render(_ source: CIImage, at time: Double) -> CIImage {
@@ -39,7 +40,7 @@ struct RenderPlan {
 
         let background = CIImage(color: .black).cropped(to: CGRect(origin: .zero, size: canvas))
         var frame = placed.composited(over: background)
-        if let overlay = AnnotationRenderer.overlay(annotations, at: time, source: uprightSize,
+        if let overlay = AnnotationRenderer.overlay(annotations, clicks: clicks, at: time, source: uprightSize,
                                                     region: CGRect(x: x, y: y, width: w, height: h),
                                                     content: content, canvas: canvas) {
             frame = overlay.composited(over: frame)
@@ -99,7 +100,7 @@ enum VideoExport {
     static let fps: Int32 = 30
 
     /// `crop` is normalized (0...1) in the upright frame, origin top-left.
-    static func run(asset: AVAsset, range: CMTimeRange, crop: CGRect? = nil, points: [ZoomPoint] = [], annotations: [Annotation] = [], includeAudio: Bool = true, to url: URL) async throws {
+    static func run(asset: AVAsset, range: CMTimeRange, crop: CGRect? = nil, points: [ZoomPoint] = [], annotations: [Annotation] = [], clicks: ClickSet? = nil, includeAudio: Bool = true, to url: URL) async throws {
         guard let track = try await asset.loadTracks(withMediaType: .video).first else {
             throw ExportError.noVideoTrack
         }
@@ -138,7 +139,8 @@ enum VideoExport {
             canvas: CGSize(width: outW, height: outH),
             content: CGRect(x: (outW - contentW) / 2, y: (outH - contentH) / 2, width: contentW, height: contentH),
             points: points.sorted { $0.time < $1.time },
-            annotations: annotations
+            annotations: annotations,
+            clicks: clicks
         )
 
         let composition = AVMutableVideoComposition()

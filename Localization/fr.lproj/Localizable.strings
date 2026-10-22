@@ -192,3 +192,5 @@
 "tip.audio.off" = "Le son est coupé à l'export";
 "rec.mic.denied" = "L'accès au micro est désactivé";
 "rec.mic.denied.text" = "L'enregistrement continue sans ta voix. Active-le dans Réglages Système > Confidentialité et sécurité > Microphone.";
+"tip.clicks" = "Afficher les clics";
+"set.clicks" = "Clics";

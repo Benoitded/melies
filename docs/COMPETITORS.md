@@ -10,7 +10,7 @@ avant en commun, pas d'un sondage. À confirmer avec de vrais retours.
 | Fonction | Qui l'a | Méliès | Priorité |
 |---|---|---|---|
 | Micro et son du système | CleanShot X, Screen Studio, Cap, Movavi | **oui** (son du système vérifié, micro à tester) | fait |
-| Clics mis en évidence, curseur lissé et redimensionnable | CleanShot X (clics), Screen Studio (lissage, taille), Screenize, Movavi | non (on enregistre la position du curseur, pas les clics) | **indispensable** |
+| Clics mis en évidence, curseur lissé et redimensionnable | CleanShot X (clics), Screen Studio (lissage, taille), Screenize, Movavi | clics : **oui** (anneau au clic) ; curseur lissé et redimensionnable : non | clics faits, lissage à faire |
 | Export GIF, avec choix de qualité et de taille | CleanShot X, Screen Studio, Kap | non (MP4 seulement) | **indispensable** |
 | Zoom automatique sur les actions | Screen Studio, Screenize | partiel : zoom manuel, centré sur le curseur enregistré | haute |
 | Fond, marges, coins arrondis et ombre autour de l'enregistrement | Screen Studio | non | haute |

@@ -83,25 +83,47 @@ enum ZoomCamera {
     }
 }
 
-/// Cursor positions recorded next to a video, normalized in the recorded frame (top-left origin).
+/// Cursor positions and clicks recorded next to a video, normalized in the recorded frame (top-left origin).
 struct CursorTrack {
     struct Sample { var t: Double; var x: Double; var y: Double }
+    struct Click { var t: Double; var x: Double; var y: Double }
     var samples: [Sample]
+    var clicks: [Click] = []
+
+    private struct Payload: Codable {
+        var cursor: [[Double]]
+        var clicks: [[Double]]
+    }
 
     static func sidecarURL(for video: URL) -> URL {
         video.deletingPathExtension().appendingPathExtension("cursor.json")
     }
 
     static func load(for video: URL) -> CursorTrack? {
-        guard let data = try? Data(contentsOf: sidecarURL(for: video)),
-              let raw = try? JSONDecoder().decode([[Double]].self, from: data) else { return nil }
-        let samples = raw.compactMap { $0.count == 3 ? Sample(t: $0[0], x: $0[1], y: $0[2]) : nil }
-        return samples.isEmpty ? nil : CursorTrack(samples: samples)
+        guard let data = try? Data(contentsOf: sidecarURL(for: video)) else { return nil }
+        let decoder = JSONDecoder()
+        var cursor: [[Double]] = []
+        var clicks: [[Double]] = []
+        if let payload = try? decoder.decode(Payload.self, from: data) {
+            cursor = payload.cursor
+            clicks = payload.clicks
+        } else if let legacy = try? decoder.decode([[Double]].self, from: data) {
+            cursor = legacy // first version: only the cursor, as a plain array
+        } else {
+            return nil
+        }
+        let samples = cursor.compactMap { $0.count == 3 ? Sample(t: $0[0], x: $0[1], y: $0[2]) : nil }
+        let taps = clicks.compactMap { $0.count == 3 ? Click(t: $0[0], x: $0[1], y: $0[2]) : nil }
+        return samples.isEmpty && taps.isEmpty ? nil : CursorTrack(samples: samples, clicks: taps)
     }
 
     func save(for video: URL) {
-        let raw = samples.map { [($0.t * 1000).rounded() / 1000, ($0.x * 10000).rounded() / 10000, ($0.y * 10000).rounded() / 10000] }
-        if let data = try? JSONEncoder().encode(raw) { try? data.write(to: Self.sidecarURL(for: video)) }
+        func rounded(_ a: Double, _ digits: Double) -> Double { (a * digits).rounded() / digits }
+        let payload = Payload(
+            cursor: samples.map { [rounded($0.t, 1000), rounded($0.x, 10000), rounded($0.y, 10000)] },
+            clicks: clicks.map { [rounded($0.t, 1000), rounded($0.x, 10000), rounded($0.y, 10000)] }
+        )
+        if let data = try? JSONEncoder().encode(payload) { try? data.write(to: Self.sidecarURL(for: video)) }
     }
 
     /// Interpolated cursor position at time `t`.

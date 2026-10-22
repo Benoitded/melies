@@ -21,6 +21,9 @@ final class EditorModel: ObservableObject {
     @Published var cropMode = false
     /// The video has an audio track; `includeAudio` decides whether the export keeps it.
     @Published var hasAudio = false
+    /// Draw a ring at every recorded click (preview and export).
+    @Published var showClicks = ClickStyleStore.enabled
+    var hasClicks: Bool { !(cursor?.clicks.isEmpty ?? true) }
     @Published var includeAudio = true
     @Published var thumbnails: [NSImage] = []
     @Published var zoomPoints: [ZoomPoint] = [] { didSet { noteChange() } }
@@ -531,7 +534,7 @@ final class EditorModel: ObservableObject {
         player.pause()
         defer { busy = false }
         do {
-            try await VideoExport.run(asset: asset, range: range, crop: cropRect, points: zoomPoints, annotations: annotations, includeAudio: includeAudio, to: destination)
+            try await VideoExport.run(asset: asset, range: range, crop: cropRect, points: zoomPoints, annotations: annotations, clicks: showClicks ? ClickSet.current(for: cursor) : nil, includeAudio: includeAudio, to: destination)
             return true
         } catch {
             status = L("status.fail", error.localizedDescription)
