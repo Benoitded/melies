@@ -209,4 +209,4 @@
 "tip.track" = "Seguir el objeto";
 "tip.track.clear" = "Dejar de seguir";
 "tip.track.cancel" = "Cancelar análisis";
-"trk.lost" = "Objeto perdido, posición mantenida";
+"trk.lost" = "Objeto fuera o tapado: la anotación termina ahí";

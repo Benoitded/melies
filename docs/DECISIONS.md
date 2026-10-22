@@ -216,3 +216,14 @@ chaque essai, elle redonnait la taille du premier. La taille se lit maintenant a
 
 Le son est un seul flux AAC (les pistes système et micro sont mélangées) ; sans son, le fichier n'a pas
 de piste audio du tout.
+
+## Suivi d'objet (2026-10-22)
+
+Premier essai avec `VNTrackObjectRequest` (Vision) : correct pour un objet qui bouge, mais il se perd sur du
+texte qui défile (zone peu texturée, motifs répétés) et ne dit pas quand l'objet disparaît. Remplacé par une
+comparaison de pixels : la zone de départ (en niveaux de gris, image réduite à ~640 px) est cherchée à chaque
+image autour de sa dernière position, d'abord grossièrement puis finement ; le modèle s'adapte lentement aux
+changements d'apparence. Si l'écart moyen dépasse 10 % pendant plus de 0,12 s (défilé hors cadre, fenêtre
+passée devant), le suivi s'arrête et l'annotation se termine à cet instant. Le suivi va vers l'avant depuis
+la tête de lecture ; les décalages sont stockés par annotation (`Annotation.track`) et appliqués au rendu,
+à la sélection et à l'export.

@@ -483,7 +483,12 @@ final class EditorModel: ObservableObject {
             }
             guard let self else { return }
             if let result, !Task.isCancelled, !result.samples.isEmpty {
-                self.updateAnnotation(id) { $0.track = result.samples; $0.trackStart = from }
+                self.updateAnnotation(id) {
+                    $0.track = result.samples
+                    $0.trackStart = from
+                    // Gone from the frame (scrolled out, covered): the annotation disappears with it.
+                    if let lostAt = result.lostAt { $0.end = max(lostAt, from + 0.2) }
+                }
                 self.trackingLost = result.lost
             }
             self.trackingID = nil

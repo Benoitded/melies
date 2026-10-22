@@ -1,13 +1,23 @@
 import AVFoundation
-import Vision
 
-/// Follows a region of the video with Apple's Vision tracker, from `from` to `to` seconds.
+/// Follows a region of the video (scrolling text, a moving window, a face...) by matching its pixels
+/// image after image. When the region can no longer be found (scrolled out, covered by something),
+/// tracking stops and reports when.
 /// Positions are normalized in the upright frame (origin top left), the same space as annotations.
 enum ObjectTracker {
     struct Result {
         var samples: [TrackSample]
-        /// True when the object was lost before `to`: the last sample is held from then on.
-        var lost: Bool
+        /// When the region was lost before `to`, nil if it was followed to the end.
+        var lostAt: Double?
+        var lost: Bool { lostAt != nil }
+    }
+
+    /// Mean absolute luma difference (0...1) above which the region is considered gone.
+    private static let lostThreshold = 0.10
+
+    private struct Luma {
+        var width: Int, height: Int
+        var data: [UInt8]
     }
 
     /// Tracks `box` (normalized, origin top left) found in the frame at `from`.
@@ -16,7 +26,7 @@ enum ObjectTracker {
         asset: AVAsset, box: CGRect, from: Double, to: Double,
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> Result {
-        guard let video = try await asset.loadTracks(withMediaType: .video).first else { return Result(samples: [], lost: false) }
+        guard let video = try await asset.loadTracks(withMediaType: .video).first else { return Result(samples: [], lostAt: nil) }
         let composition = try await AVMutableVideoComposition.videoComposition(withPropertiesOf: asset)
         let reader = try AVAssetReader(asset: asset)
         let output = AVAssetReaderVideoCompositionOutput(
@@ -28,36 +38,129 @@ enum ObjectTracker {
         reader.timeRange = CMTimeRange(start: CMTime(seconds: from, preferredTimescale: 600),
                                        end: CMTime(seconds: to, preferredTimescale: 600))
         guard reader.startReading() else { throw reader.error ?? CocoaError(.fileReadUnknown) }
+        defer { reader.cancelReading() }
 
-        // Vision uses a bottom-left origin.
-        let visionBox = CGRect(x: box.minX, y: 1 - box.maxY, width: box.width, height: box.height)
-        var observation = VNDetectedObjectObservation(boundingBox: visionBox)
-        let handler = VNSequenceRequestHandler()
+        var template: [Float] = []
+        var tw = 0, th = 0, originX = 0, originY = 0
+        var x = 0, y = 0
         var samples: [TrackSample] = []
-        var lost = false
+        var badSince: Double?
         let span = max(to - from, 0.001)
 
         while let buffer = output.copyNextSampleBuffer() {
             try Task.checkCancellation()
-            guard let pixels = CMSampleBufferGetImageBuffer(buffer) else { continue }
+            guard let pixels = CMSampleBufferGetImageBuffer(buffer), let frame = luma(of: pixels) else { continue }
             let t = CMSampleBufferGetPresentationTimeStamp(buffer).seconds
-            let request = VNTrackObjectRequest(detectedObjectObservation: observation)
-            request.trackingLevel = .accurate
-            try handler.perform([request], on: pixels)
-            guard let result = request.results?.first as? VNDetectedObjectObservation, result.confidence > 0.2 else {
-                lost = true
-                break
+
+            if template.isEmpty {
+                originX = Int((box.minX * Double(frame.width)).rounded())
+                originY = Int((box.minY * Double(frame.height)).rounded())
+                tw = max(min(Int((box.width * Double(frame.width)).rounded()), frame.width - originX), 4)
+                th = max(min(Int((box.height * Double(frame.height)).rounded()), frame.height - originY), 4)
+                template = patch(of: frame, x: originX, y: originY, w: tw, h: th)
+                x = originX; y = originY
+                samples.append(TrackSample(t: t, dx: 0, dy: 0))
+                continue
             }
-            observation = result
-            // Offsets of the box centre relative to the start, y flipped back to top-left.
+
+            let (bx, by, score) = bestMatch(of: template, tw: tw, th: th, in: frame, around: (x, y))
+            if score > lostThreshold {
+                // Tolerate a couple of noisy frames (a flash, a compression glitch) before giving up.
+                if badSince == nil { badSince = t }
+                if t - (badSince ?? t) > 0.12 { return Result(samples: samples, lostAt: badSince) }
+                continue
+            }
+            badSince = nil
+            x = bx; y = by
+            // Follow slow appearance changes without drifting away from the original look.
+            if score < lostThreshold * 0.4 {
+                let now = patch(of: frame, x: x, y: y, w: tw, h: th)
+                for i in template.indices { template[i] += (now[i] - template[i]) * 0.08 }
+            }
             samples.append(TrackSample(
                 t: t,
-                dx: Double(result.boundingBox.midX - visionBox.midX),
-                dy: -Double(result.boundingBox.midY - visionBox.midY)
+                dx: Double(x - originX) / Double(frame.width),
+                dy: Double(y - originY) / Double(frame.height)
             ))
             progress(min(max((t - from) / span, 0), 1))
         }
-        reader.cancelReading()
-        return Result(samples: samples, lost: lost)
+        return Result(samples: samples, lostAt: nil)
+    }
+
+    /// Grayscale copy of the frame, at most ~640 px wide so matching stays fast.
+    private static func luma(of buffer: CVPixelBuffer) -> Luma? {
+        CVPixelBufferLockBaseAddress(buffer, .readOnly)
+        defer { CVPixelBufferUnlockBaseAddress(buffer, .readOnly) }
+        guard let base = CVPixelBufferGetBaseAddress(buffer) else { return nil }
+        let w = CVPixelBufferGetWidth(buffer), h = CVPixelBufferGetHeight(buffer)
+        let stride = CVPixelBufferGetBytesPerRow(buffer)
+        let f = max(1, Int((Double(w) / 640).rounded()))
+        let ow = w / f, oh = h / f
+        var data = [UInt8](repeating: 0, count: ow * oh)
+        let src = base.assumingMemoryBound(to: UInt8.self)
+        for j in 0..<oh {
+            let row = src + j * f * stride
+            for i in 0..<ow {
+                let p = row + i * f * 4 // BGRA
+                data[j * ow + i] = UInt8((Int(p[0]) * 29 + Int(p[1]) * 150 + Int(p[2]) * 77) >> 8)
+            }
+        }
+        return Luma(width: ow, height: oh, data: data)
+    }
+
+    private static func patch(of frame: Luma, x: Int, y: Int, w: Int, h: Int) -> [Float] {
+        var out = [Float](repeating: 0, count: w * h)
+        for j in 0..<h { for i in 0..<w { out[j * w + i] = Float(frame.data[(y + j) * frame.width + x + i]) } }
+        return out
+    }
+
+    /// Where the template fits best in the frame, searching around the last position (coarse, then fine).
+    /// Returns the top-left position and the mean absolute difference (0...1).
+    private static func bestMatch(of template: [Float], tw: Int, th: Int, in frame: Luma, around p: (Int, Int)) -> (Int, Int, Double) {
+        let maxX = frame.width - tw, maxY = frame.height - th
+        guard maxX >= 0, maxY >= 0 else { return (p.0, p.1, 1) }
+        let radiusX = max(frame.width / 8, 12), radiusY = max(frame.height / 6, 12)
+        let sampleStep = max(1, Int(Double(tw * th).squareRoot() / 28))
+
+        func cost(_ ox: Int, _ oy: Int, step: Int, stop: Double) -> Double {
+            var sum: Double = 0, count = 0
+            var j = 0
+            while j < th {
+                let rowT = j * tw, rowF = (oy + j) * frame.width + ox
+                var i = 0
+                while i < tw {
+                    sum += Double(abs(template[rowT + i] - Float(frame.data[rowF + i])))
+                    count += 1
+                    i += step
+                }
+                if sum / (Double(count) * 255) > stop { return 1 }
+                j += step
+            }
+            return sum / (Double(max(count, 1)) * 255)
+        }
+
+        var best = (x: min(max(p.0, 0), maxX), y: min(max(p.1, 0), maxY), score: 1.0)
+        best.score = cost(best.x, best.y, step: sampleStep, stop: 1)
+        let coarse = 2
+        var oy = max(p.1 - radiusY, 0)
+        while oy <= min(p.1 + radiusY, maxY) {
+            var ox = max(p.0 - radiusX, 0)
+            while ox <= min(p.0 + radiusX, maxX) {
+                let c = cost(ox, oy, step: sampleStep, stop: best.score)
+                if c < best.score { best = (ox, oy, c) }
+                ox += coarse
+            }
+            oy += coarse
+        }
+        // Fine pass around the coarse winner, with every pixel of the template (every 2nd for big ones).
+        let fineStep = max(1, sampleStep / 2)
+        var fine = best
+        for oy in max(best.y - coarse, 0)...min(best.y + coarse, maxY) {
+            for ox in max(best.x - coarse, 0)...min(best.x + coarse, maxX) {
+                let c = cost(ox, oy, step: fineStep, stop: fine.score)
+                if c < fine.score { fine = (ox, oy, c) }
+            }
+        }
+        return (fine.x, fine.y, fine.score)
     }
 }

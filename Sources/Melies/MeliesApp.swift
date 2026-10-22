@@ -94,7 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let box = CGRect(x: 100.0 / 640, y: 120.0 / 360, width: 120.0 / 640, height: 120.0 / 360)
                 let r = try? await ObjectTracker.track(asset: AVURLAsset(url: URL(fileURLWithPath: path)), box: box, from: 0, to: 2) { _ in }
                 let last = r?.samples.last
-                print("TRACK samples=\(r?.samples.count ?? -1) lost=\(r?.lost ?? false) last=\(String(describing: last))")
+                print("TRACK samples=\(r?.samples.count ?? -1) lostAt=\(String(describing: r?.lostAt)) last=\(String(describing: last))")
                 exit(0)
             }
         }

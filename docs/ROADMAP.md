@@ -1,13 +1,13 @@
 # Roadmap
 
-## v1 (en cours)
+## v1 (fait)
 - [x] Enregistrement d'écran natif (ScreenCaptureKit, zone au choix) avec Cmd+Shift+6
 - [x] Bouton rouge d'arrêt dans la barre de menu, ouverture auto de l'éditeur
-- [ ] App barre de menu avec icône, menu, Réglages et liste des raccourcis
-- [ ] Raccourci global qui ouvre l'éditeur sur la dernière vidéo du Bureau
-- [ ] Trim (I / O) avec lecture en boucle
-- [ ] Export Twitter : Cmd+C (copier le fichier), Cmd+S (enregistrer)
-- [ ] Glisser-déposer, Cmd+Shift+O, Cmd+Shift+V
+- [x] App barre de menu avec icône, menu, Réglages et liste des raccourcis
+- [x] Raccourci global qui ouvre l'éditeur sur la dernière vidéo du Bureau
+- [x] Trim (I / O) avec lecture en boucle
+- [x] Export Twitter : Cmd+C (copier le fichier), Cmd+S (enregistrer)
+- [x] Glisser-déposer, Cmd+Shift+O, Cmd+Shift+V
 
 ## v2
 - [x] Crop de l'image (poignées, appliqué à l'export)
@@ -17,6 +17,7 @@
 - [x] Spotlight (zone éclairée), flou et pixelisation
 - [x] Clics visibles : anneau qui s'étend à chaque clic enregistré (couleur et taille réglables)
 - [x] Export à taille cible (MP4, GIF), résolution, estimation de taille ; copier, enregistrer, partager et glisser suivent ces réglages
+- [x] Suivi d'objet : flou, spot, rectangle, texte, flèche suivent le contenu (défilement, déplacement) et s'arrêtent quand il disparaît
 - [ ] Priorités issues de l'étude des concurrents : voir `docs/COMPETITORS.md`
 - [x] Zooms animés : points de caméra (niveau, vitesse, style), centrage auto sur le curseur enregistré, aperçu et export identiques
 - [x] Cmd+Z / Cmd+Shift+Z (annuler / rétablir : annotations, zooms, recadrage, trim)
@@ -28,5 +29,7 @@
 - [ ] Zoom auto sur le curseur pendant l'enregistrement
 
 ## Plus tard
-- [ ] Signature et notarisation si distribution
-- [ ] Open source : vérifier le nom, licence, README avec GIF de démo
+- [ ] Distribution : hardened runtime, signature Developer ID, notarisation, DMG, GitHub Releases
+- [ ] Mise à jour automatique (Sparkle, flux signé sur GitHub Releases)
+- [ ] CI GitHub Actions (build + tests)
+- [ ] Open source : vérifier le nom, choisir une licence, README avec GIF de démo

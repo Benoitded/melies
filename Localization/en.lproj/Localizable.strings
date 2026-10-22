@@ -209,4 +209,4 @@
 "tip.track" = "Follow the object";
 "tip.track.clear" = "Stop following";
 "tip.track.cancel" = "Stop analysis";
-"trk.lost" = "Tracking lost, position held";
+"trk.lost" = "Object left the frame: annotation ends there";
