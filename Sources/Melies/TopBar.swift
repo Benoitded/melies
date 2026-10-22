@@ -17,6 +17,7 @@ struct TopBar: View {
             BarButton(symbol: "square.and.arrow.down", title: L("tip.save"), shortcut: "(⌘S)", disabled: model.busy) {
                 Task { await model.save() }
             }
+            DragHandle(model: model)
                     }
                     group {
             BarButton(symbol: session.pinned ? "pin.fill" : "pin", title: L("tip.pin"), active: session.pinned) {
@@ -173,5 +174,54 @@ struct Tooltip: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .glassEffect(.regular, in: .capsule)
+    }
+}
+
+/// Grab it and drop the optimized MP4 into any app (a message, a mail, the Finder, a web page).
+struct DragHandle: View {
+    @ObservedObject var model: EditorModel
+    @State private var hovering = false
+
+    var body: some View {
+        HStack(spacing: 2) {
+            grip
+            Image(systemName: "doc.fill").font(.system(size: 14))
+            grip
+        }
+        .frame(width: 38, height: 30)
+        .background(Capsule().fill(Color.primary.opacity(hovering ? 0.1 : 0)))
+        .contentShape(Rectangle())
+        .onHover { hovering = $0 }
+        .pointerStyle(.grabIdle)
+        .onDrag {
+            model.dragProvider()
+        } preview: {
+            DragPreview(image: model.thumbnails.first)
+        }
+        .tip(L("tip.drag"))
+    }
+
+    private var grip: some View {
+        VStack(spacing: 2.5) {
+            ForEach(0..<3, id: \.self) { _ in Circle().frame(width: 2, height: 2) }
+        }
+        .foregroundStyle(.secondary)
+    }
+}
+
+private struct DragPreview: View {
+    let image: NSImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(nsImage: image).resizable().scaledToFit()
+            } else {
+                Image(systemName: "film").font(.system(size: 28))
+            }
+        }
+        .frame(width: 140, height: 90)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.white.opacity(0.4), lineWidth: 1))
     }
 }

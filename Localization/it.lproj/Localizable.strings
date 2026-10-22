@@ -185,3 +185,5 @@
 "tip.strength" = "Intensità";
 "blur.pixelate" = "Pixelizza";
 "blur.gaussian" = "Sfocatura";
+"tip.drag" = "Trascina il video in un'altra app";
+"status.dragged" = "Video inviato";

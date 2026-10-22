@@ -185,3 +185,5 @@
 "tip.strength" = "Intensité";
 "blur.pixelate" = "Pixeliser";
 "blur.gaussian" = "Flou";
+"tip.drag" = "Glisser la vidéo vers une autre app";
+"status.dragged" = "Vidéo envoyée";

@@ -1,5 +1,6 @@
 import AVFoundation
 import AppKit
+import UniformTypeIdentifiers
 
 @MainActor
 final class EditorModel: ObservableObject {
@@ -521,7 +522,7 @@ final class EditorModel: ObservableObject {
         )
     }
 
-    private func export(to destination: URL) async -> Bool {
+    func export(to destination: URL) async -> Bool {
         busy = true
         status = L("status.exporting")
         player.pause()
@@ -538,6 +539,31 @@ final class EditorModel: ObservableObject {
     private func sizeLabel(_ url: URL) -> String {
         let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
         return ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+    }
+
+    /// What is dropped when the user drags the drag handle into another app: the optimized MP4,
+    /// exported only when the destination asks for it, like a file promise.
+    func dragProvider() -> NSItemProvider {
+        let provider = NSItemProvider()
+        let name = url.deletingPathExtension().lastPathComponent
+        provider.suggestedName = name
+        provider.registerFileRepresentation(forTypeIdentifier: UTType.mpeg4Movie.identifier, fileOptions: [], visibility: .all) { completion in
+            let progress = Progress(totalUnitCount: 1)
+            Task { @MainActor in
+                let folder = FileManager.default.temporaryDirectory.appendingPathComponent("melies-drag-\(UUID().uuidString)")
+                try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                let file = folder.appendingPathComponent(name + ".mp4")
+                if await self.export(to: file) {
+                    self.status = L("status.dragged")
+                    completion(file, false, nil)
+                } else {
+                    completion(nil, false, ExportError.noVideoTrack)
+                }
+                progress.completedUnitCount = 1
+            }
+            return progress
+        }
+        return provider
     }
 
     /// Cmd+C: export to a temp file, then put that file on the pasteboard.
