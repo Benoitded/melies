@@ -213,3 +213,4 @@
 "exp.other" = "Other...";
 "exp.hevc.note" = "HEVC (H.265) makes files about 40% smaller. Twitter/X and some apps may not accept it.";
 "exp.estimating" = "Estimating the size...";
+"exp.estimate.range" = "Between %@ and %@ MB, depending on the content. Set a maximum size for an exact result.";

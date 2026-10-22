@@ -98,6 +98,16 @@ struct ExportOptionsView: View {
         }
         if let mb = settings.maxMegabytes { return L("exp.estimate.limit", mb) }
         guard let measured = model.measuredMB else { return L("exp.estimating") }
-        return L("exp.estimate", String(format: "%.1f", measured))
+        // Ceiling: the bitrate asked of the encoder times the duration. Simple content stays under it.
+        let base = model.baseSize.width > 0 ? model.baseSize : CGSize(width: 1280, height: 720)
+        let scale = min(1, CGFloat(settings.maxWidth) / base.width)
+        let canvas = CGSize(width: base.width * scale, height: base.height * scale)
+        let audio = model.hasAudio && model.includeAudio
+        let bitrate = settings.videoBitrate(seconds: seconds, canvas: canvas, hasAudio: audio)
+        let ceiling = Double(bitrate) * seconds / 8 / 1_000_000 + (audio ? 0.016 * seconds : 0)
+        if ceiling > measured * 1.25 {
+            return L("exp.estimate.range", String(format: "%.1f", measured), String(format: "%.1f", ceiling))
+        }
+        return L("exp.estimate", String(format: "%.1f", max(measured, min(ceiling, measured * 1.1))))
     }
 }
