@@ -7,6 +7,7 @@ Scripts/release.sh            # 0.1.0 -> 0.1.1
 Scripts/release.sh minor      # 0.1.1 -> 0.2.0
 Scripts/release.sh 1.0.0      # an exact version
 Scripts/release.sh --dry-run  # builds everything in dist/, publishes nothing
+Scripts/release.sh 0.1.1 --dry-run --skip-notarization  # fast DMG while Apple has not answered (Gatekeeper will warn)
 ```
 
 The script bumps the version, builds and signs the app, makes the DMG, notarizes it, signs the update for
@@ -23,6 +24,13 @@ flowchart LR
   G --> H[Homebrew cask updated]
   G --> U[Installed apps offer the update]
 ```
+
+## Pre-release while Apple is slow
+
+Notarization can take hours the first time. To share a build before it is accepted, build a DMG without notarization
+(`--skip-notarization`) and publish it by hand as a GitHub **pre-release**. A pre-release is never "latest": automatic
+updates and Homebrew ignore it. People open it once with System Settings > Privacy & Security > "Open Anyway". The
+real release (notarized) replaces it later.
 
 ## One-time setup
 

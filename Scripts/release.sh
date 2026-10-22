@@ -5,6 +5,7 @@
 #   Scripts/release.sh 1.4.0      an exact version
 #   Scripts/release.sh --dry-run  build, DMG and appcast in dist/, without touching git or GitHub
 #   --allow-unnotarized           publish even if notarization did not happen (for tests only)
+#   --skip-notarization           do not submit to Apple (fast pre-release builds: Gatekeeper will warn)
 #
 # What it does: bumps the version, builds and signs the app (Developer ID + hardened runtime when that
 # certificate exists), makes the DMG, notarizes and staples it (when the "melies-notary" profile exists),
@@ -15,8 +16,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-DRY=0; ARG=patch; ALLOW_UNNOTARIZED=0
-for a in "$@"; do case "$a" in --dry-run) DRY=1 ;; --allow-unnotarized) ALLOW_UNNOTARIZED=1 ;; *) ARG="$a" ;; esac; done
+DRY=0; ARG=patch; ALLOW_UNNOTARIZED=0; SKIP_NOTARIZATION=0
+for a in "$@"; do case "$a" in --dry-run) DRY=1 ;; --allow-unnotarized) ALLOW_UNNOTARIZED=1 ;; --skip-notarization) SKIP_NOTARIZATION=1 ;; *) ARG="$a" ;; esac; done
 
 PLIST=Scripts/Info.plist
 PB=/usr/libexec/PlistBuddy
@@ -74,7 +75,9 @@ hdiutil create -quiet -volname "Méliès" -srcfolder "$DIST/stage" -format UDZO 
 
 NOTARIZED=0
 # Notarization, when the keychain profile exists (xcrun notarytool store-credentials melies-notary).
-if [ -n "$DEVID" ] && xcrun notarytool history --keychain-profile melies-notary >/dev/null 2>&1; then
+if [ "$SKIP_NOTARIZATION" = 1 ]; then
+  echo "!! Skipping notarization as asked."
+elif [ -n "$DEVID" ] && xcrun notarytool history --keychain-profile melies-notary >/dev/null 2>&1; then
   echo "==> Notarizing (a few minutes)"
   xcrun notarytool submit "$DMG" --keychain-profile melies-notary --wait
   xcrun stapler staple "$DMG"
