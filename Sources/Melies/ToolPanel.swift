@@ -2,24 +2,51 @@ import SwiftUI
 
 // MARK: Tooltip with a hover delay
 
+/// Where a tooltip goes: below the control by default, above when the window has no room underneath,
+/// anchored to the control's right edge when it would run past the window's right side.
+enum TipPlacement {
+    static func resolve(control: CGRect, window: CGSize, tip: CGSize, forceRight: Bool = false) -> (above: Bool, anchorRight: Bool) {
+        let noRoomBelow = control.maxY + 36 + tip.height > window.height
+        let roomAbove = control.minY - tip.height - 6 > 0
+        return (noRoomBelow && roomAbove, forceRight || control.minX - 6 + tip.width > window.width)
+    }
+}
+
 /// Appears after the pointer rests on the control, like Shottr's.
+/// The placement is automatic: below the control by default, above it when the window has no room underneath
+/// (bottom bar), and anchored to the right edge when the tooltip would run past the window's right side.
 struct DelayedTip: ViewModifier {
     let title: String
     let shortcut: String?
-    /// Anchor the tooltip to the right edge of the control, so it grows leftwards near the window edge.
+    /// Force the right-edge anchoring even when there seems to be room.
     let trailing: Bool
     /// When the control tracks hover itself (an AppKit view), pass its state here.
     var hover: Bool?
 
     @State private var show = false
     @State private var task: Task<Void, Never>?
+    @State private var frame: CGRect = .zero
+    @State private var above = false
+    @State private var anchorRight = false
+
+    /// Rough size of the tooltip, enough to decide where it fits (see Tooltip: long titles wrap at 250 pt).
+    private var estimatedSize: CGSize {
+        let long = title.count > 36
+        let width = long ? 282 : min(CGFloat(title.count + (shortcut?.count ?? 0)) * 7.5 + 40, 282)
+        return CGSize(width: width, height: long ? 78 : 40)
+    }
+
+    private func place() {
+        guard let size = (NSApp.keyWindow ?? NSApp.mainWindow)?.contentView?.bounds.size, size.width > 0 else { return }
+        (above, anchorRight) = TipPlacement.resolve(control: frame, window: size, tip: estimatedSize, forceRight: trailing)
+    }
 
     private func hoverChanged(_ inside: Bool) {
         task?.cancel()
         if inside {
             task = Task {
                 try? await Task.sleep(for: .milliseconds(450))
-                if !Task.isCancelled { withAnimation(.easeOut(duration: 0.12)) { show = true } }
+                if !Task.isCancelled { place(); withAnimation(.easeOut(duration: 0.12)) { show = true } }
             }
         } else {
             show = false
@@ -28,12 +55,15 @@ struct DelayedTip: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame = $0 }
             .onHover { inside in if hover == nil { hoverChanged(inside) } }
             .onChange(of: hover ?? false) { _, inside in if hover != nil { hoverChanged(inside) } }
-            .overlay(alignment: trailing ? .topTrailing : .topLeading) {
+            .overlay(alignment: anchorRight ? .topTrailing : .topLeading) {
                 if show {
                     Tooltip(title: title, shortcut: shortcut)
-                        .offset(x: trailing ? 6 : -6, y: 36)
+                        // Moving the top guide to the tooltip's bottom edge puts it 6 pt above the control, whatever its height.
+                        .alignmentGuide(.top) { d in above ? d[.bottom] + 6 : d[.top] }
+                        .offset(x: anchorRight ? 6 : -6, y: above ? 0 : 36)
                         .transition(.opacity)
                         .allowsHitTesting(false)
                 }
