@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:melies}",
+            "name": "Debug Melies",
+            "target": "Melies",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug Melies"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:melies}",
+            "name": "Release Melies",
+            "target": "Melies",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release Melies"
+        }
+    ]
+}

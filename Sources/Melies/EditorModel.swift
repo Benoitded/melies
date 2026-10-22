@@ -22,6 +22,14 @@ final class EditorModel: ObservableObject {
     @Published var thumbnails: [NSImage] = []
     @Published var zoomPoints: [ZoomPoint] = []
     @Published var selectedPointID: UUID?
+    @Published var tool: Tool = .select
+    @Published var annotations: [Annotation] = []
+    @Published var selectedAnnotationID: UUID?
+    /// True while a text field has the keyboard, so single-key shortcuts must stay quiet.
+    @Published var isEditingText = false
+    @Published var textFocusTick = 0
+    /// Set while an annotation drag is in progress, so panning the canvas does not also run.
+    var annotationGestureActive = false
     var cursor: CursorTrack?
     /// Canvas zoom: 1 means "fit in the window". `pan` moves the video from its fitted center.
     @Published var zoom: Double = 1
@@ -240,6 +248,8 @@ final class EditorModel: ObservableObject {
     func selectPoint(_ id: UUID?) {
         selectedPointID = id
         if let point = selectedPoint {
+            selectedAnnotationID = nil
+            tool = .select
             player.pause()
             seek(to: point.time)
         }
@@ -263,9 +273,67 @@ final class EditorModel: ObservableObject {
     }
 
     func deleteSelected() {
-        zoomPoints.removeAll { $0.id == selectedPointID }
-        selectedPointID = nil
+        if let id = selectedAnnotationID {
+            annotations.removeAll { $0.id == id }
+            selectedAnnotationID = nil
+        } else if selectedPointID != nil {
+            zoomPoints.removeAll { $0.id == selectedPointID }
+            selectedPointID = nil
+        }
     }
+
+    // MARK: Annotations (arrow, text, rectangle)
+
+    var selectedAnnotation: Annotation? { annotations.first { $0.id == selectedAnnotationID } }
+
+    func setTool(_ new: Tool) {
+        tool = new
+        if new != .select {
+            selectedPointID = nil
+            selectedAnnotationID = nil
+            cropMode = false
+        }
+    }
+
+    func selectAnnotation(_ id: UUID?) {
+        selectedAnnotationID = id
+        guard let a = selectedAnnotation else { return }
+        selectedPointID = nil
+        cropMode = false
+        if current < a.start || current > a.end { seek(to: a.start) }
+    }
+
+    /// Creates an annotation visible for 3 seconds from the playhead, with the last style used for its kind.
+    func addAnnotation(_ kind: AnnotationKind, at point: CGPoint) -> UUID {
+        let style = AnnotationStyleStore.style(for: kind)
+        let start = min(max(current, 0), max(duration - 0.3, 0))
+        let end = min(start + 3, max(duration, start + 0.3))
+        let annotation = Annotation(
+            kind: kind, start: start, end: end, p1: point, p2: point, color: style.color, width: style.width,
+            arrow: style.arrow, rect: style.rect, text: kind == .text ? L("ann.default_text") : "",
+            font: style.font, bold: style.bold, box: style.box
+        )
+        annotations.append(annotation)
+        return annotation.id
+    }
+
+    func updateAnnotation(_ id: UUID, remember: Bool = false, _ change: (inout Annotation) -> Void) {
+        guard let i = annotations.firstIndex(where: { $0.id == id }) else { return }
+        change(&annotations[i])
+        annotations[i].start = min(max(annotations[i].start, 0), duration)
+        annotations[i].end = min(max(annotations[i].end, annotations[i].start + 0.2), max(duration, annotations[i].start + 0.2))
+        if remember {
+            let a = annotations[i]
+            AnnotationStyleStore.save(AnnotationStyle(color: a.color, width: a.width, arrow: a.arrow, rect: a.rect, font: a.font, bold: a.bold, box: a.box), for: a.kind)
+        }
+    }
+
+    func updateSelectedAnnotation(_ change: (inout Annotation) -> Void) {
+        guard let id = selectedAnnotationID else { return }
+        updateAnnotation(id, remember: true, change)
+    }
+
+    func requestTextFocus() { textFocusTick += 1 }
 
     // MARK: Crop
 
@@ -344,7 +412,7 @@ final class EditorModel: ObservableObject {
         player.pause()
         defer { busy = false }
         do {
-            try await VideoExport.run(asset: asset, range: range, crop: cropRect, points: zoomPoints, to: destination)
+            try await VideoExport.run(asset: asset, range: range, crop: cropRect, points: zoomPoints, annotations: annotations, to: destination)
             return true
         } catch {
             status = L("status.fail", error.localizedDescription)

@@ -1,0 +1,92 @@
+import AppKit
+import SwiftUI
+
+/// Drawing tools in the editor.
+enum Tool: Equatable {
+    case select, arrow, text, rect
+}
+
+struct RGBA: Codable, Equatable {
+    var r: Double, g: Double, b: Double, a: Double
+
+    static let red = RGBA(r: 1.0, g: 0.23, b: 0.19, a: 1)
+    static let orange = RGBA(r: 1.0, g: 0.62, b: 0.04, a: 1)
+    static let yellow = RGBA(r: 1.0, g: 0.84, b: 0.04, a: 1)
+    static let green = RGBA(r: 0.20, g: 0.78, b: 0.35, a: 1)
+    static let blue = RGBA(r: 0.04, g: 0.52, b: 1.0, a: 1)
+    static let purple = RGBA(r: 0.69, g: 0.32, b: 0.87, a: 1)
+    static let white = RGBA(r: 1, g: 1, b: 1, a: 1)
+    static let black = RGBA(r: 0, g: 0, b: 0, a: 1)
+    static let palette: [RGBA] = [.red, .orange, .yellow, .green, .blue, .purple, .white, .black]
+
+    var cg: CGColor { CGColor(srgbRed: r, green: g, blue: b, alpha: a) }
+    var color: Color { Color(.sRGB, red: r, green: g, blue: b, opacity: a) }
+    var luminance: Double { 0.299 * r + 0.587 * g + 0.114 * b }
+
+    init(r: Double, g: Double, b: Double, a: Double) { self.r = r; self.g = g; self.b = b; self.a = a }
+
+    init(_ color: Color) {
+        let ns = NSColor(color).usingColorSpace(.sRGB) ?? .red
+        self.init(r: Double(ns.redComponent), g: Double(ns.greenComponent), b: Double(ns.blueComponent), a: Double(ns.alphaComponent))
+    }
+}
+
+enum AnnotationKind: String, Codable { case arrow, text, rect }
+enum ArrowStyle: String, CaseIterable, Codable { case block, line, double }
+enum RectStyle: String, CaseIterable, Codable { case rounded, square, soft, solid }
+enum FontStyle: String, CaseIterable, Codable { case sans, rounded, serif, mono, hand }
+enum TextBox: String, CaseIterable, Codable { case plain, boxed, badge }
+
+/// An element drawn on the video, visible between `start` and `end` (asset time, seconds).
+/// Geometry is normalized in the upright source frame (0...1, top-left origin), so it follows
+/// crop and zoom animation. Sizes (`width`) are in units of 1/1000 of the source width.
+struct Annotation: Identifiable, Equatable {
+    var id = UUID()
+    var kind: AnnotationKind
+    var start: Double
+    var end: Double
+    var p1: CGPoint          // arrow tail, rectangle corner, or text anchor (top-left)
+    var p2: CGPoint          // arrow head, or opposite rectangle corner
+    var color: RGBA
+    var width: Double        // line thickness, or font size for text
+    var arrow: ArrowStyle
+    var rect: RectStyle
+    var text: String
+    var font: FontStyle
+    var bold: Bool
+    var box: TextBox
+}
+
+/// The look used for the next annotation of each kind: it remembers the last choices.
+struct AnnotationStyle: Codable, Equatable {
+    var color: RGBA
+    var width: Double
+    var arrow: ArrowStyle = .block
+    var rect: RectStyle = .rounded
+    var font: FontStyle = .sans
+    var bold = true
+    var box: TextBox = .plain
+}
+
+enum AnnotationStyleStore {
+    private static let key = "annotationStyles"
+
+    static func style(for kind: AnnotationKind) -> AnnotationStyle {
+        if let data = UserDefaults.standard.data(forKey: key),
+           let all = try? JSONDecoder().decode([String: AnnotationStyle].self, from: data),
+           let saved = all[kind.rawValue] { return saved }
+        switch kind {
+        case .arrow: return AnnotationStyle(color: .red, width: 7)
+        case .rect: return AnnotationStyle(color: .red, width: 4)
+        case .text: return AnnotationStyle(color: .white, width: 30, box: .badge)
+        }
+    }
+
+    static func save(_ style: AnnotationStyle, for kind: AnnotationKind) {
+        var all: [String: AnnotationStyle] = [:]
+        if let data = UserDefaults.standard.data(forKey: key),
+           let existing = try? JSONDecoder().decode([String: AnnotationStyle].self, from: data) { all = existing }
+        all[kind.rawValue] = style
+        if let data = try? JSONEncoder().encode(all) { UserDefaults.standard.set(data, forKey: key) }
+    }
+}

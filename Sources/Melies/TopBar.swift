@@ -32,19 +32,25 @@ struct TopBar: View {
             }
                     }
                     group {
-            BarButton(symbol: "scissors", title: L("tip.trim"), shortcut: "(I / O)") {}
-            BarButton(symbol: "crop", title: L("tip.crop"), shortcut: "(C)", active: model.cropMode || model.cropRect != nil) {
-                model.toggleCrop()
-            }
-            BarButton(symbol: "arrow.up.right", title: L("tip.arrow"), shortcut: L("tip.soon"), disabled: true) {}
-            BarButton(symbol: "textformat", title: L("tip.text"), shortcut: L("tip.soon"), disabled: true) {}
-            BarButton(symbol: "ruler", title: L("tip.measure"), shortcut: L("tip.soon"), disabled: true) {}
-            BarButton(symbol: "rectangle", title: L("tip.rect"), shortcut: L("tip.soon"), disabled: true) {}
-            BarButton(symbol: "plus.magnifyingglass", title: L("tip.zoomanim"), shortcut: "(Z)", active: !model.zoomPoints.isEmpty) {
-                model.addZoom()
-            }
-            BarButton(symbol: "pencil", title: L("tip.pencil"), shortcut: L("tip.soon"), disabled: true) {}
-            BarButton(symbol: "ellipsis", title: L("tip.more"), shortcut: L("tip.soon"), disabled: true) {}
+                        BarButton(symbol: "cursorarrow", title: L("tip.select"), shortcut: "(V)", active: model.tool == .select) {
+                            model.setTool(.select)
+                        }
+                        BarButton(symbol: "arrow.up.right", title: L("tip.arrow"), shortcut: "(A)", active: model.tool == .arrow) {
+                            model.setTool(.arrow)
+                        }
+                        BarButton(symbol: "textformat", title: L("tip.text"), shortcut: "(T)", active: model.tool == .text) {
+                            model.setTool(.text)
+                        }
+                        BarButton(symbol: "rectangle", title: L("tip.rect"), shortcut: "(R)", active: model.tool == .rect) {
+                            model.setTool(.rect)
+                        }
+                        BarButton(symbol: "scissors", title: L("tip.trim"), shortcut: "(I / O)") {}
+                        BarButton(symbol: "crop", title: L("tip.crop"), shortcut: "(C)", active: model.cropMode || model.cropRect != nil) {
+                            model.toggleCrop()
+                        }
+                        BarButton(symbol: "plus.magnifyingglass", title: L("tip.zoomanim"), shortcut: "(Z)", active: !model.zoomPoints.isEmpty) {
+                            model.addZoom()
+                        }
                     }
                 }
             }
@@ -54,8 +60,6 @@ struct TopBar: View {
             info(value: sizeText, label: model.croppedSize == nil ? L("info.source") : L("info.crop"))
             divider
             info(value: String(format: "%.1f s", max(model.end - model.start, 0)), label: L("info.duration"))
-            divider
-            info(value: fpsText, label: L("info.export"))
             divider
             info(value: "\(model.zoomPercent)%", label: L("info.zoom"))
         }

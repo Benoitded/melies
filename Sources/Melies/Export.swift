@@ -15,6 +15,7 @@ struct RenderPlan {
     var canvas: CGSize           // output size
     var content: CGRect          // where the picture sits inside the canvas, top-left origin
     var points: [ZoomPoint]
+    var annotations: [Annotation] = []
 
     /// Draws the frame for `time` (asset time, seconds) from the raw source image.
     func render(_ source: CIImage, at time: Double) -> CIImage {
@@ -36,7 +37,13 @@ struct RenderPlan {
             .transformed(by: CGAffineTransform(translationX: content.minX, y: canvas.height - content.maxY))
 
         let background = CIImage(color: .black).cropped(to: CGRect(origin: .zero, size: canvas))
-        return placed.composited(over: background)
+        var frame = placed.composited(over: background)
+        if let overlay = AnnotationRenderer.overlay(annotations, at: time, source: uprightSize,
+                                                    region: CGRect(x: x, y: y, width: w, height: h),
+                                                    content: content, canvas: canvas) {
+            frame = overlay.composited(over: frame)
+        }
+        return frame
     }
 }
 
@@ -91,7 +98,7 @@ enum VideoExport {
     static let fps: Int32 = 30
 
     /// `crop` is normalized (0...1) in the upright frame, origin top-left.
-    static func run(asset: AVAsset, range: CMTimeRange, crop: CGRect? = nil, points: [ZoomPoint] = [], to url: URL) async throws {
+    static func run(asset: AVAsset, range: CMTimeRange, crop: CGRect? = nil, points: [ZoomPoint] = [], annotations: [Annotation] = [], to url: URL) async throws {
         guard let track = try await asset.loadTracks(withMediaType: .video).first else {
             throw ExportError.noVideoTrack
         }
@@ -129,7 +136,8 @@ enum VideoExport {
             base: base,
             canvas: CGSize(width: outW, height: outH),
             content: CGRect(x: (outW - contentW) / 2, y: (outH - contentH) / 2, width: contentW, height: contentH),
-            points: points.sorted { $0.time < $1.time }
+            points: points.sorted { $0.time < $1.time },
+            annotations: annotations
         )
 
         let composition = AVMutableVideoComposition()
