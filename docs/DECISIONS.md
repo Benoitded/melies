@@ -323,3 +323,24 @@ The local MCP server lets an AI app drive the editor, so its inputs are treated 
   Scripts/build.sh`. A release build has none, so no environment variable can change what the published app does.
 - Also changed in the same pass: the microphone entitlement is declared (needed once the hardened runtime is on),
   temporary files are cleaned up, and the release script checks notarization and publishes as a draft first.
+
+## Automatic captions: on-device only (2026-10-22)
+
+Méliès is free and local-only, so captions are generated with Apple's `SpeechTranscriber` / `SpeechAnalyzer` (Speech
+framework, macOS 26) and never with a server.
+- **Why on-device:** the audio of a screen recording often holds passwords read aloud, customer names, private
+  meetings. No upload also means no account, no key, no cost, no rate limit.
+- **No network, even for models:** the framework can download a language model, but Méliès does not trigger it. Only
+  locales reported by `SpeechTranscriber.installedLocales` are offered, and a language whose model is missing gets a
+  message pointing to System Settings > Keyboard > Dictation. The `SFSpeechRecognizer` fallback was not written: macOS 26
+  is the minimum, so the new API is always there, and the old one can silently use a server unless
+  `requiresOnDeviceRecognition` is set.
+- **Pipeline:** `AVAssetReader` mixes the audio tracks (system sound and microphone) to linear PCM in the analyzer's
+  preferred format and streams it as `AnalyzerInput`; word times come from the `audioTimeRange` attribute of the result.
+  `CaptionLayout` (pure code, unit tested) groups words into captions: at most 2 lines of 42 characters, 6 s, split on
+  pauses (0.8 s) and after a finished sentence.
+- **Drawing:** captions are drawn in canvas space, inside the picture area (`content`), above the zoomed video. They do
+  not follow the zoom camera or the crop, so their size and position stay constant and readable while the camera moves.
+  The preview and the export call the same `CaptionRenderer.draw`. Captions are session only (not saved with the video).
+- **Permission:** `NSSpeechRecognitionUsageDescription` is declared (English, plus localized `InfoPlist.strings`). The
+  hardened runtime needs no extra entitlement for speech recognition.

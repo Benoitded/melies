@@ -59,6 +59,9 @@ The full list is in [`docs/SHORTCUTS.md`](docs/SHORTCUTS.md).
   follows scrolling text), forward and backward from the playhead. The path is drawn on the video, the editor says
   why tracking stopped, and a refresh button tracks again from the playhead.
 - **Visible clicks**, **system sound** and **microphone**.
+- **Automatic captions**: generated on your Mac from the audio (Apple's on-device speech recognition, nothing is sent
+  anywhere), editable line by line, shown in the preview and burned into the export, or saved as an `.srt` file. Only
+  languages already installed for Dictation are offered.
 - **Combine two videos**: side by side, stacked, or picture in picture.
 - **Export to a target size**: MP4 (H.264), the more compact HEVC (some apps reject it), or GIF; sizes from 1 to 100 MB
   or a custom value; 360p, 480p, 720p or 1080p. The panel shows a size estimate measured on a short test encode (a
