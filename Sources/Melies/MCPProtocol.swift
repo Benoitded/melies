@@ -8,6 +8,10 @@ struct MCPProtocol {
 
     let tools: EditorTools
 
+    /// What the client is doing, so the app can show it (who connected, which tool is running).
+    enum Activity { case client(String), started(String), finished(String, failed: Bool) }
+    var onActivity: ((Activity) -> Void)?
+
     /// The reply to one JSON-RPC message, or nil when none is due (notifications).
     func handle(_ message: [String: Any]) async -> [String: Any]? {
         let id = message["id"]
@@ -20,6 +24,7 @@ struct MCPProtocol {
 
         switch method {
         case "initialize":
+            if let name = (params["clientInfo"] as? [String: Any])?["name"] as? String { onActivity?(.client(name)) }
             let asked = params["protocolVersion"] as? String ?? ""
             return result(id, [
                 "protocolVersion": Self.supportedVersions.contains(asked) ? asked : Self.supportedVersions[0],
@@ -35,7 +40,10 @@ struct MCPProtocol {
             }])
         case "tools/call":
             guard let name = params["name"] as? String else { return error(id, -32602, "Missing tool name") }
-            return result(id, await call(name, params["arguments"] as? [String: Any] ?? [:]))
+            onActivity?(.started(name))
+            let outcome = await call(name, params["arguments"] as? [String: Any] ?? [:])
+            onActivity?(.finished(name, failed: outcome["isError"] as? Bool ?? false))
+            return result(id, outcome)
         default:
             return error(id, -32601, "Method not found: \(method)")
         }

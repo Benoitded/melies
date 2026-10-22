@@ -107,6 +107,8 @@ struct EditorView: View {
                     .onChange(of: geo.size) { _, _ in updateCanvas(geo) }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(alignment: .top) { AIBadge() }
+                .animation(.easeInOut(duration: 0.2), value: MCPServer.shared.showBadge)
                 .overlay(alignment: .topTrailing) {
                     ZoomPanel(model: model).padding(10)
                     AnnotationPanel(model: model).padding(10)
