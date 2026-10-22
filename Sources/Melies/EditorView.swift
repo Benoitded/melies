@@ -26,43 +26,13 @@ struct EditorView: View {
         }
     }
 
-    /// Invisible buttons that carry the Shottr-style keyboard shortcuts.
+    /// Keys are handled by `EditorWindowController` (see its key monitor); only Cmd+Shift+O stays here.
     private var shortcuts: some View {
-        Group {
-            Button("") {
-                if let model = session.model {
-                    if model.cropMode { model.cancelCrop(); return }
-                    if model.tool != .select { model.setTool(.select); return }
-                    if model.selectedAnnotationID != nil { model.selectAnnotation(nil); return }
-                    if model.selectedPointID != nil { model.selectPoint(nil); return }
-                }
-                close()
-            }.keyboardShortcut(.escape, modifiers: [])
-            Button("") { session.chooseFile() }.keyboardShortcut("o", modifiers: [.command, .shift])
-            // Single-key shortcuts stay quiet while a text field has the keyboard.
-            if let model = session.model, !model.isEditingText {
-                Button("") { model.togglePlay() }.keyboardShortcut(.space, modifiers: [])
-                Button("") { model.setTool(.select) }.keyboardShortcut("v", modifiers: [])
-                Button("") { model.setTool(.arrow) }.keyboardShortcut("a", modifiers: [])
-                Button("") { model.setTool(.text) }.keyboardShortcut("t", modifiers: [])
-                Button("") { model.setTool(.rect) }.keyboardShortcut("r", modifiers: [])
-                Button("") { model.setTool(.spotlight) }.keyboardShortcut("s", modifiers: [])
-                Button("") { model.setTool(.blur) }.keyboardShortcut("b", modifiers: [])
-                Button("") { model.toggleCrop() }.keyboardShortcut("c", modifiers: [])
-                Button("") { model.addZoom() }.keyboardShortcut("z", modifiers: [])
-                Button("") { model.deleteSelected() }.keyboardShortcut(.delete, modifiers: [])
-                Button("") { if model.cropMode { model.confirmCrop() } }.keyboardShortcut(.return, modifiers: [])
-                Button("") { model.setIn() }.keyboardShortcut("i", modifiers: [])
-                Button("") { model.setOut() }.keyboardShortcut("o", modifiers: [])
-                Button("") { model.step(frames: -1) }.keyboardShortcut(.leftArrow, modifiers: [])
-                Button("") { model.step(frames: 1) }.keyboardShortcut(.rightArrow, modifiers: [])
-                Button("") { model.step(frames: -10) }.keyboardShortcut(.leftArrow, modifiers: [.shift])
-                Button("") { model.step(frames: 10) }.keyboardShortcut(.rightArrow, modifiers: [.shift])
-            }
-        }
-        .opacity(0)
-        .frame(width: 0, height: 0)
-        .accessibilityHidden(true)
+        Button("") { session.chooseFile() }
+            .keyboardShortcut("o", modifiers: [.command, .shift])
+            .opacity(0)
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
     }
 
     private struct Empty: View {

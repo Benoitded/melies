@@ -11,7 +11,63 @@ final class EditorWindowController {
     var isKey: Bool { window?.isKeyWindow ?? false }
 
     private var eventMonitor: Any?
+    private var keyMonitor: Any?
     private var lastRightDrag: CGPoint?
+
+    /// Single-key shortcuts (V A T R S B C Z I O, Space, arrows, Delete, Return, Esc). They are read straight
+    /// from the key events of the editor window, because invisible SwiftUI buttons never received them.
+    /// They stay quiet while a text field is being edited, and with Cmd, Option or Control (those are menu items).
+    private func installKeyMonitor() {
+        guard keyMonitor == nil else { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+            MainActor.assumeIsolated { (self?.handleKey(event) ?? false) ? nil : event }
+        }
+    }
+
+    private func handleKey(_ event: NSEvent) -> Bool {
+        guard let window, event.window === window, window.isKeyWindow else { return false }
+        if window.firstResponder is NSTextView { return false } // typing in a text field
+        guard event.modifierFlags.intersection([.command, .option, .control]).isEmpty else { return false }
+        guard let model = session.model else {
+            if event.keyCode == 53 { close(); return true }
+            return false
+        }
+        let shift = event.modifierFlags.contains(.shift)
+
+        switch event.keyCode {
+        case 49: model.togglePlay(); return true                                  // Space
+        case 53:                                                                  // Esc
+            if model.cropMode { model.cancelCrop() }
+            else if model.tool != .select { model.setTool(.select) }
+            else if model.selectedAnnotationID != nil { model.selectAnnotation(nil) }
+            else if model.selectedPointID != nil { model.selectPoint(nil) }
+            else { close() }
+            return true
+        case 36, 76:                                                              // Return
+            guard model.cropMode else { return false }
+            model.confirmCrop(); return true
+        case 51, 117:                                                             // Delete (Backspace, forward delete)
+            guard model.selectedAnnotationID != nil || model.selectedPointID != nil else { return false }
+            model.deleteSelected(); return true
+        case 123: model.step(frames: shift ? -10 : -1); return true               // Left
+        case 124: model.step(frames: shift ? 10 : 1); return true                 // Right
+        default: break
+        }
+        switch event.charactersIgnoringModifiers?.lowercased() {
+        case "v": model.setTool(.select)
+        case "a": model.setTool(.arrow)
+        case "t": model.setTool(.text)
+        case "r": model.setTool(.rect)
+        case "s": model.setTool(.spotlight)
+        case "b": model.setTool(.blur)
+        case "c": model.toggleCrop()
+        case "z": model.addZoom()
+        case "i": model.setIn()
+        case "o": model.setOut()
+        default: return false
+        }
+        return true
+    }
 
     /// Trackpad pinch, Cmd+scroll to zoom, two-finger scroll or right-drag to pan (only over the canvas).
     private func installZoomMonitor() {
@@ -104,6 +160,7 @@ final class EditorWindowController {
             }
         }
         installZoomMonitor()
+        installKeyMonitor()
         NSApp.setActivationPolicy(.regular) // Dock icon only while the editor is open
         MainMenu.install()
         NSApp.activate(ignoringOtherApps: true)
