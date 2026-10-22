@@ -206,3 +206,7 @@
 "exp.estimate.limit" = "El archivo queda por debajo de %d MB: la calidad se adapta.";
 "exp.estimate.gif" = "Un GIF pesa mucho. Fija un tamaño máximo para mantenerlo ligero.";
 "exp.estimate.gif_limit" = "El GIF queda por debajo de %d MB: el ancho y la fluidez bajan si hace falta.";
+"tip.track" = "Seguir el objeto";
+"tip.track.clear" = "Dejar de seguir";
+"tip.track.cancel" = "Cancelar análisis";
+"trk.lost" = "Objeto perdido, posición mantenida";

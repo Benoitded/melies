@@ -445,6 +445,61 @@ final class EditorModel: ObservableObject {
         }
     }
 
+    // MARK: Tracking
+
+    @Published var trackingID: UUID?
+    @Published var trackingProgress: Double = 0
+    @Published var trackingLost = false
+    private var trackingTask: Task<Void, Never>?
+
+    /// The region to follow, normalized in the upright frame (origin top left).
+    private func trackBox(for a: Annotation) -> CGRect {
+        let aspect = sourceSize.height > 0 ? sourceSize.width / sourceSize.height : 1
+        func clamp(_ r: CGRect) -> CGRect { r.intersection(CGRect(x: 0, y: 0, width: 1, height: 1)) }
+        switch a.kind {
+        case .rect, .spotlight, .blur:
+            return clamp(CGRect(x: min(a.p1.x, a.p2.x), y: min(a.p1.y, a.p2.y), width: abs(a.p2.x - a.p1.x), height: abs(a.p2.y - a.p1.y)))
+        case .arrow:
+            let w = 0.08
+            return clamp(CGRect(x: a.p2.x - w / 2, y: a.p2.y - w * aspect / 2, width: w, height: w * aspect))
+        case .text:
+            return clamp(CGRect(x: a.p1.x - 0.06, y: a.p1.y - 0.03, width: 0.12, height: 0.06))
+        }
+    }
+
+    /// Follows the content under the annotation from the playhead to the end of the annotation.
+    func startTracking(_ id: UUID) {
+        guard trackingID == nil, let a = annotations.first(where: { $0.id == id }) else { return }
+        let from = min(max(current, a.start), a.end)
+        let box = trackBox(for: a)
+        guard box.width > 0.005, box.height > 0.005, a.end - from > 0.1 else { return }
+        trackingID = id
+        trackingProgress = 0
+        trackingLost = false
+        let asset = self.asset
+        trackingTask = Task { [weak self] in
+            let result = try? await ObjectTracker.track(asset: asset, box: box, from: from, to: a.end) { p in
+                Task { @MainActor [weak self] in self?.trackingProgress = p }
+            }
+            guard let self else { return }
+            if let result, !Task.isCancelled, !result.samples.isEmpty {
+                self.updateAnnotation(id) { $0.track = result.samples; $0.trackStart = from }
+                self.trackingLost = result.lost
+            }
+            self.trackingID = nil
+        }
+    }
+
+    func cancelTracking() {
+        trackingTask?.cancel()
+        trackingID = nil
+    }
+
+    func clearTrack(_ id: UUID) {
+        updateAnnotation(id) { $0.track = []; $0.trackStart = 0 }
+        trackingLost = false
+    }
+
     func updateSelectedAnnotation(_ change: (inout Annotation) -> Void) {
         guard let id = selectedAnnotationID else { return }
         updateAnnotation(id, remember: true, change)

@@ -84,7 +84,8 @@ enum AnnotationRenderer {
     static func draw(_ list: [Annotation], at t: Double, in ctx: CGContext, source: CGSize, animated: Bool = true) {
         // Spotlights dim what is behind everything else, so they go first.
         let ordered = list.filter { $0.kind == .spotlight } + list.filter { $0.kind != .spotlight }
-        for a in ordered where isVisible(a, at: t) {
+        for original in ordered where isVisible(original, at: t) {
+            let a = original.moved(at: t)
             ctx.saveGState()
             ctx.setAlpha(animated ? CGFloat(opacity(a, at: t)) : 1)
             switch a.kind {
@@ -323,7 +324,8 @@ extension AnnotationRenderer {
     /// Export: puts every visible blur patch back onto the frame, fading with the annotation.
     static func applyBlurs(to frame: CIImage, list: [Annotation], at t: Double, source: CGSize) -> CIImage {
         var result = frame
-        for a in list where a.kind == .blur && isVisible(a, at: t) {
+        for original in list where original.kind == .blur && isVisible(original, at: t) {
+            let a = original.moved(at: t)
             guard var (patch, _) = blurPatch(of: frame, for: a, source: source) else { continue }
             let alpha = CGFloat(opacity(a, at: t))
             if alpha < 0.999 {
@@ -336,7 +338,8 @@ extension AnnotationRenderer {
 
     /// Preview: draws the visible blur patches into a y-down source-pixel context.
     static func drawBlurs(frame: CIImage, list: [Annotation], at t: Double, in ctx: CGContext, source: CGSize, animated: Bool, ciContext: CIContext) {
-        for a in list where a.kind == .blur && isVisible(a, at: t) {
+        for original in list where original.kind == .blur && isVisible(original, at: t) {
+            let a = original.moved(at: t)
             guard let (patch, ciRect) = blurPatch(of: frame, for: a, source: source),
                   let image = ciContext.createCGImage(patch, from: ciRect) else { continue }
             let rect = CGRect(x: ciRect.minX, y: source.height - ciRect.maxY, width: ciRect.width, height: ciRect.height)

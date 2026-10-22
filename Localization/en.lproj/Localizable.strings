@@ -206,3 +206,7 @@
 "exp.estimate.limit" = "The file stays under %d MB: the quality adapts.";
 "exp.estimate.gif" = "A GIF is large. Set a maximum size to keep it light.";
 "exp.estimate.gif_limit" = "The GIF stays under %d MB: width and frame rate shrink if needed.";
+"tip.track" = "Follow the object";
+"tip.track.clear" = "Stop following";
+"tip.track.cancel" = "Stop analysis";
+"trk.lost" = "Tracking lost, position held";
