@@ -121,6 +121,8 @@ struct AnnotationLane: View {
         case .arrow: return "arrow.up.right"
         case .text: return "textformat"
         case .rect: return "rectangle"
+        case .spotlight: return "circle.lefthalf.filled.inverse"
+        case .blur: return "squareshape.split.3x3"
         }
     }
 }

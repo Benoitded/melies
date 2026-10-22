@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Drawing tools in the editor.
 enum Tool: Equatable {
-    case select, arrow, text, rect
+    case select, arrow, text, rect, spotlight, blur
 }
 
 struct RGBA: Codable, Equatable {
@@ -31,11 +31,12 @@ struct RGBA: Codable, Equatable {
     }
 }
 
-enum AnnotationKind: String, Codable { case arrow, text, rect }
+enum AnnotationKind: String, Codable { case arrow, text, rect, spotlight, blur }
 enum ArrowStyle: String, CaseIterable, Codable { case block, line, double }
 enum RectStyle: String, CaseIterable, Codable { case rounded, square, soft, solid }
 enum FontStyle: String, CaseIterable, Codable { case sans, rounded, serif, mono, hand }
 enum TextBox: String, CaseIterable, Codable { case plain, boxed, badge }
+enum BlurStyle: String, CaseIterable, Codable { case pixelate, gaussian }
 
 /// An element drawn on the video, visible between `start` and `end` (asset time, seconds).
 /// Geometry is normalized in the upright source frame (0...1, top-left origin), so it follows
@@ -55,6 +56,8 @@ struct Annotation: Identifiable, Equatable {
     var font: FontStyle
     var bold: Bool
     var box: TextBox
+    /// Spotlight and blur: the shape and the effect. `width` is the darkness (%) or the strength.
+    var blur: BlurStyle = .pixelate
 }
 
 /// The look used for the next annotation of each kind: it remembers the last choices.
@@ -66,6 +69,7 @@ struct AnnotationStyle: Codable, Equatable {
     var font: FontStyle = .sans
     var bold = true
     var box: TextBox = .plain
+    var blur: BlurStyle = .pixelate
 }
 
 enum AnnotationStyleStore {
@@ -79,6 +83,8 @@ enum AnnotationStyleStore {
         case .arrow: return AnnotationStyle(color: .red, width: 7)
         case .rect: return AnnotationStyle(color: .red, width: 4)
         case .text: return AnnotationStyle(color: .white, width: 30, box: .badge)
+        case .spotlight: return AnnotationStyle(color: .black, width: 65)
+        case .blur: return AnnotationStyle(color: .black, width: 12, blur: .pixelate)
         }
     }
 

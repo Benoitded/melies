@@ -136,3 +136,11 @@ Le compositeur (`ComposeCompositor`) dessine les deux vidéos avec la même géo
 de la fenêtre (`ComposeGeometry`). Quand une vidéo finit avant l'autre, sa dernière image reste
 affichée. L'incrustation a des coins arrondis, un liseré et une ombre. Le son des deux vidéos est
 conservé s'il existe.
+
+## Spotlight et flou (2026-10-22)
+
+Le spotlight assombrit tout sauf une zone (dessiné comme les autres annotations). Le flou et la
+pixelisation changent les pixels de la vidéo : ils sont appliqués sur l'image source avant le
+recadrage et la caméra, donc le motif suit le zoom. L'aperçu lit la dernière image décodée du lecteur
+(`AVPlayerItemVideoOutput`) et utilise le même filtre que l'export. Pixelisation par défaut : un flou
+léger peut parfois se défaire, des gros blocs non.

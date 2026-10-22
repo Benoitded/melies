@@ -49,6 +49,10 @@ struct AnnotationOverlay: View {
                     cg.translateBy(x: video.minX, y: video.minY)
                     cg.scaleBy(x: scale, y: scale)
                     cg.translateBy(x: -region.minX * source.width, y: -region.minY * source.height)
+                    if let frame = model.currentFrameImage {
+                        AnnotationRenderer.drawBlurs(frame: frame, list: model.annotations, at: model.current, in: cg,
+                                                     source: source, animated: model.isPlaying, ciContext: EditorModel.previewContext)
+                    }
                     AnnotationRenderer.draw(model.annotations, at: model.current, in: cg, source: source, animated: model.isPlaying)
                     cg.restoreGState()
                 }
@@ -72,8 +76,13 @@ struct AnnotationOverlay: View {
         case .arrow:
             handleDot(toView(a.p1))
             handleDot(toView(a.p2))
-        case .rect:
+        case .rect, .spotlight, .blur:
             ForEach(Array(cornerPoints(a).enumerated()), id: \.offset) { _, p in handleDot(p) }
+            if a.kind != .rect {
+                let r = viewRect(fromSource: AnnotationRenderer.normalizedRect(a, source))
+                Rectangle().stroke(Color.accentColor, style: StrokeStyle(lineWidth: 1.2, dash: [5, 3]))
+                    .frame(width: r.width, height: r.height).offset(x: r.minX, y: r.minY)
+            }
         case .text:
             let r = viewRect(fromSource: AnnotationRenderer.bounds(of: a, source: source)).insetBy(dx: -3, dy: -3)
             RoundedRectangle(cornerRadius: 6)
@@ -116,8 +125,8 @@ struct AnnotationOverlay: View {
     private func begin(_ value: DragGesture.Value) {
         let start = value.startLocation
         switch model.tool {
-        case .arrow, .rect:
-            let kind: AnnotationKind = model.tool == .arrow ? .arrow : .rect
+        case .arrow, .rect, .spotlight, .blur:
+            let kind: AnnotationKind = model.tool == .arrow ? .arrow : (model.tool == .rect ? .rect : (model.tool == .spotlight ? .spotlight : .blur))
             let id = model.addAnnotation(kind, at: toNorm(start))
             model.annotationGestureActive = true
             mode = .create(id, kind)
@@ -197,7 +206,7 @@ struct AnnotationOverlay: View {
             case .arrow:
                 if hypot(point.x - toView(a.p1).x, point.y - toView(a.p1).y) < reach { return (a.id, .tail) }
                 if hypot(point.x - toView(a.p2).x, point.y - toView(a.p2).y) < reach { return (a.id, .head) }
-            case .rect:
+            case .rect, .spotlight, .blur:
                 for (i, c) in cornerPoints(a).enumerated() where hypot(point.x - c.x, point.y - c.y) < reach { return (a.id, .corner(i)) }
             case .text:
                 break

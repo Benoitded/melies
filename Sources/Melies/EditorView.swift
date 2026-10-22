@@ -46,6 +46,8 @@ struct EditorView: View {
                 Button("") { model.setTool(.arrow) }.keyboardShortcut("a", modifiers: [])
                 Button("") { model.setTool(.text) }.keyboardShortcut("t", modifiers: [])
                 Button("") { model.setTool(.rect) }.keyboardShortcut("r", modifiers: [])
+                Button("") { model.setTool(.spotlight) }.keyboardShortcut("s", modifiers: [])
+                Button("") { model.setTool(.blur) }.keyboardShortcut("b", modifiers: [])
                 Button("") { model.toggleCrop() }.keyboardShortcut("c", modifiers: [])
                 Button("") { model.addZoom() }.keyboardShortcut("z", modifiers: [])
                 Button("") { model.deleteSelected() }.keyboardShortcut(.delete, modifiers: [])

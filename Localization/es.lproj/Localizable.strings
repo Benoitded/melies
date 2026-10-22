@@ -41,7 +41,7 @@
 "tip.text" = "Texto";
 "tip.measure" = "Medir";
 "tip.rect" = "Rectángulo";
-"tip.spotlight" = "Foco y zoom";
+"tip.spotlight" = "Foco";
 "tip.pencil" = "Lápiz";
 "tip.more" = "Más";
 "tip.soon" = "(pronto)";
@@ -155,7 +155,7 @@
 "font.serif" = "Serif";
 "font.mono" = "Mono";
 "font.hand" = "Manuscrita";
-"sc.tools" = "Selección, flecha, texto, rectángulo";
+"sc.tools" = "Selección, flecha, texto, rectángulo, foco, desenfoque";
 "sc.delete" = "Eliminar la selección";
 "sc.undo" = "Deshacer / rehacer";
 "tip.combine" = "Combinar con otro vídeo…";
@@ -180,3 +180,8 @@
 "cmb.working" = "Combinando…";
 "cmb.done" = "Combinado";
 "cmb.failed" = "No se pudo combinar: %@";
+"tip.blur" = "Desenfocar o pixelar";
+"tip.dim" = "Oscuridad";
+"tip.strength" = "Intensidad";
+"blur.pixelate" = "Pixelar";
+"blur.gaussian" = "Desenfoque";

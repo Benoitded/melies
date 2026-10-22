@@ -63,7 +63,7 @@ enum AnnotationRenderer {
     static func bounds(of a: Annotation, source: CGSize) -> CGRect {
         let u = unit(source)
         switch a.kind {
-        case .rect:
+        case .rect, .spotlight, .blur:
             return normalizedRect(a, source)
         case .arrow:
             let p = point(a.p1, source), q = point(a.p2, source)
@@ -82,13 +82,17 @@ enum AnnotationRenderer {
     /// `animated: false` skips the fade, so a paused editor shows annotations fully (a new annotation
     /// starts exactly at the playhead, where the fade would make it invisible).
     static func draw(_ list: [Annotation], at t: Double, in ctx: CGContext, source: CGSize, animated: Bool = true) {
-        for a in list where isVisible(a, at: t) {
+        // Spotlights dim what is behind everything else, so they go first.
+        let ordered = list.filter { $0.kind == .spotlight } + list.filter { $0.kind != .spotlight }
+        for a in ordered where isVisible(a, at: t) {
             ctx.saveGState()
             ctx.setAlpha(animated ? CGFloat(opacity(a, at: t)) : 1)
             switch a.kind {
             case .arrow: drawArrow(a, ctx, source)
             case .rect: drawRect(a, ctx, source)
             case .text: drawText(a, ctx, source)
+            case .spotlight: drawSpotlight(a, ctx, source)
+            case .blur: break // pixels of the video itself, see `applyBlurs`
             }
             ctx.restoreGState()
         }
@@ -152,6 +156,20 @@ enum AnnotationRenderer {
             if a.arrow == .double { barbs(at: p, direction: -1) }
             ctx.strokePath()
         }
+    }
+
+    /// Everything outside the region is darkened; the region stays as it is.
+    private static func drawSpotlight(_ a: Annotation, _ ctx: CGContext, _ source: CGSize) {
+        let u = unit(source)
+        let r = normalizedRect(a, source)
+        guard r.width > 1, r.height > 1 else { return }
+        let radius = a.rect == .square ? 0 : min(min(r.width, r.height) * 0.15, 16 * u)
+        let path = CGMutablePath()
+        path.addRect(CGRect(x: -source.width, y: -source.height, width: source.width * 3, height: source.height * 3))
+        path.addPath(CGPath(roundedRect: r, cornerWidth: radius, cornerHeight: radius, transform: nil))
+        ctx.setFillColor(CGColor(gray: 0, alpha: CGFloat(min(max(a.width, 5), 95) / 100)))
+        ctx.addPath(path)
+        ctx.fillPath(using: .evenOdd)
     }
 
     private static func drawRect(_ a: Annotation, _ ctx: CGContext, _ source: CGSize) {
@@ -238,6 +256,8 @@ enum AnnotationRenderer {
             return distance(from: p, toSegment: point(a.p1, source), point(a.p2, source)) <= reach
         case .text:
             return bounds(of: a, source: source).insetBy(dx: -slop / 2, dy: -slop / 2).contains(p)
+        case .spotlight, .blur:
+            return normalizedRect(a, source).insetBy(dx: -slop, dy: -slop).contains(p)
         case .rect:
             let r = normalizedRect(a, source)
             if a.rect == .soft || a.rect == .solid { return r.insetBy(dx: -slop, dy: -slop).contains(p) }
@@ -268,5 +288,63 @@ extension AnnotationRenderer {
         draw(list, at: t, in: ctx, source: source)
         guard let image = ctx.makeImage() else { return nil }
         return CIImage(cgImage: image)
+    }
+}
+
+// MARK: Blur and pixelation (they change the video's own pixels, so they work on the frame image)
+
+extension AnnotationRenderer {
+    /// The blurred or pixelated version of the frame inside `a`'s region.
+    /// `frame` is the upright source image (Core Image coordinates, y up, origin at 0,0).
+    static func blurPatch(of frame: CIImage, for a: Annotation, source: CGSize) -> (image: CIImage, ciRect: CGRect)? {
+        let r = normalizedRect(a, source)
+        guard r.width >= 2, r.height >= 2 else { return nil }
+        let u = unit(source)
+        let ciRect = CGRect(x: r.minX, y: source.height - r.maxY, width: r.width, height: r.height).intersection(frame.extent)
+        guard !ciRect.isNull, ciRect.width >= 2, ciRect.height >= 2 else { return nil }
+        let strength = CGFloat(min(max(a.width, 1), 60)) * u
+        switch a.blur {
+        case .pixelate:
+            let patch = frame.cropped(to: ciRect)
+                .applyingFilter("CIPixellate", parameters: [kCIInputCenterKey: CIVector(x: ciRect.minX, y: ciRect.minY), kCIInputScaleKey: max(strength, 2)])
+                .cropped(to: ciRect)
+            return (patch, ciRect)
+        case .gaussian:
+            let margin = strength * 3
+            let patch = frame.cropped(to: ciRect.insetBy(dx: -margin, dy: -margin).intersection(frame.extent))
+                .clampedToExtent()
+                .applyingGaussianBlur(sigma: Double(strength))
+                .cropped(to: ciRect)
+            return (patch, ciRect)
+        }
+    }
+
+    /// Export: puts every visible blur patch back onto the frame, fading with the annotation.
+    static func applyBlurs(to frame: CIImage, list: [Annotation], at t: Double, source: CGSize) -> CIImage {
+        var result = frame
+        for a in list where a.kind == .blur && isVisible(a, at: t) {
+            guard var (patch, _) = blurPatch(of: frame, for: a, source: source) else { continue }
+            let alpha = CGFloat(opacity(a, at: t))
+            if alpha < 0.999 {
+                patch = patch.applyingFilter("CIColorMatrix", parameters: ["inputAVector": CIVector(x: 0, y: 0, z: 0, w: alpha)])
+            }
+            result = patch.composited(over: result)
+        }
+        return result
+    }
+
+    /// Preview: draws the visible blur patches into a y-down source-pixel context.
+    static func drawBlurs(frame: CIImage, list: [Annotation], at t: Double, in ctx: CGContext, source: CGSize, animated: Bool, ciContext: CIContext) {
+        for a in list where a.kind == .blur && isVisible(a, at: t) {
+            guard let (patch, ciRect) = blurPatch(of: frame, for: a, source: source),
+                  let image = ciContext.createCGImage(patch, from: ciRect) else { continue }
+            let rect = CGRect(x: ciRect.minX, y: source.height - ciRect.maxY, width: ciRect.width, height: ciRect.height)
+            ctx.saveGState()
+            ctx.setAlpha(animated ? CGFloat(opacity(a, at: t)) : 1)
+            ctx.translateBy(x: rect.minX, y: rect.maxY)
+            ctx.scaleBy(x: 1, y: -1) // images are drawn y-up
+            ctx.draw(image, in: CGRect(origin: .zero, size: rect.size))
+            ctx.restoreGState()
+        }
     }
 }
