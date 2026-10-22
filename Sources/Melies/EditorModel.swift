@@ -587,12 +587,12 @@ final class EditorModel: ObservableObject {
         let provider = NSItemProvider()
         let name = url.deletingPathExtension().lastPathComponent
         provider.suggestedName = name
-        provider.registerFileRepresentation(forTypeIdentifier: UTType.mpeg4Movie.identifier, fileOptions: [], visibility: .all) { completion in
+        provider.registerFileRepresentation(forTypeIdentifier: ExportSettings.current.contentType.identifier, fileOptions: [], visibility: .all) { completion in
             let progress = Progress(totalUnitCount: 1)
             Task { @MainActor in
                 let folder = FileManager.default.temporaryDirectory.appendingPathComponent("melies-drag-\(UUID().uuidString)")
                 try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                let file = folder.appendingPathComponent(name + ".mp4")
+                let file = folder.appendingPathComponent(name + "." + ExportSettings.current.fileExtension)
                 if await self.export(to: file) {
                     self.status = L("status.dragged")
                     completion(file, false, nil)
@@ -609,7 +609,7 @@ final class EditorModel: ObservableObject {
     /// Cmd+C: export to a temp file, then put that file on the pasteboard.
     func copy() async {
         let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("melies-\(Int(Date().timeIntervalSince1970)).mp4")
+            .appendingPathComponent("melies-\(Int(Date().timeIntervalSince1970)).\(ExportSettings.current.fileExtension)")
         guard await export(to: tmp) else { return }
         let pb = NSPasteboard.general
         pb.clearContents()
@@ -621,7 +621,7 @@ final class EditorModel: ObservableObject {
     /// Export to a temp file and show the system share sheet.
     func share(from view: NSView?) async {
         let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("melies-\(Int(Date().timeIntervalSince1970)).mp4")
+            .appendingPathComponent("melies-\(Int(Date().timeIntervalSince1970)).\(ExportSettings.current.fileExtension)")
         guard await export(to: tmp), let view else { return }
         status = L("status.share_ready", sizeLabel(tmp))
         let picker = NSSharingServicePicker(items: [tmp])
@@ -637,11 +637,12 @@ final class EditorModel: ObservableObject {
     /// Cmd+S: export next to the original, never overwriting.
     func save() async {
         let folder = url.deletingLastPathComponent()
-        let base = url.deletingPathExtension().lastPathComponent + "-twitter"
-        var target = folder.appendingPathComponent(base + ".mp4")
+        let ext = ExportSettings.current.fileExtension
+        let base = url.deletingPathExtension().lastPathComponent + "-optimized"
+        var target = folder.appendingPathComponent(base + "." + ext)
         var n = 2
         while FileManager.default.fileExists(atPath: target.path) {
-            target = folder.appendingPathComponent("\(base)-\(n).mp4")
+            target = folder.appendingPathComponent("\(base)-\(n).\(ext)")
             n += 1
         }
         guard await export(to: target) else { return }

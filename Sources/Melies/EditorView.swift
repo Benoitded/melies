@@ -132,6 +132,7 @@ struct EditorView: View {
                     }
                     .font(.system(size: 12).monospacedDigit())
                     Spacer()
+                    ExportOptionsButton(model: model)
                     if model.hasAudio {
                         Button { model.includeAudio.toggle() } label: {
                             Image(systemName: model.includeAudio ? "speaker.wave.2.fill" : "speaker.slash.fill")
@@ -156,5 +157,22 @@ struct EditorView: View {
             let s = max(seconds, 0)
             return String(format: "%d:%02d.%d", Int(s) / 60, Int(s) % 60, Int((s * 10).truncatingRemainder(dividingBy: 10)))
         }
+    }
+}
+
+private struct ExportOptionsButton: View {
+    @ObservedObject var model: EditorModel
+    @State private var open = false
+
+    var body: some View {
+        Button { open.toggle() } label: {
+            Image(systemName: "slider.horizontal.3")
+                .font(.system(size: 12))
+                .frame(width: 20, height: 20)
+        }
+        .buttonStyle(.glass)
+        .buttonBorderShape(.circle)
+        .tip(L("exp.title"), trailing: true)
+        .popover(isPresented: $open, arrowEdge: .top) { ExportOptionsView(model: model) }
     }
 }

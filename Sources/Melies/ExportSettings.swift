@@ -128,8 +128,9 @@ enum MP4Writer {
         if writer.status != .completed { throw writer.error ?? ExportError.noVideoTrack }
     }
 
+    /// Read from the disk each time: `URL.resourceValues` caches, which made every retry see the first size.
     static func fileSize(_ url: URL) -> Int {
-        (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        ((try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? NSNumber)?.intValue ?? 0
     }
 }
 
@@ -141,7 +142,7 @@ enum GIFWriter {
                       canvas: CGSize, maxMegabytes: Int?, to url: URL) async throws {
         let attempts: [(width: CGFloat, fps: Double)] = maxMegabytes == nil
             ? [(800, 15)]
-            : [(720, 15), (600, 12), (480, 12), (400, 10), (320, 8), (256, 6)]
+            : [(720, 15), (600, 12), (480, 12), (400, 10), (320, 8), (256, 6), (200, 5), (160, 4), (128, 3)]
         for attempt in attempts {
             let width = min(attempt.width, canvas.width)
             let size = try await writeOnce(asset: asset, range: range, track: track, composition: composition,

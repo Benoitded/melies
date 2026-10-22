@@ -199,3 +199,20 @@ pendant la lecture. L'aperçu du flou demande donc lui-même l'image exacte sous
 - La poignée de glisser-déposer est dans la zone de la barre de titre, où appuyer sur la souris déplace la
   fenêtre. Elle est désormais une vue AppKit (`mouseDownCanMoveWindow = false`) qui lance un vrai glisser de
   fichier « promis » (`NSFilePromiseProvider`) : le MP4 n'est exporté qu'au dépôt.
+
+## Export à taille cible et GIF (2026-10-22)
+
+L'export n'utilise plus le préréglage d'`AVAssetExportSession` (débit non réglable) : `AVAssetReader`
+lit les images composées (le même compositeur que l'aperçu), `AVAssetWriter` encode en H.264 à un
+**débit calculé** pour viser la taille choisie (93 % de la cible, moins le son à 128 kb/s). Si le fichier
+dépasse quand même, jusqu'à trois reprises avec un débit corrigé. Sans limite, le débit suit le nombre de
+pixels. Le GIF est écrit avec ImageIO ; avec une taille maximale, il essaie des largeurs et des cadences
+décroissantes (720 px à 15 i/s jusqu'à 128 px à 3 i/s) jusqu'à ce que le fichier tienne. Si rien ne tient,
+la taille réelle est affichée.
+
+Piège : `URL.resourceValues(forKeys: [.fileSizeKey])` met la valeur en cache sur l'objet URL ; relue après
+chaque essai, elle redonnait la taille du premier. La taille se lit maintenant avec
+`FileManager.attributesOfItem`.
+
+Le son est un seul flux AAC (les pistes système et micro sont mélangées) ; sans son, le fichier n'a pas
+de piste audio du tout.

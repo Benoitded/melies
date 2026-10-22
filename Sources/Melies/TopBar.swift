@@ -258,7 +258,7 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
         else { return }
         pressEvent = nil
 
-        let provider = NSFilePromiseProvider(fileType: UTType.mpeg4Movie.identifier, delegate: self)
+        let provider = NSFilePromiseProvider(fileType: ExportSettings.current.contentType.identifier, delegate: self)
         let item = NSDraggingItem(pasteboardWriter: provider)
         let size = NSSize(width: 140, height: 90)
         let origin = convert(event.locationInWindow, from: nil)
@@ -291,7 +291,7 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
 
     func filePromiseProvider(_ provider: NSFilePromiseProvider, fileNameForType fileType: String) -> String {
         let name = model?.url.deletingPathExtension().lastPathComponent ?? "video"
-        return name + ".mp4"
+        return name + "." + ExportSettings.current.fileExtension
     }
 
     func filePromiseProvider(_ provider: NSFilePromiseProvider, writePromiseTo url: URL, completionHandler: @escaping (Error?) -> Void) {

@@ -224,6 +224,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // Debug: MELIES_SETTINGS_EXPORT=out-without-extension with MELIES_OPEN=file exports through the model, as copy and save do.
+        if let outBase = ProcessInfo.processInfo.environment["MELIES_SETTINGS_EXPORT"], let input = ProcessInfo.processInfo.environment["MELIES_OPEN"] {
+            Task { @MainActor in
+                EditorWindowController.shared.open(URL(fileURLWithPath: input))
+                try? await Task.sleep(for: .seconds(1.5))
+                guard let model = EditorWindowController.shared.session.model else { print("[settings] no model"); NSApp.terminate(nil); return }
+                let settings = ExportSettings.current
+                let file = URL(fileURLWithPath: outBase + "." + settings.fileExtension)
+                let ok = await model.export(to: file)
+                print("[settings] format=\(settings.format.rawValue) maxMB=\(settings.maxMegabytes.map(String.init) ?? "none") width=\(settings.maxWidth) ok=\(ok) bytes=\(MP4Writer.fileSize(file))")
+                NSApp.terminate(nil)
+            }
+        }
+
         // Debug: MELIES_COMBINE_UI=b.mp4 with MELIES_OPEN=a.mp4 opens the Combine window with both videos loaded.
         if let b = ProcessInfo.processInfo.environment["MELIES_COMBINE_UI"], let a = ProcessInfo.processInfo.environment["MELIES_OPEN"] {
             Task { @MainActor in
