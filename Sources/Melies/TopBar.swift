@@ -248,9 +248,9 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
         addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self))
     }
 
-    override func mouseEntered(with event: NSEvent) { onHover?(true) }
+    override func mouseEntered(with event: NSEvent) { onHover?(true); model?.prepareDragFile() }
     override func mouseExited(with event: NSEvent) { onHover?(false) }
-    override func mouseDown(with event: NSEvent) { pressEvent = event }
+    override func mouseDown(with event: NSEvent) { pressEvent = event; model?.prepareDragFile() }
 
     override func mouseDragged(with event: NSEvent) {
         guard let press = pressEvent, model != nil,
@@ -258,8 +258,14 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
         else { return }
         pressEvent = nil
 
-        let provider = NSFilePromiseProvider(fileType: ExportSettings.current.contentType.identifier, delegate: self)
-        let item = NSDraggingItem(pasteboardWriter: provider)
+        // A real file when it is ready (works everywhere); otherwise a promise, exported when the drop asks for it.
+        let writer: NSPasteboardWriting
+        if let file = model?.readyDragFile() {
+            writer = file as NSURL
+        } else {
+            writer = NSFilePromiseProvider(fileType: ExportSettings.current.contentType.identifier, delegate: self)
+        }
+        let item = NSDraggingItem(pasteboardWriter: writer)
         let size = NSSize(width: 140, height: 90)
         let origin = convert(event.locationInWindow, from: nil)
         item.setDraggingFrame(NSRect(x: origin.x - size.width / 2, y: origin.y - size.height / 2, width: size.width, height: size.height),

@@ -17,6 +17,7 @@
 - [x] Spotlight (zone éclairée), flou et pixelisation
 - [x] Clics visibles : anneau qui s'étend à chaque clic enregistré (couleur et taille réglables)
 - [x] Export à taille cible (MP4, GIF), résolution, estimation de taille ; copier, enregistrer, partager et glisser suivent ces réglages
+- [x] Export plus compact : tailles de 1 à 100 Mo (ou libre), 360p à 1080p, HEVC
 - [x] Suivi d'objet : flou, spot, rectangle, texte, flèche suivent le contenu (défilement, déplacement) et s'arrêtent quand il disparaît
 - [ ] Priorités issues de l'étude des concurrents : voir `docs/COMPETITORS.md`
 - [x] Zooms animés : points de caméra (niveau, vitesse, style), centrage auto sur le curseur enregistré, aperçu et export identiques

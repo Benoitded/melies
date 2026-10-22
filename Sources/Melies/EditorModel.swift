@@ -25,7 +25,7 @@ final class EditorModel: ObservableObject {
     /// Draw a ring at every recorded click (preview and export).
     @Published var showClicks = ClickStyleStore.enabled
     var hasClicks: Bool { !(cursor?.clicks.isEmpty ?? true) }
-    @Published var includeAudio = true
+    @Published var includeAudio = true { didSet { editRevision += 1 } }
     @Published var thumbnails: [NSImage] = []
     @Published var zoomPoints: [ZoomPoint] = [] { didSet { noteChange() } }
     @Published var selectedPointID: UUID?
@@ -170,6 +170,7 @@ final class EditorModel: ObservableObject {
     /// Called whenever edited state changes. Changes less than 0.6 s apart (a drag, a slider, typing)
     /// form one burst, which is one undo step.
     private func noteChange() {
+        editRevision += 1
         guard !restoring else { return }
         if !inBurst {
             undoStack.append(committed)
@@ -622,18 +623,56 @@ final class EditorModel: ObservableObject {
         )
     }
 
-    func export(to destination: URL) async -> Bool {
-        busy = true
-        status = L("status.exporting")
-        player.pause()
-        defer { busy = false }
+    func export(to destination: URL, quiet: Bool = false) async -> Bool {
+        if !quiet {
+            busy = true
+            status = L("status.exporting")
+            player.pause()
+        }
+        defer { if !quiet { busy = false } }
         do {
             try await VideoExport.run(asset: asset, range: range, crop: cropRect, points: zoomPoints, annotations: annotations, clicks: showClicks ? ClickSet.current(for: cursor) : nil, includeAudio: includeAudio, to: destination)
             return true
         } catch {
-            status = L("status.fail", error.localizedDescription)
+            if !quiet { status = L("status.fail", error.localizedDescription) }
             return false
         }
+    }
+
+    // MARK: Drag file
+
+    /// Bumped on every edit, so a file exported ahead of time can be told from a stale one.
+    private(set) var editRevision = 0
+    private var dragFile: (key: String, url: URL)?
+    private var preparingKey: String?
+
+    private var dragKey: String {
+        "\(editRevision)|\(ExportSettings.current)|\(showClicks)|\(includeAudio)"
+    }
+
+    /// Exports the current result to a temporary file ahead of time (when the pointer reaches the drag handle),
+    /// so the drag can carry a real file: browsers and chat apps do not accept file promises.
+    func prepareDragFile() {
+        let key = dragKey
+        guard dragFile?.key != key, preparingKey != key else { return }
+        preparingKey = key
+        Task { @MainActor in
+            let folder = FileManager.default.temporaryDirectory.appendingPathComponent("melies-drag-\(UUID().uuidString)")
+            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let name = url.deletingPathExtension().lastPathComponent
+            let file = folder.appendingPathComponent(name + "." + ExportSettings.current.fileExtension)
+            if await export(to: file, quiet: true) {
+                if let old = dragFile { try? FileManager.default.removeItem(at: old.url.deletingLastPathComponent()) }
+                dragFile = (key, file)
+            }
+            if preparingKey == key { preparingKey = nil }
+        }
+    }
+
+    /// The pre-exported file, when it still matches the current edits and export settings.
+    func readyDragFile() -> URL? {
+        guard let dragFile, dragFile.key == dragKey else { return nil }
+        return dragFile.url
     }
 
     private func sizeLabel(_ url: URL) -> String {

@@ -12,8 +12,9 @@ enum ObjectTracker {
         var lost: Bool { lostAt != nil }
     }
 
-    /// Mean absolute luma difference (0...1) above which the region is considered gone.
-    private static let lostThreshold = 0.10
+    /// Mean luma difference, relative to the contrast of the region, above which it is considered gone
+    /// (about 0 for a perfect match, about 1.1 for unrelated content).
+    private static let lostThreshold = 0.5
 
     private struct Luma {
         var width: Int, height: Int
@@ -64,7 +65,11 @@ enum ObjectTracker {
             }
 
             let (bx, by, score) = bestMatch(of: template, tw: tw, th: th, in: frame, around: (x, y))
-            if score > lostThreshold {
+            // Touching a frame edge it was not on at the start means it is leaving the frame.
+            let leaving = (bx <= 0 && originX > 0) || (by <= 0 && originY > 0)
+                || (bx >= frame.width - tw && originX < frame.width - tw)
+                || (by >= frame.height - th && originY < frame.height - th)
+            if score > lostThreshold || leaving {
                 // Tolerate a couple of noisy frames (a flash, a compression glitch) before giving up.
                 if badSince == nil { badSince = t }
                 if t - (badSince ?? t) > 0.12 { return Result(samples: samples, lostAt: badSince) }
@@ -73,7 +78,7 @@ enum ObjectTracker {
             badSince = nil
             x = bx; y = by
             // Follow slow appearance changes without drifting away from the original look.
-            if score < lostThreshold * 0.4 {
+            if score < lostThreshold * 0.3 {
                 let now = patch(of: frame, x: x, y: y, w: tw, h: th)
                 for i in template.indices { template[i] += (now[i] - template[i]) * 0.08 }
             }
@@ -115,12 +120,16 @@ enum ObjectTracker {
     }
 
     /// Where the template fits best in the frame, searching around the last position (coarse, then fine).
-    /// Returns the top-left position and the mean absolute difference (0...1).
+    /// Returns the top-left position and the difference relative to the region's contrast.
     private static func bestMatch(of template: [Float], tw: Int, th: Int, in frame: Luma, around p: (Int, Int)) -> (Int, Int, Double) {
         let maxX = frame.width - tw, maxY = frame.height - th
-        guard maxX >= 0, maxY >= 0 else { return (p.0, p.1, 1) }
+        guard maxX >= 0, maxY >= 0 else { return (p.0, p.1, 9) }
         let radiusX = max(frame.width / 8, 12), radiusY = max(frame.height / 6, 12)
         let sampleStep = max(1, Int(Double(tw * th).squareRoot() / 28))
+        // Differences are judged against how much the region itself varies, so a plain area is not "matched" by chance.
+        let mean = template.reduce(0, +) / Float(template.count)
+        let contrast = Double(template.reduce(0) { $0 + abs($1 - mean) } / Float(template.count))
+        let denom = max(contrast, 8)
 
         func cost(_ ox: Int, _ oy: Int, step: Int, stop: Double) -> Double {
             var sum: Double = 0, count = 0
@@ -133,14 +142,14 @@ enum ObjectTracker {
                     count += 1
                     i += step
                 }
-                if sum / (Double(count) * 255) > stop { return 1 }
+                if sum / (Double(count) * denom) > stop { return 9 }
                 j += step
             }
-            return sum / (Double(max(count, 1)) * 255)
+            return sum / (Double(max(count, 1)) * denom)
         }
 
-        var best = (x: min(max(p.0, 0), maxX), y: min(max(p.1, 0), maxY), score: 1.0)
-        best.score = cost(best.x, best.y, step: sampleStep, stop: 1)
+        var best = (x: min(max(p.0, 0), maxX), y: min(max(p.1, 0), maxY), score: 9.0)
+        best.score = cost(best.x, best.y, step: sampleStep, stop: 9)
         let coarse = 2
         var oy = max(p.1 - radiusY, 0)
         while oy <= min(p.1 + radiusY, maxY) {
