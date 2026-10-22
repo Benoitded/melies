@@ -30,3 +30,4 @@ Ouvrir directement une vidéo : `open -a ~/Applications/Melies.app fichier.mov`.
 - `docs/TWITTER-VIDEO.md` : contraintes vidéo de Twitter et ce que fait l'export
 - `docs/ROADMAP.md` : v1, v2, v3
 - `docs/COMPETITORS.md` : étude des concurrents et priorités
+- `docs/AI.md` : outils pour piloter l'éditeur par IA (MCP, chat, enregistrement)

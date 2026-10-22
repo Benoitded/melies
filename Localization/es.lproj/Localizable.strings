@@ -110,6 +110,15 @@
 "set.adv.ontop.label" = "Siempre al frente";
 "set.adv.welcome" = "Guía de bienvenida";
 "set.adv.welcome.button" = "Mostrar…";
+"set.adv.mcp" = "Servidor MCP (IA)";
+"set.adv.mcp.label" = "Dejar que una app de IA controle el editor";
+"set.adv.mcp.hint" = "Desactivado por defecto. Permite que Claude Code, Claude Desktop o Cursor editen el vídeo abierto mediante un servidor local, accesible solo desde este Mac y protegido por una clave secreta.";
+"set.adv.mcp.running" = "Activo en %@";
+"set.adv.mcp.failed" = "No se pudo iniciar: %@";
+"set.adv.mcp.copy_cmd" = "Copiar comando de Claude Code";
+"set.adv.mcp.copy_json" = "Copiar config JSON";
+"set.adv.mcp.new_key" = "Nueva clave";
+"set.adv.mcp.copied" = "Copiado";
 "toast.recorded" = "Grabación guardada";
 "menu.reopen" = "Reabrir Méliès";
 "menu.more" = "Más";

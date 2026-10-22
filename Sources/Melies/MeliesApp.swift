@@ -87,6 +87,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in ScreenRecorder.shared.toggle() }
         }
 
+        Task { @MainActor in MCPServer.shared.startIfEnabled() }
+
         // Only from a real app bundle: test runs of the bare binary (and its missing translations) must not open it.
         if OnboardingWindowController.needed, Bundle.main.bundleURL.pathExtension == "app" {
             Task { @MainActor in OnboardingWindowController.shared.show() }

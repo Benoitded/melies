@@ -110,6 +110,15 @@
 "set.adv.ontop.label" = "Always on top";
 "set.adv.welcome" = "Welcome guide";
 "set.adv.welcome.button" = "Show…";
+"set.adv.mcp" = "MCP server (AI)";
+"set.adv.mcp.label" = "Let an AI app drive the editor";
+"set.adv.mcp.hint" = "Off by default. Lets Claude Code, Claude Desktop or Cursor edit the open video through a local server only this Mac can reach, protected by a secret key.";
+"set.adv.mcp.running" = "Running on %@";
+"set.adv.mcp.failed" = "Could not start: %@";
+"set.adv.mcp.copy_cmd" = "Copy Claude Code command";
+"set.adv.mcp.copy_json" = "Copy JSON config";
+"set.adv.mcp.new_key" = "New key";
+"set.adv.mcp.copied" = "Copied";
 "toast.recorded" = "Recording saved";
 "menu.reopen" = "Reopen Méliès";
 "menu.more" = "More";
