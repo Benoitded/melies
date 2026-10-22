@@ -19,8 +19,7 @@
 - [x] Cmd+Z / Cmd+Shift+Z (annuler / rétablir : annotations, zooms, recadrage, trim)
 
 ## v3
-- [ ] Deux vidéos côte à côte (hstack / vstack)
-- [ ] Picture-in-picture
+- [x] Deux vidéos côte à côte, empilées, ou en incrustation (fenêtre « Combiner », résultat rouvert dans l'éditeur)
 - [ ] Zoom auto sur le curseur pendant l'enregistrement, audio système et micro
 
 ## Plus tard
