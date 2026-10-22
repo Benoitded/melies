@@ -117,6 +117,7 @@ final class EditorModel {
 
     deinit {
         if let timeObserver { player.removeTimeObserver(timeObserver) }
+        if let old = dragFile { try? FileManager.default.removeItem(at: old.url.deletingLastPathComponent()) }
     }
 
     private func load() async {
@@ -520,6 +521,8 @@ final class EditorModel {
     /// The path found so far, shown on the video while the analysis runs.
     var trackingTrail: [TrackSample] = []
     @ObservationIgnored private var trackingTask: Task<Void, Never>?
+    /// Identifies the current analysis: writes from an older, cancelled run (still winding down) are dropped.
+    @ObservationIgnored private var trackingRun = 0
 
     /// The region to follow, normalized in the upright frame (origin top left).
     private func trackBox(for a: Annotation) -> CGRect {
@@ -543,6 +546,8 @@ final class EditorModel {
         let box = trackBox(for: a)
         // Started in the middle of the annotation: it is followed on both sides of the playhead.
         guard box.width > 0.005, box.height > 0.005, a.end - from > 0.1 || from - a.start > 0.1 else { return }
+        trackingRun += 1
+        let run = trackingRun
         trackingID = id
         trackingProgress = 0
         trackingLost = false
@@ -550,11 +555,11 @@ final class EditorModel {
         let asset = self.asset
         trackingTask = Task { [weak self] in
             let result = try? await ObjectTracker.track(asset: asset, box: box, from: from, to: a.end, lowerBound: a.start, progress: { p in
-                Task { @MainActor [weak self] in self?.trackingProgress = p }
+                Task { @MainActor [weak self] in if self?.trackingRun == run { self?.trackingProgress = p } }
             }, onSample: { sample in
-                Task { @MainActor [weak self] in self?.trackingTrail.append(sample) }
+                Task { @MainActor [weak self] in if self?.trackingRun == run { self?.trackingTrail.append(sample) } }
             })
-            guard let self else { return }
+            guard let self, self.trackingRun == run else { return }
             if let result, !Task.isCancelled, !result.samples.isEmpty {
                 self.updateAnnotation(id) {
                     $0.track = result.samples
@@ -583,7 +588,9 @@ final class EditorModel {
 
     func cancelTracking() {
         trackingTask?.cancel()
+        trackingRun += 1 // the old task may still run for a moment: its late writes are ignored
         trackingID = nil
+        trackingTrail = []
     }
 
     func clearTrack(_ id: UUID) {
@@ -779,6 +786,8 @@ final class EditorModel {
     private(set) var editRevision = 0
     @ObservationIgnored private var dragFile: (key: String, url: URL)?
     @ObservationIgnored private var preparingKey: String?
+    /// A key whose export failed: not retried on every hover, only after the next edit changes the key.
+    @ObservationIgnored private var failedKey: String?
 
     private var dragKey: String {
         "\(editRevision)|\(ExportSettings.current)|\(showClicks)|\(includeAudio)"
@@ -788,16 +797,20 @@ final class EditorModel {
     /// so the drag can carry a real file: browsers and chat apps do not accept file promises.
     func prepareDragFile() {
         let key = dragKey
-        guard dragFile?.key != key, preparingKey != key else { return }
+        guard dragFile?.key != key, preparingKey != key, failedKey != key else { return }
         preparingKey = key
         Task { @MainActor in
             let folder = FileManager.default.temporaryDirectory.appendingPathComponent("melies-drag-\(UUID().uuidString)")
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             let name = url.deletingPathExtension().lastPathComponent
             let file = folder.appendingPathComponent(name + "." + ExportSettings.current.fileExtension)
-            if await export(to: file, quiet: true) {
+            if await export(to: file, quiet: true), key == dragKey {
                 if let old = dragFile { try? FileManager.default.removeItem(at: old.url.deletingLastPathComponent()) }
                 dragFile = (key, file)
+            } else {
+                // Failed, or the edits moved on meanwhile: this file is useless, so the folder goes now.
+                if key == dragKey { failedKey = key }
+                try? FileManager.default.removeItem(at: folder)
             }
             if preparingKey == key { preparingKey = nil }
         }

@@ -13,6 +13,24 @@ final class SafetyTests: XCTestCase {
         }
     }
 
+    func testExportFollowsSymlinkedStandardFolders() throws {
+        let fm = FileManager.default
+        let fakeHome = fm.temporaryDirectory.appendingPathComponent("melies-home-\(UUID().uuidString)")
+        let real = fakeHome.appendingPathComponent("elsewhere/Films")
+        try fm.createDirectory(at: real, withIntermediateDirectories: true)
+        try fm.createSymbolicLink(at: fakeHome.appendingPathComponent("Movies"), withDestinationURL: real)
+        defer { try? fm.removeItem(at: fakeHome) }
+        let url = try EditorTools.safeExportTarget(fakeHome.appendingPathComponent("Movies/a.mp4").path, ext: "mp4", source: URL(fileURLWithPath: "/nowhere/v.mov"), home: fakeHome.path)
+        XCTAssertEqual(url.lastPathComponent, "a.mp4")
+    }
+
+    func testASourceInTheHomeFolderDoesNotOpenTheWholeHome() {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let homeSource = home.appendingPathComponent("v.mov")
+        XCTAssertThrowsError(try EditorTools.safeExportTarget(home.appendingPathComponent("Library/x.mp4").path, ext: "mp4", source: homeSource))
+        XCTAssertThrowsError(try EditorTools.safeExportTarget("/x.mp4", ext: "mp4", source: URL(fileURLWithPath: "/v.mov")))
+    }
+
     func testExportForcesTheExtension() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("melies-test-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

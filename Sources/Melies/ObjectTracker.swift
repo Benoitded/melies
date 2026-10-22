@@ -146,22 +146,25 @@ enum ObjectTracker {
         var startAt: Double?
         if let lowerBound, before > 0.05 {
             var frames: [(t: Double, frame: Luma)] = []
-            let (reader, output) = try reader(for: CMTimeRange(start: seconds(lowerBound), end: seconds(from + 0.02)))
+            // Decimate while reading (a 10 min 60 fps stretch would otherwise hold gigabytes): keep about 400
+            // frames, every thin-th one plus always the last (the reference at `from`).
+            let fps = max(Double((try? await video.load(.nominalFrameRate)) ?? 60), 1)
+            let thin = max(1, Int((before * fps / 400).rounded(.up)))
+            let (reader, output) = try reader(for: CMTimeRange(start: seconds(lowerBound), end: seconds(from + 0.001)))
             defer { reader.cancelReading() }
+            var index = 0
+            var pending: (t: Double, frame: Luma)?
             while let buffer = output.copyNextSampleBuffer() {
                 try Task.checkCancellation()
                 guard let pixels = CMSampleBufferGetImageBuffer(buffer), let frame = luma(of: pixels) else { continue }
-                frames.append((CMSampleBufferGetPresentationTimeStamp(buffer).seconds, frame))
+                let item = (t: CMSampleBufferGetPresentationTimeStamp(buffer).seconds, frame: frame)
+                if index % thin == 0 { frames.append(item); pending = nil } else { pending = item }
+                index += 1
             }
-            // Very long stretches: keep about 400 frames (the tracker follows bigger steps without trouble).
-            let thin = max(1, Int((Double(frames.count) / 400).rounded(.up)))
+            if let pending { frames.append(pending) }
             var walker = Walker()
-            var step = 0
             for (t, frame) in frames.reversed() {
                 try Task.checkCancellation()
-                step += 1
-                // The frame at `from` is the reference and must never be skipped.
-                if walker.template.isEmpty == false, (step - 1) % thin != 0 { continue }
                 switch walker.step(box: box, frame: frame, t: t) {
                 case .reference: continue // the same reference sample as the forward pass
                 case .sample(let sample):
