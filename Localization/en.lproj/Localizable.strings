@@ -196,3 +196,13 @@
 "rec.mic.denied.text" = "Recording goes on without your voice. Turn it on in System Settings > Privacy & Security > Microphone.";
 "tip.clicks" = "Show clicks";
 "set.clicks" = "Clicks";
+"exp.title" = "Export options";
+"exp.format" = "Format";
+"exp.size" = "Maximum size";
+"exp.nolimit" = "No limit";
+"exp.mb" = "MB";
+"exp.width" = "Resolution";
+"exp.estimate" = "About %@ MB";
+"exp.estimate.limit" = "The file stays under %d MB: the quality adapts.";
+"exp.estimate.gif" = "A GIF is large. Set a maximum size to keep it light.";
+"exp.estimate.gif_limit" = "The GIF stays under %d MB: width and frame rate shrink if needed.";

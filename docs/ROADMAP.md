@@ -16,6 +16,7 @@
 - [x] Flèches, texte, rectangle (panneau de réglages, durée sur la timeline)
 - [x] Spotlight (zone éclairée), flou et pixelisation
 - [x] Clics visibles : anneau qui s'étend à chaque clic enregistré (couleur et taille réglables)
+- [x] Export à taille cible (MP4, GIF), résolution, estimation de taille ; copier, enregistrer, partager et glisser suivent ces réglages
 - [ ] Priorités issues de l'étude des concurrents : voir `docs/COMPETITORS.md`
 - [x] Zooms animés : points de caméra (niveau, vitesse, style), centrage auto sur le curseur enregistré, aperçu et export identiques
 - [x] Cmd+Z / Cmd+Shift+Z (annuler / rétablir : annotations, zooms, recadrage, trim)

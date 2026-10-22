@@ -13,7 +13,7 @@ enum LatestRecording {
 
         return files
             .filter { videoExtensions.contains($0.pathExtension.lowercased()) }
-            .filter { !$0.lastPathComponent.contains("-twitter") }
+            .filter { !$0.lastPathComponent.contains("-twitter") && !$0.lastPathComponent.contains("-optimized") }
             .max { lhs, rhs in
                 let l = (try? lhs.resourceValues(forKeys: Set(keys)).contentModificationDate) ?? .distantPast
                 let r = (try? rhs.resourceValues(forKeys: Set(keys)).contentModificationDate) ?? .distantPast

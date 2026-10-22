@@ -196,3 +196,13 @@
 "rec.mic.denied.text" = "La grabación continúa sin tu voz. Actívalo en Ajustes del Sistema > Privacidad y seguridad > Micrófono.";
 "tip.clicks" = "Mostrar los clics";
 "set.clicks" = "Clics";
+"exp.title" = "Opciones de exportación";
+"exp.format" = "Formato";
+"exp.size" = "Tamaño máximo";
+"exp.nolimit" = "Sin límite";
+"exp.mb" = "MB";
+"exp.width" = "Resolución";
+"exp.estimate" = "Unos %@ MB";
+"exp.estimate.limit" = "El archivo queda por debajo de %d MB: la calidad se adapta.";
+"exp.estimate.gif" = "Un GIF pesa mucho. Fija un tamaño máximo para mantenerlo ligero.";
+"exp.estimate.gif_limit" = "El GIF queda por debajo de %d MB: el ancho y la fluidez bajan si hace falta.";

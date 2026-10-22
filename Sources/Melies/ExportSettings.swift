@@ -1,0 +1,196 @@
+import AVFoundation
+import AppKit
+import CoreImage
+import ImageIO
+import UniformTypeIdentifiers
+
+/// What the user chose for exports: MP4 or GIF, an optional size limit, and the maximum width.
+struct ExportSettings: Equatable {
+    enum Format: String, CaseIterable { case mp4, gif }
+
+    var format: Format = .mp4
+    /// nil means no limit.
+    var maxMegabytes: Int?
+    var maxWidth: Int = 1920
+
+    static let sizeChoices: [Int] = [8, 15, 25, 50, 100]
+    static let widthChoices: [Int] = [1280, 1920]
+
+    static var current: ExportSettings {
+        let d = UserDefaults.standard
+        let mb = d.integer(forKey: "exportMaxMB")
+        let width = d.integer(forKey: "exportMaxWidth")
+        return ExportSettings(
+            format: Format(rawValue: d.string(forKey: "exportFormat") ?? "") ?? .mp4,
+            maxMegabytes: mb > 0 ? mb : nil,
+            maxWidth: widthChoices.contains(width) ? width : 1920
+        )
+    }
+
+    var fileExtension: String { format.rawValue }
+    var contentType: UTType { format == .gif ? .gif : .mpeg4Movie }
+
+    /// Average video bitrate (bits per second) for a clip of `seconds` shown at `canvas` size.
+    func videoBitrate(seconds: Double, canvas: CGSize, hasAudio: Bool) -> Int {
+        let seconds = max(seconds, 0.1)
+        if let mb = maxMegabytes {
+            let totalBits = Double(mb) * 1_000_000 * 8 * 0.93 // a little margin: encoders overshoot
+            let audioBits = hasAudio ? 128_000 * seconds : 0
+            return Int(min(max((totalBits - audioBits) / seconds, 120_000), 20_000_000))
+        }
+        let byPixels = Double(canvas.width * canvas.height) * 30 * 0.1
+        return Int(min(max(byPixels, 1_500_000), 16_000_000))
+    }
+}
+
+// MARK: MP4 written with a chosen bitrate
+
+enum MP4Writer {
+    /// Reads the composed frames (and the mixed sound) and writes an H.264 / AAC MP4 at `bitrate`.
+    static func write(asset: AVAsset, range: CMTimeRange, track: AVAssetTrack, composition: AVVideoComposition,
+                      canvas: CGSize, bitrate: Int, audioTracks: [AVAssetTrack], audioMix: AVAudioMix?, to url: URL) async throws {
+        try? FileManager.default.removeItem(at: url)
+        let reader = try AVAssetReader(asset: asset)
+        reader.timeRange = range
+
+        let videoOutput = AVAssetReaderVideoCompositionOutput(
+            videoTracks: [track],
+            videoSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+        )
+        videoOutput.videoComposition = composition
+        reader.add(videoOutput)
+
+        var audioOutput: AVAssetReaderAudioMixOutput?
+        if !audioTracks.isEmpty {
+            let output = AVAssetReaderAudioMixOutput(audioTracks: audioTracks, audioSettings: [
+                AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: 44100, AVNumberOfChannelsKey: 2,
+                AVLinearPCMBitDepthKey: 16, AVLinearPCMIsFloatKey: false,
+                AVLinearPCMIsBigEndianKey: false, AVLinearPCMIsNonInterleaved: false,
+            ])
+            output.audioMix = audioMix
+            reader.add(output)
+            audioOutput = output
+        }
+
+        let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
+        writer.shouldOptimizeForNetworkUse = true
+        let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: [
+            AVVideoCodecKey: AVVideoCodecType.h264,
+            AVVideoWidthKey: Int(canvas.width), AVVideoHeightKey: Int(canvas.height),
+            AVVideoCompressionPropertiesKey: [
+                AVVideoAverageBitRateKey: bitrate,
+                AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+                AVVideoExpectedSourceFrameRateKey: 30,
+                AVVideoMaxKeyFrameIntervalKey: 60,
+            ],
+        ])
+        videoInput.expectsMediaDataInRealTime = false
+        writer.add(videoInput)
+
+        var audioInput: AVAssetWriterInput?
+        if audioOutput != nil {
+            let input = AVAssetWriterInput(mediaType: .audio, outputSettings: [
+                AVFormatIDKey: kAudioFormatMPEG4AAC, AVNumberOfChannelsKey: 2, AVSampleRateKey: 44100, AVEncoderBitRateKey: 128_000,
+            ])
+            input.expectsMediaDataInRealTime = false
+            writer.add(input)
+            audioInput = input
+        }
+
+        guard reader.startReading(), writer.startWriting() else {
+            throw reader.error ?? writer.error ?? ExportError.noVideoTrack
+        }
+        writer.startSession(atSourceTime: range.start)
+
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            let group = DispatchGroup()
+            func pump(_ input: AVAssetWriterInput, _ output: AVAssetReaderOutput, _ label: String) {
+                group.enter()
+                let queue = DispatchQueue(label: "melies.export.\(label)")
+                input.requestMediaDataWhenReady(on: queue) {
+                    while input.isReadyForMoreMediaData {
+                        if let sample = output.copyNextSampleBuffer() {
+                            input.append(sample)
+                        } else {
+                            input.markAsFinished()
+                            group.leave()
+                            return
+                        }
+                    }
+                }
+            }
+            pump(videoInput, videoOutput, "video")
+            if let audioInput, let audioOutput { pump(audioInput, audioOutput, "audio") }
+            group.notify(queue: .global()) { continuation.resume() }
+        }
+
+        await writer.finishWriting()
+        if writer.status != .completed { throw writer.error ?? ExportError.noVideoTrack }
+    }
+
+    /// Read from the disk each time: `URL.resourceValues` caches, which made every retry see the first size.
+    static func fileSize(_ url: URL) -> Int {
+        ((try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? NSNumber)?.intValue ?? 0
+    }
+}
+
+// MARK: GIF
+
+enum GIFWriter {
+    /// Writes an animated GIF, shrinking width and frame rate until it fits `maxMegabytes` (if any).
+    static func write(asset: AVAsset, range: CMTimeRange, track: AVAssetTrack, composition: AVVideoComposition,
+                      canvas: CGSize, maxMegabytes: Int?, to url: URL) async throws {
+        let attempts: [(width: CGFloat, fps: Double)] = maxMegabytes == nil
+            ? [(800, 15)]
+            : [(720, 15), (600, 12), (480, 12), (400, 10), (320, 8), (256, 6), (200, 5), (160, 4), (128, 3)]
+        for attempt in attempts {
+            let width = min(attempt.width, canvas.width)
+            let size = try await writeOnce(asset: asset, range: range, track: track, composition: composition,
+                                           canvas: canvas, width: width, fps: attempt.fps, to: url)
+            if let mb = maxMegabytes, size > mb * 1_000_000 { continue }
+            return
+        }
+    }
+
+    private static func writeOnce(asset: AVAsset, range: CMTimeRange, track: AVAssetTrack, composition: AVVideoComposition,
+                                  canvas: CGSize, width: CGFloat, fps: Double, to url: URL) async throws -> Int {
+        try? FileManager.default.removeItem(at: url)
+        let reader = try AVAssetReader(asset: asset)
+        reader.timeRange = range
+        let output = AVAssetReaderVideoCompositionOutput(
+            videoTracks: [track], videoSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+        )
+        output.videoComposition = composition
+        reader.add(output)
+        guard reader.startReading() else { throw reader.error ?? ExportError.noVideoTrack }
+
+        let scale = width / canvas.width
+        let context = CIContext()
+        let seconds = range.duration.seconds
+        let total = min(max(Int(seconds * fps), 1), 600)
+        var frames: [CGImage] = []
+        var next = 0
+        while let sample = output.copyNextSampleBuffer() {
+            let time = CMSampleBufferGetPresentationTimeStamp(sample).seconds - range.start.seconds
+            guard next < total, time >= Double(next) / fps - 0.0001, let buffer = CMSampleBufferGetImageBuffer(sample) else { continue }
+            let image = CIImage(cvPixelBuffer: buffer).transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+            if let cg = context.createCGImage(image, from: image.extent) {
+                frames.append(cg)
+                next += 1
+            }
+        }
+        guard let last = frames.last else { throw ExportError.noVideoTrack }
+        while frames.count < total { frames.append(last) } // the source ended a little early
+
+        guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.gif.identifier as CFString, frames.count, nil) else {
+            throw ExportError.noVideoTrack
+        }
+        CGImageDestinationSetProperties(destination, [
+            kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFLoopCount as String: 0],
+        ] as CFDictionary)
+        let frameProperties = [kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFDelayTime as String: 1 / fps]] as CFDictionary
+        for frame in frames { CGImageDestinationAddImage(destination, frame, frameProperties) }
+        guard CGImageDestinationFinalize(destination) else { throw ExportError.noVideoTrack }
+        return MP4Writer.fileSize(url)
+    }
+}

@@ -96,11 +96,10 @@ final class FrameCompositor: NSObject, AVVideoCompositing {
 /// Share-friendly export: H.264 MP4, 30 fps, width <= 1920, aspect ratio between 1:3 and 3:1
 /// (so Twitter and most apps accept it), with optional crop and zoom animation.
 enum VideoExport {
-    static let maxWidth: CGFloat = 1920
     static let fps: Int32 = 30
 
     /// `crop` is normalized (0...1) in the upright frame, origin top-left.
-    static func run(asset: AVAsset, range: CMTimeRange, crop: CGRect? = nil, points: [ZoomPoint] = [], annotations: [Annotation] = [], clicks: ClickSet? = nil, includeAudio: Bool = true, to url: URL) async throws {
+    static func run(asset: AVAsset, range: CMTimeRange, crop: CGRect? = nil, points: [ZoomPoint] = [], annotations: [Annotation] = [], clicks: ClickSet? = nil, includeAudio: Bool = true, settings: ExportSettings = .current, to url: URL) async throws {
         guard let track = try await asset.loadTracks(withMediaType: .video).first else {
             throw ExportError.noVideoTrack
         }
@@ -118,7 +117,7 @@ enum VideoExport {
             width: max((region.width * srcW).rounded(), 2), height: max((region.height * srcH).rounded(), 2)
         )
 
-        let scale = min(1, maxWidth / base.width)
+        let scale = min(1, CGFloat(settings.maxWidth) / base.width)
         var contentW = (base.width * scale).rounded()
         var contentH = (base.height * scale).rounded()
 
@@ -151,26 +150,37 @@ enum VideoExport {
             FrameInstruction(timeRange: CMTimeRange(start: .zero, duration: assetDuration), trackID: track.trackID, plan: plan),
         ]
 
-        guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
-            throw ExportError.noVideoTrack
-        }
-        session.timeRange = range
-        session.videoComposition = composition
         // A recording can hold the system sound and the microphone as separate tracks: the mix puts
-        // them together in one track (or silences them when the sound is turned off).
-        let audioTracks = try await asset.loadTracks(withMediaType: .audio)
+        // them together in one track. Without sound (turned off, or none), the file has no audio track.
+        let allAudio = try await asset.loadTracks(withMediaType: .audio)
+        let audioTracks = includeAudio ? allAudio : []
+        var audioMix: AVMutableAudioMix?
         if !audioTracks.isEmpty {
             let mix = AVMutableAudioMix()
-            mix.inputParameters = audioTracks.map { track in
-                let parameters = AVMutableAudioMixInputParameters(track: track)
-                parameters.setVolume(includeAudio ? 1 : 0, at: .zero)
+            mix.inputParameters = audioTracks.map { t in
+                let parameters = AVMutableAudioMixInputParameters(track: t)
+                parameters.setVolume(1, at: .zero)
                 return parameters
             }
-            session.audioMix = mix
+            audioMix = mix
         }
-        session.shouldOptimizeForNetworkUse = true
-        try? FileManager.default.removeItem(at: url)
-        try await session.export(to: url, as: .mp4)
+
+        switch settings.format {
+        case .gif:
+            try await GIFWriter.write(asset: asset, range: range, track: track, composition: composition,
+                                      canvas: plan.canvas, maxMegabytes: settings.maxMegabytes, to: url)
+        case .mp4:
+            var bitrate = settings.videoBitrate(seconds: range.duration.seconds, canvas: plan.canvas, hasAudio: !audioTracks.isEmpty)
+            // Encoders overshoot a size target now and then: retry a little lower, up to three times.
+            for attempt in 1...3 {
+                try await MP4Writer.write(asset: asset, range: range, track: track, composition: composition, canvas: plan.canvas,
+                                          bitrate: bitrate, audioTracks: audioTracks, audioMix: audioMix, to: url)
+                guard let mb = settings.maxMegabytes else { break }
+                let size = MP4Writer.fileSize(url)
+                if size <= mb * 1_000_000 || attempt == 3 { break }
+                bitrate = Int(Double(bitrate) * Double(mb * 1_000_000) / Double(size) * 0.9)
+            }
+        }
     }
 
     /// Maps a track's preferred transform (iPhone portrait clips are rotated) to an image orientation.
