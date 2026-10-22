@@ -7,6 +7,7 @@ final class MenuActions: NSObject, NSMenuItemValidation {
 
     private var session: EditorSession { EditorWindowController.shared.session }
 
+    @objc func checkForUpdates() { Updater.shared.checkForUpdates() }
     @objc func openSettings() { SettingsWindowController.shared.show() }
     @objc func showHelp() { OnboardingWindowController.shared.show() }
 
@@ -124,6 +125,9 @@ enum MainMenu {
     private static func appMenu() -> NSMenu {
         let menu = NSMenu(title: "Méliès")
         add(menu, L("mm.about"), #selector(NSApplication.orderFrontStandardAboutPanel(_:)))
+        if Updater.shared.isAvailable {
+            add(menu, L("menu.updates"), #selector(MenuActions.checkForUpdates), target: MenuActions.shared)
+        }
         menu.addItem(.separator())
         add(menu, L("mm.settings"), #selector(MenuActions.openSettings), ",", target: MenuActions.shared)
         menu.addItem(.separator())

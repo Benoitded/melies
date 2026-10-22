@@ -25,9 +25,28 @@ final class Updater: ObservableObject {
         set { objectWillChange.send(); controller?.updater.automaticallyChecksForUpdates = newValue }
     }
 
+    /// Before the first release is published the feed does not exist (GitHub answers 404): that is not an error
+    /// for the user, it just means there is nothing newer, so say so instead of showing Sparkle's failure.
     func checkForUpdates() {
         NSApp.activate(ignoringOtherApps: true)
-        controller?.checkForUpdates(nil)
+        guard let feed = (Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") as? String).flatMap(URL.init(string:)) else {
+            controller?.checkForUpdates(nil)
+            return
+        }
+        Task {
+            var request = URLRequest(url: feed)
+            request.httpMethod = "HEAD"
+            request.timeoutInterval = 8
+            let status = (try? await URLSession.shared.data(for: request).1 as? HTTPURLResponse)?.statusCode
+            if status == 404 {
+                let alert = NSAlert()
+                alert.messageText = L("upd.latest.title")
+                alert.informativeText = L("upd.latest.text", versionLabel)
+                alert.runModal()
+            } else {
+                controller?.checkForUpdates(nil)
+            }
+        }
     }
 
     var versionLabel: String {
