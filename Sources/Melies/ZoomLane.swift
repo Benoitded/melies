@@ -40,6 +40,7 @@ struct ZoomLane: View {
                                 Label(L("zoom.auto"), systemImage: "cursorarrow.click.2").font(.system(size: 11))
                             }
                             .buttonStyle(.glass)
+                            .clickCursor()
                             .buttonBorderShape(.capsule)
                             .controlSize(.small)
                             .tip(L("zoom.auto.tip"), trailing: true)
@@ -86,7 +87,7 @@ struct ZoomLane: View {
                         .frame(width: 24, height: 24)
                         .contentShape(Rectangle())
                         .position(x: x(point.time), y: y(point.scale))
-                        .pointerStyle(.grabIdle)
+                        .grabCursor(dragging: grab != nil)
                         .highPriorityGesture(
                             DragGesture(minimumDistance: 0, coordinateSpace: .named(space))
                                 .onChanged { value in
@@ -145,6 +146,7 @@ struct ZoomPanel: View {
                         .frame(width: 26, height: 26).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .clickCursor()
                 .tip(L("zoom.delete"), trailing: true)
             }
         }
@@ -161,6 +163,17 @@ struct ZoomRegionOverlay: View {
     @State private var part: Part?
     @State private var startPoint: ZoomPoint?
     @State private var startRect: CGRect = .zero
+    @State private var hover: Int? // corner index under the pointer, -1 for the inside
+
+    private var zoomCursor: PointerStyle? {
+        switch part {
+        case .corner?: return hover.map { $0 >= 0 ? .corner($0) : .grabActive } ?? .frameResize(position: .bottomTrailing)
+        case .move?: return .grabActive
+        case nil:
+            guard let hover else { return nil }
+            return hover >= 0 ? .corner(hover) : .grabIdle
+        }
+    }
 
     private func viewRect(of point: ZoomPoint) -> CGRect {
         let n = model.region(of: point)
@@ -185,6 +198,17 @@ struct ZoomRegionOverlay: View {
                 }
             }
             .contentShape(Rectangle())
+            .onContinuousHover { phase in
+                switch phase {
+                case .active(let p):
+                    let corners = [CGPoint(x: r.minX, y: r.minY), CGPoint(x: r.maxX, y: r.minY),
+                                   CGPoint(x: r.minX, y: r.maxY), CGPoint(x: r.maxX, y: r.maxY)]
+                    if let i = corners.firstIndex(where: { hypot($0.x - p.x, $0.y - p.y) < 18 }) { hover = i }
+                    else { hover = r.contains(p) ? -1 : nil }
+                case .ended: hover = nil
+                }
+            }
+            .pointerStyle(zoomCursor)
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { value in

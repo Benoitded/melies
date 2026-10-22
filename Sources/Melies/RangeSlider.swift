@@ -14,6 +14,7 @@ struct RangeSlider: View {
 
     /// Distance between the pointer and the handle edge at the start of a drag.
     @State private var grab: CGFloat?
+    @State private var scrubbing = false
 
     var body: some View {
         GeometryReader { geo in
@@ -91,13 +92,16 @@ struct RangeSlider: View {
             }
             .coordinateSpace(name: space)
             .contentShape(Rectangle())
+            .grabCursor(dragging: scrubbing)
             // Click or drag anywhere else to scrub inside the kept range.
             .gesture(
                 DragGesture(minimumDistance: 0, coordinateSpace: .named(space))
                     .onChanged { value in
+                        scrubbing = true
                         model.player.pause()
                         model.seek(to: min(max(time(value.location.x), model.start), model.end))
                     }
+                    .onEnded { _ in scrubbing = false }
             )
         }
         .frame(height: height)

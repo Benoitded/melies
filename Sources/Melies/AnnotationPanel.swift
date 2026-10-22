@@ -32,6 +32,7 @@ struct AnnotationPanel: View {
                         .frame(width: 26, height: 26).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .clickCursor()
                 .tip(L("ann.delete"), trailing: true)
             }
             .onChange(of: textFocused) { _, focused in model.isEditingText = focused }
@@ -67,6 +68,7 @@ struct AnnotationPanel: View {
             .frame(width: 26, height: 26).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .clickCursor()
         .tip(analyzing ? L("tip.track.cancel") : a.isTracked ? (model.trackingLost ? L("trk.lost") : L("tip.track.clear")) : L("tip.track"), trailing: true)
     }
 
@@ -122,6 +124,7 @@ struct AnnotationPanel: View {
                         .overlay(Circle().stroke(Color.accentColor, lineWidth: a.color == c ? 2 : 0).padding(-3))
                 }
                 .buttonStyle(.plain)
+                .clickCursor()
             }
             // Any color: a rainbow dot that opens the system color panel.
             Button {
@@ -136,6 +139,7 @@ struct AnnotationPanel: View {
                     .contentShape(Circle())
             }
             .buttonStyle(.plain)
+            .clickCursor()
             .tip(L("tip.color"), trailing: true)
         }
     }
@@ -182,6 +186,7 @@ struct AnnotationPanel: View {
                 .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.primary.opacity(a.bold ? 0.13 : 0.06)))
         }
         .buttonStyle(.plain)
+        .clickCursor()
         .tip(L("tip.bold"), trailing: true)
 
         IconSegments(

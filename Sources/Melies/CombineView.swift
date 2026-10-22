@@ -91,6 +91,7 @@ struct CombineView: View {
                     Image(systemName: "arrow.left.arrow.right").font(.system(size: 13, weight: .semibold))
                 }
                 .buttonStyle(.glass)
+                .clickCursor()
                 .buttonBorderShape(.circle)
                 .tip(L("cmb.swap"))
                 slot(title: L("cmb.b"), url: model.urlB, thumb: model.thumbB) { model.setB($0) }
@@ -111,7 +112,7 @@ struct CombineView: View {
             }
 
             HStack {
-                Button(L("cmb.cancel")) { close() }.buttonStyle(.glass)
+                Button(L("cmb.cancel")) { close() }.buttonStyle(.glass).clickCursor()
                 Spacer()
                 if model.busy {
                     ProgressView().controlSize(.small)
@@ -119,6 +120,7 @@ struct CombineView: View {
                 }
                 Button(L("cmb.combine")) { model.combine(done: finished) }
                     .buttonStyle(.glassProminent)
+                    .clickCursor()
                     .controlSize(.large)
                     .disabled(!model.canCombine)
                     .keyboardShortcut(.defaultAction)
@@ -153,6 +155,7 @@ struct CombineView: View {
                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.primary.opacity(0.12)))
             }
             .buttonStyle(.plain)
+            .clickCursor()
             .onDrop(of: [.fileURL], isTargeted: nil) { providers in
                 guard let provider = providers.first else { return false }
                 _ = provider.loadObject(ofClass: URL.self) { dropped, _ in

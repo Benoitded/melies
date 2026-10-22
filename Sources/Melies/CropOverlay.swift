@@ -9,6 +9,7 @@ struct CropOverlay: View {
     private enum Part { case move, left, right, top, bottom, topLeft, topRight, bottomLeft, bottomRight }
     @State private var part: Part?
     @State private var startRect: CGRect = .zero
+    @State private var hover: Part?
 
     private let minSize: CGFloat = 40
     private let grab: CGFloat = 16
@@ -53,6 +54,13 @@ struct CropOverlay: View {
         }
         .contentShape(Rectangle())
         .allowsHitTesting(model.cropMode)
+        .onContinuousHover { phase in
+            switch phase {
+            case .active(let point): hover = model.cropMode ? hit(point, in: rect) : nil
+            case .ended: hover = nil
+            }
+        }
+        .pointerStyle(model.cropMode ? cursor(for: part ?? hover, dragging: part != nil) : nil)
         .gesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { value in
@@ -74,6 +82,21 @@ struct CropOverlay: View {
             CGPoint(x: r.minX, y: r.midY), CGPoint(x: r.maxX, y: r.midY),
             CGPoint(x: r.minX, y: r.maxY), CGPoint(x: r.midX, y: r.maxY), CGPoint(x: r.maxX, y: r.maxY),
         ].map { CGPoint(x: min(max($0.x, inner.minX), inner.maxX), y: min(max($0.y, inner.minY), inner.maxY)) }
+    }
+
+    private func cursor(for part: Part?, dragging: Bool) -> PointerStyle? {
+        switch part {
+        case .move?: return dragging ? .grabActive : .grabIdle
+        case .left?: return .frameResize(position: .leading)
+        case .right?: return .frameResize(position: .trailing)
+        case .top?: return .frameResize(position: .top)
+        case .bottom?: return .frameResize(position: .bottom)
+        case .topLeft?: return .corner(0)
+        case .topRight?: return .corner(1)
+        case .bottomLeft?: return .corner(2)
+        case .bottomRight?: return .corner(3)
+        case nil: return nil
+        }
     }
 
     private func hit(_ p: CGPoint, in r: CGRect) -> Part? {

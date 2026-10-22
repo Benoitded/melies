@@ -45,8 +45,8 @@ struct EditorView: View {
                 Text(L("empty.hint"))
                     .foregroundStyle(.secondary)
                 HStack {
-                    Button(L("empty.latest")) { session.openLatest() }.buttonStyle(.glass)
-                    Button(L("empty.open")) { session.chooseFile() }.buttonStyle(.glass)
+                    Button(L("empty.latest")) { session.openLatest() }.buttonStyle(.glass).clickCursor()
+                    Button(L("empty.open")) { session.chooseFile() }.buttonStyle(.glass).clickCursor()
                 }
             }
         }
@@ -124,6 +124,7 @@ struct EditorView: View {
                             .frame(width: 20, height: 20)
                     }
                     .buttonStyle(.glass)
+                    .clickCursor()
                     .buttonBorderShape(.circle)
                     HStack(spacing: 5) {
                         Text(timecode(max(model.current - model.start, 0)))
@@ -144,6 +145,7 @@ struct EditorView: View {
                             Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
                         }
                         .buttonStyle(.plain)
+                        .clickCursor()
                         .tip(L("tip.cancel_export"), trailing: true)
                     }
                     Spacer()
@@ -154,6 +156,7 @@ struct EditorView: View {
                                 .frame(width: 20, height: 20)
                         }
                         .buttonStyle(.glass)
+                        .clickCursor()
                         .buttonBorderShape(.circle)
                         .tip(model.includeAudio ? L("tip.audio.on") : L("tip.audio.off"), trailing: true)
                     }
@@ -182,6 +185,7 @@ private struct ExportOptionsButton: View {
                 .frame(width: 20, height: 20)
         }
         .buttonStyle(.glass)
+        .clickCursor()
         .buttonBorderShape(.circle)
         .tip(L("exp.title"), trailing: true)
         .popover(isPresented: $open, arrowEdge: .top) { ExportOptionsView(model: model) }

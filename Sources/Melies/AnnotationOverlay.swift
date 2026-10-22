@@ -15,6 +15,7 @@ struct AnnotationOverlay: View {
     }
     @State private var mode: Mode?
     @State private var lastHere: CGPoint?
+    @State private var hoverPart: Part?
 
     private var source: CGSize { model.sourceSize }
     private var scale: CGFloat { video.width / max(region.width * source.width, 1) }
@@ -69,7 +70,14 @@ struct AnnotationOverlay: View {
             Color.clear
                 .contentShape(Rectangle())
                 .gesture(drag)
-                .pointerStyle(model.tool == .select ? nil : .rectSelection)
+                .onContinuousHover { phase in
+                    guard model.tool == .select, mode == nil else { return }
+                    switch phase {
+                    case .active(let point): hoverPart = hit(at: point)?.1
+                    case .ended: hoverPart = nil
+                    }
+                }
+                .pointerStyle(cursor)
         }
     }
 
@@ -108,6 +116,24 @@ struct AnnotationOverlay: View {
         let r = AnnotationRenderer.normalizedRect(a, source)
         let n = { (x: CGFloat, y: CGFloat) in toView(CGPoint(x: x / source.width, y: y / source.height)) }
         return [n(r.minX, r.minY), n(r.maxX, r.minY), n(r.minX, r.maxY), n(r.maxX, r.maxY)]
+    }
+
+    /// What the pointer says: drawing tools draw (crosshair) or place text (text bar); in select mode it shows what
+    /// is under it: a corner to resize, a shape or end point to grab, the video itself to pan when zoomed in.
+    private var cursor: PointerStyle? {
+        switch model.tool {
+        case .text: return .horizontalText
+        case .arrow, .rect, .spotlight, .blur: return .rectSelection
+        case .select:
+            var part = hoverPart
+            var dragging = false
+            if case .edit(_, let active, _)? = mode { part = active; dragging = true }
+            switch part {
+            case .corner(let i)?: return .corner(i)
+            case .body?, .head?, .tail?: return dragging ? .grabActive : .grabIdle
+            case nil: return model.zoom > 1.0001 && !model.cropMode ? .grabIdle : nil
+            }
+        }
     }
 
     // MARK: Gesture
