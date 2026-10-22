@@ -28,15 +28,18 @@ What the script does, in order:
 2. Bumps `CFBundleShortVersionString` and `CFBundleVersion` in `Scripts/Info.plist` (restored if a step fails before the commit).
 3. Builds and signs the app with `Scripts/build.sh` (Developer ID and hardened runtime when the certificate exists,
    found by its SHA-1 hash), then makes the DMG and signs it.
-4. Notarizes and staples the DMG when the `melies-notary` profile exists, then checks it: `stapler validate` and
-   `spctl -a -t open` must both pass, otherwise the script stops.
+4. Notarizes and staples the DMG only when BOTH prerequisites hold: a Developer ID identity was found, and the
+   `melies-notary` keychain profile check (`xcrun notarytool history --keychain-profile melies-notary`) succeeds. It then
+   checks the result: `stapler validate` and `spctl -a -t open` must both pass, otherwise the script stops. Without
+   either prerequisite the DMG stays unnotarized and a real release refuses to publish unless `--allow-unnotarized` is
+   passed (for tests only).
 5. Signs the update for Sparkle and writes `appcast.xml`. Release notes are the commit subjects since the previous
    tag: one clear commit per task is enough.
-6. Publishes in an order that never leaves half a release: commit locally, create the GitHub release as a **draft**,
-   push the commit and the tag, then publish the draft. If creating the draft fails, the local commit is undone; if the
-   push fails, the draft and the tag are removed.
+6. Publishes the release in an order that avoids a half release (this covers only the draft and tag steps):
+   commit locally, create the release as a **draft**, push the commit and the tag, then publish the draft. If
+   creating the draft fails, the local commit is undone; if the push fails, the draft and the tag are removed.
 7. Rewrites the Homebrew cask (version and sha256) in the tap and pushes it. A tap that is missing or cannot be
-   pushed only prints a warning; the release itself stays published.
+   pushed only prints a warning; the release itself stays published (best effort: the cask update can fail after publication, so redo it by hand in the tap with the new version and sha256, then push).
 
 ```mermaid
 flowchart LR

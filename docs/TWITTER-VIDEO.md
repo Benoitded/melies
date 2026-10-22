@@ -27,5 +27,5 @@ ffmpeg equivalent, to check:
 
 ```bash
 ffmpeg -i in.mov -vf "fps=30,pad=1280:432:(ow-iw)/2:(oh-ih)/2:color=black" \
-  -c:v libx264 -crf 24 -pix_fmt yuv420p -an -movflags +faststart out.mp4
+  -c:v libx264 -crf 24 -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart out.mp4
 ```

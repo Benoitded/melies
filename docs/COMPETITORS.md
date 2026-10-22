@@ -40,10 +40,10 @@ smart zooms, cursor smoothing, backgrounds). Try it for real before deciding.
 | Target-size export, GIF | **done** (options panel: MP4 or GIF, maximum size, resolution) |
 | Export identical to preview | by construction (same drawing), to be tested on real cases |
 | Auto zoom from clicks | done (three strengths, glides between close zooms); quality against CleanShot X 5.0 not compared yet |
-| Background, margins, rounded corners, shadow | to do |
+| Background, margins, rounded corners, shadow | done (gradient or solid presets, identical preview and export) |
 | Webcam overlay | to do |
 | Countdown | done (3, 5 or 10 s, optional) |
-| Pause, window or full screen target | to do |
+| Pause, window or full-screen target | to do |
 | Object tracking for blur, spotlight, rectangle, text and arrows | done (pixel matching, both directions from the playhead; Vision was tried first and dropped) |
 | Key display | to do, never storing the typed text |
 | Developer signing and notarization | signing works, first notarization pending |

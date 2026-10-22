@@ -91,6 +91,11 @@ protocol in `MCPProtocol.swift`, JSON-RPC 2.0, "Streamable HTTP" transport over 
 - Connection: Settings copies the Claude Code command
   (`claude mcp add --transport http melies http://127.0.0.1:47821/mcp --header "Authorization: Bearer ..."`),
   a URL with the key (for apps that cannot send a header) or a JSON config for other clients.
+  The copied command and URL contain the key in clear text, so a shell may keep them in its history and a client may
+  log the URL. Prefer the `Authorization` header form: paste the copied command only in a shell with history off, or
+  replace the literal key by an environment variable you set from a file (`--header "Authorization: Bearer $MELIES_MCP_KEY"`),
+  and keep the key out of files you commit. Use the `?token=` URL only for a client that cannot send a header (the key can
+  then appear in that client's logs). If a key leaks, "New key" rotates it and invalidates every configured client.
 - Feedback (Settings > Advanced > MCP server): a status line (waiting for an AI app, connected with the client name,
   "working" with the tool in progress, last action and when, a red message when an app used a wrong key), and a
   three-step checklist (copy the command, paste it in a terminal, ask for an edit). While an AI app edits, the editor
