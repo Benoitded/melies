@@ -185,6 +185,8 @@
 "tip.strength" = "Strength";
 "blur.pixelate" = "Pixelate";
 "blur.gaussian" = "Blur";
+"tip.drag" = "Drag the video into another app";
+"status.dragged" = "Video sent";
 "set.audio" = "Audio";
 "set.audio.mic" = "Microphone";
 "set.audio.system" = "System sound";

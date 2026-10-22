@@ -163,6 +163,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // Debug: MELIES_DRAG_TEST=out.mp4 with MELIES_OPEN=file asks the drag provider for its file and copies it to out.mp4.
+        if let out = ProcessInfo.processInfo.environment["MELIES_DRAG_TEST"], let input = ProcessInfo.processInfo.environment["MELIES_OPEN"] {
+            Task { @MainActor in
+                EditorWindowController.shared.open(URL(fileURLWithPath: input))
+                try? await Task.sleep(for: .seconds(1.5))
+                guard let model = EditorWindowController.shared.session.model else { print("[drag] no model"); NSApp.terminate(nil); return }
+                let provider = model.dragProvider()
+                print("[drag] suggested name: \(provider.suggestedName ?? "-"), types: \(provider.registeredTypeIdentifiers)")
+                provider.loadFileRepresentation(forTypeIdentifier: "public.mpeg-4") { url, error in
+                    if let url {
+                        try? FileManager.default.removeItem(atPath: out)
+                        try? FileManager.default.copyItem(at: url, to: URL(fileURLWithPath: out))
+                        print("[drag] file provided: \(url.lastPathComponent)")
+                    } else {
+                        print("[drag] failed: \(String(describing: error))")
+                    }
+                    DispatchQueue.main.async { NSApp.terminate(nil) }
+                }
+            }
+        }
+
         // Debug: MELIES_RECORD_TEST=seconds records a 480x270 region for that long, then reports the tracks.
         if let seconds = ProcessInfo.processInfo.environment["MELIES_RECORD_TEST"].flatMap(Double.init) {
             Task { @MainActor in

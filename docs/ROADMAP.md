@@ -20,6 +20,7 @@
 - [x] Cmd+Z / Cmd+Shift+Z (annuler / rétablir : annotations, zooms, recadrage, trim)
 
 ## v3
+- [x] Poignée de glisser-déposer : le MP4 optimisé se dépose dans n'importe quelle app
 - [x] Deux vidéos côte à côte, empilées, ou en incrustation (fenêtre « Combiner », résultat rouvert dans l'éditeur)
 - [x] Audio : son du système et micro pendant l'enregistrement, son gardé ou coupé à l'export
 - [ ] Zoom auto sur le curseur pendant l'enregistrement

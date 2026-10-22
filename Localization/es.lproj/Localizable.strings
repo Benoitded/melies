@@ -185,6 +185,8 @@
 "tip.strength" = "Intensidad";
 "blur.pixelate" = "Pixelar";
 "blur.gaussian" = "Desenfoque";
+"tip.drag" = "Arrastra el vídeo a otra app";
+"status.dragged" = "Vídeo enviado";
 "set.audio" = "Audio";
 "set.audio.mic" = "Micrófono";
 "set.audio.system" = "Sonido del sistema";
