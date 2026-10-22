@@ -25,11 +25,26 @@ final class MenuActions: NSObject, NSMenuItemValidation {
     @objc func zoomActual() { session.model?.zoomActual() }
     @objc func zoomFit() { session.model?.zoomToFit() }
 
+    /// While a text field is being edited, undo belongs to the text; otherwise to the editor.
+    @objc func undo() {
+        if session.model?.isEditingText == true { NSApp.sendAction(Selector(("undo:")), to: nil, from: nil); return }
+        session.model?.undo()
+    }
+
+    @objc func redo() {
+        if session.model?.isEditingText == true { NSApp.sendAction(Selector(("redo:")), to: nil, from: nil); return }
+        session.model?.redo()
+    }
+
     @objc func copyVideo() { Task { await session.model?.copy() } }
     @objc func saveVideo() { Task { await session.model?.save() } }
 
     func validateMenuItem(_ item: NSMenuItem) -> Bool {
         switch item.action {
+        case #selector(undo):
+            return session.model?.isEditingText == true || (session.model?.canUndo ?? false)
+        case #selector(redo):
+            return session.model?.isEditingText == true || (session.model?.canRedo ?? false)
         case #selector(copyVideo), #selector(saveVideo), #selector(zoomIn), #selector(zoomOut),
              #selector(zoomActual), #selector(zoomFit):
             return session.model != nil && EditorWindowController.shared.isKey
@@ -129,8 +144,8 @@ enum MainMenu {
 
     private static func editMenu() -> NSMenu {
         let menu = NSMenu(title: L("mm.edit"))
-        add(menu, L("mm.undo"), Selector(("undo:")), "z")
-        add(menu, L("mm.redo"), Selector(("redo:")), "z", [.command, .shift])
+        add(menu, L("mm.undo"), #selector(MenuActions.undo), "z", target: MenuActions.shared)
+        add(menu, L("mm.redo"), #selector(MenuActions.redo), "z", [.command, .shift], target: MenuActions.shared)
         menu.addItem(.separator())
         add(menu, L("tip.copy"), #selector(MenuActions.copyVideo), "c", target: MenuActions.shared)
         return menu

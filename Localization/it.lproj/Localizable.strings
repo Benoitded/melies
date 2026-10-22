@@ -157,3 +157,4 @@
 "font.hand" = "Scrittura a mano";
 "sc.tools" = "Selezione, freccia, testo, rettangolo";
 "sc.delete" = "Elimina la selezione";
+"sc.undo" = "Annulla / ripeti";
