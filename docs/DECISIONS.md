@@ -163,3 +163,12 @@ Un enregistrement peut avoir plusieurs pistes audio : l'export les mélange en u
 (`AVMutableAudioMix`), ou les met à zéro si le bouton son de l'éditeur est coupé. Piège de test :
 lancée directement depuis un terminal, l'app n'hérite pas de l'autorisation d'enregistrement d'écran
 (macOS l'attribue au programme parent) ; il faut la démarrer par `open -a` pour tester la capture.
+
+## Clics visibles (2026-10-22)
+
+Les clics sont enregistrés à côté de la position du curseur (`<nom>.cursor.json` devient un objet
+`{cursor, clicks}` ; l'ancien tableau simple se lit toujours). On ne dessine pas dans la vidéo
+d'origine : l'anneau est calculé au rendu, donc on peut l'allumer, l'éteindre, changer sa couleur et
+sa taille après coup, et il suit le recadrage et les zooms. Seuls les clics dans la zone enregistrée
+comptent. Le curseur lissé n'est pas fait : il faudrait enregistrer sans le vrai curseur et le
+redessiner, ce qui perd les formes (flèche, barre de texte, main).

@@ -58,6 +58,10 @@ struct TopBar: View {
                         BarButton(symbol: "crop", title: L("tip.crop"), shortcut: "(C)", active: model.cropMode || model.cropRect != nil) {
                             model.toggleCrop()
                         }
+                        BarButton(symbol: "cursorarrow.click.2", title: L("tip.clicks"), active: model.showClicks && model.hasClicks, disabled: !model.hasClicks) {
+                            model.showClicks.toggle()
+                            UserDefaults.standard.set(model.showClicks, forKey: "showClicks")
+                        }
                         BarButton(symbol: "plus.magnifyingglass", title: L("tip.zoomanim"), shortcut: "(Z)", active: !model.zoomPoints.isEmpty) {
                             model.addZoom()
                         }

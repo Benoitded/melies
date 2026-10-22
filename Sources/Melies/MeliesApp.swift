@@ -120,7 +120,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     let duration = try await asset.load(.duration)
                     let demoKind = ProcessInfo.processInfo.environment["MELIES_ANNOTATION_DEMO"]
                     let notes = demoKind == "fx" ? demoEffects() : (demoKind != nil ? demoAnnotations() : [])
-                    try await VideoExport.run(asset: asset, range: CMTimeRange(start: .zero, duration: duration), points: points, annotations: notes, includeAudio: ProcessInfo.processInfo.environment["MELIES_EXPORT_MUTE"] == nil, to: URL(fileURLWithPath: out))
+                    try await VideoExport.run(asset: asset, range: CMTimeRange(start: .zero, duration: duration), points: points, annotations: notes, clicks: ClickSet.current(for: CursorTrack.load(for: URL(fileURLWithPath: input))), includeAudio: ProcessInfo.processInfo.environment["MELIES_EXPORT_MUTE"] == nil, to: URL(fileURLWithPath: out))
                     print("[export] done")
                 } catch { print("[export] failed: \(error)") }
                 NSApp.terminate(nil)

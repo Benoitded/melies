@@ -111,7 +111,7 @@ struct EditorView: View {
                         .frame(width: video.width, height: video.height, alignment: .topLeading)
                         .clipped()
                         .position(x: video.midX, y: video.midY)
-                        if !model.annotations.isEmpty || model.tool != .select, !model.cropMode, model.selectedPoint == nil {
+                        if !model.annotations.isEmpty || model.tool != .select || (model.showClicks && model.hasClicks), !model.cropMode, model.selectedPoint == nil {
                             AnnotationOverlay(model: model, video: video, region: region)
                         }
                         if model.cropMode || (model.cropRect != nil && !model.previewingCamera) {
