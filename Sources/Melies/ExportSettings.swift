@@ -15,6 +15,8 @@ struct ExportSettings: Equatable {
     /// nil means no limit.
     var maxMegabytes: Int?
     var maxWidth: Int = 1920
+    /// Margins, rounded corners, shadow around the picture (one style for the whole app).
+    var frame = FrameStyle.load()
 
     static let sizeChoices: [Int] = [1, 2, 3, 5, 8, 15, 25, 50, 100]
     /// 360p, 480p, 720p, 1080p

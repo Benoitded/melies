@@ -17,6 +17,8 @@ struct RenderPlan {
     var points: [ZoomPoint]
     var annotations: [Annotation] = []
     var clicks: ClickSet?
+    /// Set when the picture is framed on a background (margins, rounded corners, shadow).
+    var frameLayers: FrameLayers?
 
     /// Draws the frame for `time` (asset time, seconds) from the raw source image.
     func render(_ source: CIImage, at time: Double) -> CIImage {
@@ -38,11 +40,20 @@ struct RenderPlan {
             .transformed(by: CGAffineTransform(scaleX: content.width / w, y: content.height / h))
             .transformed(by: CGAffineTransform(translationX: content.minX, y: canvas.height - content.maxY))
 
-        let background = CIImage(color: .black).cropped(to: CGRect(origin: .zero, size: canvas))
-        var frame = placed.composited(over: background)
-        if let overlay = AnnotationRenderer.overlay(annotations, clicks: clicks, at: time, source: uprightSize,
+        var frame: CIImage
+        if let layers = frameLayers {
+            // The picture is cut to its rounded shape and sits on the background with its shadow.
+            frame = placed.applyingFilter("CIBlendWithAlphaMask", parameters: [
+                kCIInputBackgroundImageKey: layers.backdrop, kCIInputMaskImageKey: layers.mask,
+            ])
+        } else {
+            let background = CIImage(color: .black).cropped(to: CGRect(origin: .zero, size: canvas))
+            frame = placed.composited(over: background)
+        }
+        if var overlay = AnnotationRenderer.overlay(annotations, clicks: clicks, at: time, source: uprightSize,
                                                     region: CGRect(x: x, y: y, width: w, height: h),
                                                     content: content, canvas: canvas) {
+            if let layers = frameLayers { overlay = overlay.cropped(to: layers.contentCI) } // nothing drawn on the margins
             frame = overlay.composited(over: frame)
         }
         return frame
@@ -110,21 +121,25 @@ enum VideoExport {
             width: max((region.width * srcW).rounded(), 2), height: max((region.height * srcH).rounded(), 2)
         )
 
-        let scale = min(1, CGFloat(settings.maxWidth) / base.width)
+        // Framed: the margins are part of the output width, so the picture gets smaller to leave room for them.
+        let frame = settings.frame
+        let margin = frame.enabled ? CGFloat(frame.padding) : 0
+        let scale = min(1, CGFloat(settings.maxWidth) / (base.width * (1 + 2 * margin)))
         var contentW = (base.width * scale).rounded()
         var contentH = (base.height * scale).rounded()
+        let pad = frame.enabled ? (contentW * margin).rounded() : 0
 
         // Pad to stay within the 3:1 / 1:3 aspect ratio limits.
-        var outW = contentW
-        var outH = contentH
-        if contentW / contentH > 3 { outH = (contentW / 3).rounded(.up) }
-        if contentH / contentW > 3 { outW = (contentH / 3).rounded(.up) }
+        var outW = contentW + 2 * pad
+        var outH = contentH + 2 * pad
+        if outW / outH > 3 { outH = (outW / 3).rounded(.up) }
+        if outH / outW > 3 { outW = (outH / 3).rounded(.up) }
         contentW = (contentW / 2).rounded() * 2
         contentH = (contentH / 2).rounded() * 2
         outW = (outW / 2).rounded(.up) * 2
         outH = (outH / 2).rounded(.up) * 2
 
-        return RenderPlan(
+        var plan = RenderPlan(
             orientation: orientation(for: preferred),
             uprightSize: CGSize(width: srcW, height: srcH),
             base: base,
@@ -134,6 +149,8 @@ enum VideoExport {
             annotations: annotations,
             clicks: clicks
         )
+        if frame.enabled { plan.frameLayers = FrameLayers(style: frame, canvas: plan.canvas, content: plan.content) }
+        return plan
     }
 
     /// `crop` is normalized (0...1) in the upright frame, origin top-left.
