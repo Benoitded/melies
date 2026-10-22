@@ -98,4 +98,38 @@ git commit -q -m "Version $VERSION"
 git tag "$TAG"
 git push -q origin main "$TAG"
 gh release create "$TAG" "$DMG" "$DIST/appcast.xml" --title "Méliès $VERSION" --notes-file "$DIST/updates/Melies-$VERSION.md"
+
+# Homebrew cask: rewritten from this template with the new version and checksum.
+TAP="Benoitded/homebrew-melies"
+SHA=$(shasum -a 256 "$DMG" | awk '{print $1}')
+TAPDIR=$(mktemp -d)
+if gh repo clone "$TAP" "$TAPDIR" -- -q 2>/dev/null; then
+  mkdir -p "$TAPDIR/Casks"
+  cat > "$TAPDIR/Casks/melies.rb" <<CASK
+cask "melies" do
+  version "$VERSION"
+  sha256 "$SHA"
+
+  url "https://github.com/Benoitded/melies/releases/download/v#{version}/Melies-#{version}.dmg"
+  name "Méliès"
+  desc "Screen recorder and small video editor for the menu bar"
+  homepage "https://github.com/Benoitded/melies"
+
+  auto_updates true
+  depends_on macos: ">= :tahoe"
+
+  app "Melies.app"
+
+  zap trash: [
+    "~/Library/Preferences/dev.melies.app.plist",
+    "~/Library/Caches/dev.melies.app",
+  ]
+end
+CASK
+  git -C "$TAPDIR" add -A
+  git -C "$TAPDIR" commit -q -m "melies $VERSION"
+  git -C "$TAPDIR" push -q && echo "==> Homebrew cask updated: brew install --cask $TAP/melies"
+else
+  echo "!! Homebrew tap $TAP not found: skipped (create it once, see docs/RELEASING.md)."
+fi
 echo "==> Published $TAG: installed apps will offer the update."

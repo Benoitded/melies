@@ -1,257 +1,257 @@
-# Décisions
+# Decisions
 
-## Mac uniquement, Swift / SwiftUI (2026-10-20)
+## Mac only, Swift / SwiftUI (2026-10-20)
 
-Choix : app native Swift + SwiftUI + AVFoundation, dans la barre de menu.
+Choice: native Swift + SwiftUI + AVFoundation app, in the menu bar.
 
-Pourquoi :
-- Outil perso Mac, pas besoin du multiplateforme ni d'une version web.
-- Barre de menu, raccourci global, presse-papiers (copier un fichier vidéo),
-  encodage H.264 matériel et design système (Liquid Glass) sont natifs.
-- Plus tard, ScreenCaptureKit permettra d'enregistrer l'écran nativement.
+Why:
+- Personal Mac tool, no need for cross-platform or a web version.
+- Menu bar, global shortcut, clipboard (copying a video file), hardware H.264
+  encoding and the system design (Liquid Glass) are all native.
+- Later, ScreenCaptureKit will allow recording the screen natively.
 
-Écarté : Tauri + WebCodecs. Testé en spike : le serveur Vite a planté sous
-Node 20.17 (Vite 8 demande Node 20.19+ ou 22+), et l'encodage dans un webview
-restait à prouver. Tout le code Tauri a été supprimé, rien n'en est conservé.
+Rejected: Tauri + WebCodecs. Tried as a spike: the Vite server crashed under
+Node 20.17 (Vite 8 requires Node 20.19+ or 22+), and encoding inside a webview
+was still unproven. All the Tauri code was deleted, nothing of it is kept.
 
-Écarté : page web locale avec ffmpeg. Ne peut pas avoir de raccourci global.
+Rejected: local web page with ffmpeg. Cannot have a global shortcut.
 
-## Nom : Méliès (2026-10-20)
+## Name: Méliès (2026-10-20)
 
-Georges Méliès a inventé le jump cut, la surimpression et le trucage à
-l'écran : exactement ce que fait l'outil (couper, superposer, zoomer).
-Nom de commande et de dossier : `melies`, sans accent.
+Georges Méliès invented the jump cut, the superimposition and the on-screen
+special effect: exactly what the tool does (cut, overlay, zoom).
+Command and folder name: `melies`, without the accent.
 
-Écartés : `clipr` (trop de produits homonymes : téléchargeur Twitch, plateforme
-UGC, gestionnaire de presse-papiers), `motionr` (libre mais sans âme).
-Vérifié sur npm, Homebrew, GitHub uniquement. Marques et App Store non vérifiés.
+Rejected: `clipr` (too many homonymous products: Twitch downloader, UGC platform,
+clipboard manager), `motionr` (available but soulless).
+Checked on npm, Homebrew, GitHub only. Trademarks and App Store not checked.
 
-## Raccourcis globaux : bibliothèque KeyboardShortcuts
+## Global shortcuts: KeyboardShortcuts library
 
-Shottr utilise lui-même `sindresorhus/KeyboardShortcuts` (visible dans son
-bundle). On fait pareil : raccourci réglable dans les Réglages.
+Shottr itself uses `sindresorhus/KeyboardShortcuts` (visible in its
+bundle). We do the same: configurable shortcut in Settings.
 
-## Signature
+## Signing
 
-Compte Apple Developer disponible, mais on ne signe pas au début : build local,
-signé avec l'identité de développement du Mac si présente, sinon ad hoc.
-Notarisation à faire seulement si on distribue.
+Apple Developer account available, but we do not sign at first: local build,
+signed with the Mac's development identity if present, otherwise ad hoc.
+Notarization only if we distribute.
 
 ## Open source
 
-Prévu plus tard, sous le GitHub de l'équipe. Mac uniquement (comme Shottr).
-Avant de publier : vérifier le nom (marques, App Store), ajouter une licence,
-ne rien mettre de propre à Byzantine dans le code.
+Planned for later, under the team's GitHub. Mac only (like Shottr).
+Before publishing: check the name (trademarks, App Store), add a license,
+put nothing specific to Byzantine in the code.
 
-## Enregistrement d'écran intégré (2026-10-20)
+## Built-in screen recording (2026-10-20)
 
-Demandé dès la v1 : Cmd+Shift+6 démarre et arrête. Implémentation avec
-ScreenCaptureKit (`SCRecordingOutput`, macOS 15 minimum), zone dessinée sur un
-overlay plein écran, fichier .mov H.264 60 fps dans le dossier surveillé, puis
-l'éditeur s'ouvre dessus. L'arrêt se fait avec le même raccourci ou le bouton
-rouge dans la barre de menu. Demande l'autorisation "Enregistrement de l'écran"
-au premier lancement.
+Requested from v1: Cmd+Shift+6 starts and stops. Implemented with
+ScreenCaptureKit (`SCRecordingOutput`, macOS 15 minimum), area drawn on a
+full-screen overlay, H.264 60 fps .mov file in the watched folder, then
+the editor opens on it. Stopping is done with the same shortcut or the red
+button in the menu bar. Asks for the "Screen Recording" permission
+on first launch.
 
-## Zooms animés et compositeur vidéo maison (2026-10-20)
+## Animated zooms and a custom video compositor (2026-10-20)
 
-Les zooms sont des points de caméra (temps, niveau, centre, durée de trajet, style)
-rangés sur une piste sous la timeline. Z crée un zoom avec un début et une fin, puis
-ajoute des points intermédiaires qui reprennent l'état courant de la caméra. Le
-niveau est interpolé en échelle logarithmique, le centre linéairement, avec un style
-au choix (fluide, vif, linéaire, ressort).
+Zooms are camera points (time, level, center, travel duration, style)
+laid out on a track under the timeline. Z creates a zoom with a start and an end, then
+adds intermediate points that pick up the camera's current state. The
+level is interpolated on a logarithmic scale, the center linearly, with a
+choice of style (smooth, snappy, linear, spring).
 
-L'export n'utilise plus d'instructions AVFoundation à transformation constante : un
-`AVVideoCompositing` maison (Core Image) calcule chaque image : rotation, recadrage,
-caméra, mise à l'échelle et bandes noires. Les flèches, le texte et les rectangles seront
-dessinés au même endroit, donc l'aperçu et l'export concordent. Vérifié avec une mire
-fixe : image pleine identique (49 dB), zoom x2 à la bonne région.
+Export no longer uses constant-transform AVFoundation instructions: a custom
+`AVVideoCompositing` (Core Image) computes each frame: rotation, crop,
+camera, scaling and black bars. Arrows, text and rectangles will be
+drawn in the same place, so the preview and the export match. Verified with a
+fixed test pattern: identical full frame (49 dB), x2 zoom on the right region.
 
-Pendant l'enregistrement, la position du curseur est échantillonnée à 30 Hz et écrite dans
-`<nom>.cursor.json` à côté de la vidéo. Un nouveau zoom se centre sur la souris à cet instant.
+During recording, the cursor position is sampled at 30 Hz and written to
+`<name>.cursor.json` next to the video. A new zoom is centered on the mouse at that instant.
 
-## Réglages des outils : panneau flottant (2026-10-20)
+## Tool settings: floating panel (2026-10-20)
 
-Inspiré de Shottr, observé directement dans l'app : quand un objet est sélectionné, un petit
-panneau flottant apparaît en haut à droite de l'image (chevron pour le replier, couleur,
-épaisseur en curseur en forme de coin, styles en boutons d'icônes). Même composant
-(`ToolPanel`, `IconSegments`, `WedgeSlider`) pour les points de zoom maintenant, et pour les
-flèches, le texte et les rectangles ensuite. La piste de zoom trace la courbe du niveau
-de zoom pour qu'on voie la dynamique d'un coup d'oeil.
+Inspired by Shottr, observed directly in the app: when an object is selected, a small floating
+panel appears at the top right of the image (chevron to collapse it, color,
+thickness as a wedge-shaped slider, styles as icon buttons). Same components
+(`ToolPanel`, `IconSegments`, `WedgeSlider`) for zoom points now, and for
+arrows, text and rectangles afterwards. The zoom track draws the zoom level
+curve so you can see the dynamics at a glance.
 
-## Liquid Glass partout où ça flotte (2026-10-22)
+## Liquid Glass wherever something floats (2026-10-22)
 
-Minimum macOS 26, sans code de secours : outil perso sur un Mac en macOS 27. Le verre sert aux
-surfaces qui flottent au-dessus du contenu, jamais au contenu lui-même : les trois capsules de la
-barre d'outils (`GlassEffectContainer`), le panneau des réglages d'outil, les infobulles, la
-bulle "Copié", le bouton lecture et les boutons de l'écran vide (`.buttonStyle(.glass)`), le
-bouton principal de l'accueil (`.glassProminent`). La timeline, la piste de zoom et la vidéo
-restent du contenu. Les Réglages utilisent le style toolbar natif d'AppKit.
+Minimum macOS 26, no fallback code: personal tool on a Mac running macOS 27. Glass is used for
+surfaces that float above the content, never for the content itself: the three capsules of the
+toolbar (`GlassEffectContainer`), the tool settings panel, the tooltips, the
+"Copied" bubble, the play button and the empty-screen buttons (`.buttonStyle(.glass)`), the
+main button of the welcome screen (`.glassProminent`). The timeline, the zoom track and the video
+remain content. Settings use AppKit's native toolbar style.
 
-Piège : le rendu hors écran (`cacheDisplay`) ne dessine pas le verre. Pour juger l'apparence, il
-faut capturer la vraie fenêtre (l'app doit être lancée avec sa fenêtre ouverte pour être
-ciblable par l'outil de capture).
+Pitfall: off-screen rendering (`cacheDisplay`) does not draw the glass. To judge the appearance, you
+have to capture the real window (the app must be launched with its window open to be
+targetable by the capture tool).
 
-## Annotations : un seul dessin pour l'aperçu et l'export (2026-10-22)
+## Annotations: a single drawing for preview and export (2026-10-22)
 
-Flèche, texte et rectangle sont des objets avec une durée (début, fin) et une géométrie normalisée
-dans l'image source : ils suivent donc le recadrage et les zooms animés. `AnnotationRenderer` les
-dessine en Core Graphics dans l'espace des pixels source ; l'aperçu (Canvas SwiftUI) et l'export
-(compositeur Core Image) appliquent seulement une transformation différente. Les réglages (couleur,
-épaisseur ou taille, style, police) sont mémorisés par type d'objet.
+Arrow, text and rectangle are objects with a duration (start, end) and a geometry normalized
+in the source image: they therefore follow the crop and the animated zooms. `AnnotationRenderer` draws
+them in Core Graphics in source pixel space; the preview (SwiftUI Canvas) and the export
+(Core Image compositor) only apply a different transform. Settings (color,
+thickness or size, style, font) are remembered per object type.
 
-Piège : les raccourcis à une touche (A, T, R...) sont des boutons cachés ; ils sont désactivés
-pendant la saisie de texte (`isEditingText`), sinon taper "a" lancerait l'outil flèche.
+Pitfall: single-key shortcuts (A, T, R...) are hidden buttons; they are disabled
+while typing text (`isEditingText`), otherwise typing "a" would launch the arrow tool.
 
-## Accueil en vrai Liquid Glass, icône en couches (2026-10-22)
+## Welcome screen in real Liquid Glass, layered icon (2026-10-22)
 
-L'accueil est une fenêtre `NSGlassEffectView` : le contenu reste plat dessus (pas de verre sur
-du verre). L'icône est un fichier Icon Composer `Resources/Melies.icon` (fond dégradé, pellicule,
-bouton lecture en verre) compilé par `actool` en `Assets.car` plus un `.icns` de secours.
+The welcome screen is an `NSGlassEffectView` window: the content stays flat on top (no glass on
+glass). The icon is an Icon Composer file `Resources/Melies.icon` (gradient background, film strip,
+glass play button) compiled by `actool` into `Assets.car` plus a fallback `.icns`.
 
-## Annuler / rétablir par séquences (2026-10-22)
+## Undo / redo by sequences (2026-10-22)
 
-Un instantané de l'état éditable (annotations, points de zoom, recadrage, début et fin du trim) est
-empilé au premier changement d'une séquence. Les changements espacés de moins de 0,6 s forment une
-même séquence, donc un glissé, un curseur ou une frappe = une seule étape. Pas d'enregistrement à
-chaque geste dans le code : un `didSet` sur ces cinq propriétés suffit. La navigation (tête de
-lecture, sélection, zoom du canvas) n'est pas dans l'historique. Pendant la saisie d'un texte,
-Cmd+Z appartient au champ de texte.
+A snapshot of the editable state (annotations, zoom points, crop, trim start and end) is
+pushed on the first change of a sequence. Changes less than 0.6 s apart form
+a single sequence, so one drag, one slider or one keystroke = a single step. No per-gesture
+recording in the code: a `didSet` on these five properties is enough. Navigation (playhead,
+selection, canvas zoom) is not in the history. While typing text,
+Cmd+Z belongs to the text field.
 
-## Leçons du test à la souris (2026-10-22)
+## Lessons from mouse testing (2026-10-22)
 
-- Une annotation créée sous la tête de lecture à son tout début était invisible (fondu d'entrée à
-  0). L'éditeur affiche maintenant les objets pleinement quand la lecture est en pause.
-- Le champ de texte n'était pas actif juste après la création d'un texte : les lettres tapées
-  déclenchaient des raccourcis (I, O, A, V...). Le focus est pris à l'apparition du panneau.
+- An annotation created under the playhead at its very start was invisible (fade-in at
+  0). The editor now shows objects fully when playback is paused.
+- The text field was not active right after a text was created: typed letters
+  triggered shortcuts (I, O, A, V...). Focus is now taken when the panel appears.
 
-## Combiner deux vidéos : un fichier, puis l'éditeur (2026-10-22)
+## Combining two videos: one file, then the editor (2026-10-22)
 
-Choix : « Combiner » produit un nouveau MP4 (côte à côte, empilées ou en incrustation) qui
-s'ouvre ensuite dans l'éditeur, plutôt que de rendre tout l'éditeur multi-pistes. Raison : le
-recadrage, les zooms, les annotations et le trim restent écrits pour une seule vidéo ; la
-combinaison est une étape en amont, simple à comprendre. Compromis : un encodage de plus (qualité
-maximale pour limiter la perte).
+Choice: "Combine" produces a new MP4 (side by side, stacked or picture-in-picture) which
+then opens in the editor, rather than making the whole editor multi-track. Reason: crop,
+zooms, annotations and trim remain written for a single video; combining
+is an upstream step, simple to understand. Trade-off: one more encode (maximum
+quality to limit the loss).
 
-Le compositeur (`ComposeCompositor`) dessine les deux vidéos avec la même géométrie que l'aperçu
-de la fenêtre (`ComposeGeometry`). Quand une vidéo finit avant l'autre, sa dernière image reste
-affichée. L'incrustation a des coins arrondis, un liseré et une ombre. Le son des deux vidéos est
-conservé s'il existe.
+The compositor (`ComposeCompositor`) draws the two videos with the same geometry as the window
+preview (`ComposeGeometry`). When one video ends before the other, its last frame stays
+displayed. The picture-in-picture has rounded corners, a hairline border and a shadow. The sound of both videos is
+kept if present.
 
-## Spotlight et flou (2026-10-22)
+## Spotlight and blur (2026-10-22)
 
-Le spotlight assombrit tout sauf une zone (dessiné comme les autres annotations). Le flou et la
-pixelisation changent les pixels de la vidéo : ils sont appliqués sur l'image source avant le
-recadrage et la caméra, donc le motif suit le zoom. L'aperçu lit la dernière image décodée du lecteur
-(`AVPlayerItemVideoOutput`) et utilise le même filtre que l'export. Pixelisation par défaut : un flou
-léger peut parfois se défaire, des gros blocs non.
+The spotlight darkens everything except one area (drawn like the other annotations). Blur and
+pixelation change the video's pixels: they are applied on the source image before
+the crop and the camera, so the pattern follows the zoom. The preview reads the last decoded frame of the player
+(`AVPlayerItemVideoOutput`) and uses the same filter as the export. Pixelation by default: a light
+blur can sometimes be undone, large blocks cannot.
 
-## Poignée de glisser-déposer (2026-10-22)
+## Drag-and-drop handle (2026-10-22)
 
-La poignée de la barre d'outils (page vide entre deux groupes de points, comme Shottr) fournit le MP4
-optimisé quand l'app de destination le demande : `NSItemProvider` avec une représentation de fichier
-paresseuse (comme une promesse de fichier). L'export ne se fait donc qu'au dépôt, pas à chaque
-modification. Le glisser n'enregistre ni ne ferme rien : c'est un geste de partage, pas une sortie.
+The toolbar handle (empty area between two groups of dots, like Shottr) provides the optimized
+MP4 when the destination app asks for it: `NSItemProvider` with a lazy file representation
+(like a file promise). The export therefore only happens at drop time, not at every
+change. Dragging neither saves nor closes anything: it is a sharing gesture, not an exit.
 ## Audio (2026-10-22)
 
-Le son du système (`capturesAudio`) et le micro (`captureMicrophone`, macOS 15) passent par
-ScreenCaptureKit et sont écrits dans le même fichier par `SCRecordingOutput`. Les deux options sont
-désactivées par défaut (respect de la vie privée), réglables dans les Réglages et dans le menu de
-la barre de menu. Le micro demande l'autorisation la première fois ; refusé, l'enregistrement continue
-sans la voix et une bulle le dit.
+System sound (`capturesAudio`) and the microphone (`captureMicrophone`, macOS 15) go through
+ScreenCaptureKit and are written to the same file by `SCRecordingOutput`. Both options are
+off by default (privacy), adjustable in Settings and in the menu bar
+menu. The microphone asks for permission the first time; if denied, recording continues
+without the voice and a bubble says so.
 
-Un enregistrement peut avoir plusieurs pistes audio : l'export les mélange en une seule piste
-(`AVMutableAudioMix`), ou les met à zéro si le bouton son de l'éditeur est coupé. Piège de test :
-lancée directement depuis un terminal, l'app n'hérite pas de l'autorisation d'enregistrement d'écran
-(macOS l'attribue au programme parent) ; il faut la démarrer par `open -a` pour tester la capture.
+A recording can have several audio tracks: the export mixes them into a single track
+(`AVMutableAudioMix`), or sets them to zero if the editor's sound button is muted. Test pitfall:
+launched directly from a terminal, the app does not inherit the screen recording permission
+(macOS grants it to the parent program); it must be started with `open -a` to test capture.
 
-## Clics visibles (2026-10-22)
+## Visible clicks (2026-10-22)
 
-Les clics sont enregistrés à côté de la position du curseur (`<nom>.cursor.json` devient un objet
-`{cursor, clicks}` ; l'ancien tableau simple se lit toujours). On ne dessine pas dans la vidéo
-d'origine : l'anneau est calculé au rendu, donc on peut l'allumer, l'éteindre, changer sa couleur et
-sa taille après coup, et il suit le recadrage et les zooms. Seuls les clics dans la zone enregistrée
-comptent. Le curseur lissé n'est pas fait : il faudrait enregistrer sans le vrai curseur et le
-redessiner, ce qui perd les formes (flèche, barre de texte, main).
+Clicks are recorded alongside the cursor position (`<name>.cursor.json` becomes an object
+`{cursor, clicks}`; the old plain array can still be read). Nothing is drawn into the
+original video: the ring is computed at render time, so it can be turned on, off, and its color and
+size changed afterwards, and it follows the crop and the zooms. Only clicks inside the recorded area
+count. The smoothed cursor is not done: it would require recording without the real cursor and
+redrawing it, which loses the shapes (arrow, text bar, hand).
 
-## Raccourcis clavier : écoute directe des touches (2026-10-22)
+## Keyboard shortcuts: direct key listening (2026-10-22)
 
-Les raccourcis à une touche (V A T R S B C Z I O, Espace, flèches, Supprimer, Entrée, Échap) étaient
-portés par des boutons SwiftUI invisibles (opacité 0, taille 0) : ils ne recevaient aucune touche.
-Ils sont maintenant lus dans les événements clavier de la fenêtre de l'éditeur
-(`NSEvent.addLocalMonitorForEvents`), seulement quand elle est la fenêtre active, pas pendant la saisie
-d'un texte (le premier répondant est un éditeur de texte) et pas avec Cmd, Option ou Contrôle (ce sont des
-éléments de menu). Les lettres sont lues avec `charactersIgnoringModifiers`, donc indépendantes du clavier
-(AZERTY compris). Supprimer = Retour arrière (51) et Suppression avant (117).
-Piège de test : l'outil d'automatisation envoie les touches à une fenêtre en arrière-plan, qui n'est pas
-« active » ; pour tester, il faut d'abord activer l'app.
+Single-key shortcuts (V A T R S B C Z I O, Space, arrows, Delete, Return, Escape) used to be
+carried by invisible SwiftUI buttons (opacity 0, size 0): they received no keys.
+They are now read from the keyboard events of the editor window
+(`NSEvent.addLocalMonitorForEvents`), only when it is the active window, not while typing
+text (the first responder is a text editor) and not with Cmd, Option or Control (those are
+menu items). Letters are read with `charactersIgnoringModifiers`, so they are keyboard-independent
+(AZERTY included). Delete = Backspace (51) and Forward Delete (117).
+Test pitfall: the automation tool sends keys to a background window, which is not
+"active"; to test, the app must be activated first.
 
-## Flou à l'arrêt (2026-10-22)
+## Blur when paused (2026-10-22)
 
-Le lecteur ne distribue plus d'images quand il est en pause, et l'observateur de temps ne tourne que
-pendant la lecture. L'aperçu du flou demande donc lui-même l'image exacte sous la tête de lecture
-(`AVAssetImageGenerator`) à l'ajout d'une annotation, à chaque déplacement et à la mise en pause.
+The player no longer delivers frames when paused, and the time observer only runs
+during playback. The blur preview therefore requests the exact frame under the playhead itself
+(`AVAssetImageGenerator`) when an annotation is added, at each move and when pausing.
 
-## Barres de timeline stables et poignée qui ne déplace pas la fenêtre (2026-10-22)
+## Stable timeline bars and a handle that does not move the window (2026-10-22)
 
-- Les barres d'annotations étaient rangées par heure de début : retarder le début de la barre du haut la
-  faisait passer sous l'autre, et le glissé en cours tombait sur la mauvaise barre. Les lignes suivent
-  maintenant l'ordre de création, et sont gelées pendant un glissé.
-- La poignée de glisser-déposer est dans la zone de la barre de titre, où appuyer sur la souris déplace la
-  fenêtre. Elle est désormais une vue AppKit (`mouseDownCanMoveWindow = false`) qui lance un vrai glisser de
-  fichier « promis » (`NSFilePromiseProvider`) : le MP4 n'est exporté qu'au dépôt.
+- Annotation bars were ordered by start time: delaying the start of the top bar
+  made it go below the other, and the drag in progress landed on the wrong bar. Rows now follow
+  creation order, and are frozen during a drag.
+- The drag-and-drop handle is in the title bar area, where pressing the mouse moves the
+  window. It is now an AppKit view (`mouseDownCanMoveWindow = false`) that starts a real "promised"
+  file drag (`NSFilePromiseProvider`): the MP4 is only exported at drop time.
 
-## Export à taille cible et GIF (2026-10-22)
+## Target-size export and GIF (2026-10-22)
 
-L'export n'utilise plus le préréglage d'`AVAssetExportSession` (débit non réglable) : `AVAssetReader`
-lit les images composées (le même compositeur que l'aperçu), `AVAssetWriter` encode en H.264 à un
-**débit calculé** pour viser la taille choisie (93 % de la cible, moins le son à 128 kb/s). Si le fichier
-dépasse quand même, jusqu'à trois reprises avec un débit corrigé. Sans limite, le débit suit le nombre de
-pixels. Le GIF est écrit avec ImageIO ; avec une taille maximale, il essaie des largeurs et des cadences
-décroissantes (720 px à 15 i/s jusqu'à 128 px à 3 i/s) jusqu'à ce que le fichier tienne. Si rien ne tient,
-la taille réelle est affichée.
+Export no longer uses the `AVAssetExportSession` preset (bitrate not adjustable): `AVAssetReader`
+reads the composed frames (the same compositor as the preview), `AVAssetWriter` encodes H.264 at a
+**computed bitrate** aiming at the chosen size (93% of the target, minus audio at 128 kb/s). If the file
+still exceeds it, up to three retries with a corrected bitrate. With no limit, the bitrate follows the number of
+pixels. The GIF is written with ImageIO; with a maximum size, it tries decreasing widths and frame rates
+(720 px at 15 fps down to 128 px at 3 fps) until the file fits. If nothing fits,
+the actual size is shown.
 
-Piège : `URL.resourceValues(forKeys: [.fileSizeKey])` met la valeur en cache sur l'objet URL ; relue après
-chaque essai, elle redonnait la taille du premier. La taille se lit maintenant avec
+Pitfall: `URL.resourceValues(forKeys: [.fileSizeKey])` caches the value on the URL object; re-read after
+each attempt, it returned the size of the first one. The size is now read with
 `FileManager.attributesOfItem`.
 
-Le son est un seul flux AAC (les pistes système et micro sont mélangées) ; sans son, le fichier n'a pas
-de piste audio du tout.
+The audio is a single AAC stream (system and microphone tracks are mixed); without audio, the file has no
+audio track at all.
 
-## Suivi d'objet (2026-10-22)
+## Object tracking (2026-10-22)
 
-Premier essai avec `VNTrackObjectRequest` (Vision) : correct pour un objet qui bouge, mais il se perd sur du
-texte qui défile (zone peu texturée, motifs répétés) et ne dit pas quand l'objet disparaît. Remplacé par une
-comparaison de pixels : la zone de départ (en niveaux de gris, image réduite à ~640 px) est cherchée à chaque
-image autour de sa dernière position, d'abord grossièrement puis finement ; le modèle s'adapte lentement aux
-changements d'apparence. Si l'écart moyen dépasse 10 % pendant plus de 0,12 s (défilé hors cadre, fenêtre
-passée devant), le suivi s'arrête et l'annotation se termine à cet instant. Le suivi va vers l'avant depuis
-la tête de lecture ; les décalages sont stockés par annotation (`Annotation.track`) et appliqués au rendu,
-à la sélection et à l'export.
+First attempt with `VNTrackObjectRequest` (Vision): fine for a moving object, but it gets lost on
+scrolling text (low-texture area, repeated patterns) and does not say when the object disappears. Replaced by a
+pixel comparison: the starting area (grayscale, image downscaled to ~640 px) is searched on each
+frame around its last position, first coarsely then finely; the model adapts slowly to
+appearance changes. If the mean difference exceeds 10% for more than 0.12 s (scrolled out of frame, window
+passed in front), tracking stops and the annotation ends at that instant. Tracking goes forward from
+the playhead; the offsets are stored per annotation (`Annotation.track`) and applied at render,
+at selection and at export.
 
-Réglage : l'écart est jugé par rapport au contraste de la zone (une zone unie ne « colle » pas par hasard), et une
-zone qui touche un bord du cadre qu'elle ne touchait pas au départ est considérée comme sortante. Mesuré sur des
-vidéos générées : défilement 100 px/s, zone perdue à 2,5 s (attendu 2,5 s) ; zone masquée à 1,5 s, perdue à 1,5 s.
+Tuning: the difference is judged against the area's contrast (a flat area does not "stick" by chance), and an
+area that touches a frame edge it did not touch at the start is considered to be leaving. Measured on generated
+videos: scrolling at 100 px/s, area lost at 2.5 s (expected 2.5 s); area masked at 1.5 s, lost at 1.5 s.
 
-## Glisser-déposer : un vrai fichier (2026-10-22)
+## Drag-and-drop: a real file (2026-10-22)
 
-Les « promesses de fichier » (`NSFilePromiseProvider`) ne sont pas acceptées par Chrome ni par beaucoup d'apps de
-chat ou de pages d'envoi. Quand le pointeur arrive sur la poignée, le résultat est maintenant exporté à l'avance
-dans un fichier temporaire (invalidé à chaque modification ou changement de réglage d'export) et le glisser
-transporte ce fichier. La promesse reste le repli si l'export n'est pas encore prêt.
+"File promises" (`NSFilePromiseProvider`) are not accepted by Chrome nor by many chat apps or
+upload pages. When the pointer arrives on the handle, the result is now exported in advance
+to a temporary file (invalidated on every edit or export setting change) and the drag
+carries that file. The promise remains the fallback if the export is not ready yet.
 
-## Options d'export : plus petit, plus compact (2026-10-22)
+## Export options: smaller, more compact (2026-10-22)
 
-Tailles 1, 2, 3, 5 Mo en plus des anciennes, saisie libre via « Autre... », résolutions 360p et 480p, et un format
-HEVC (H.265) : environ 40 % plus petit à qualité égale (3,4 Mo en H.264 contre 2,1 Mo sur 10 s de test), mais
-Twitter/X et certaines apps peuvent le refuser, d'où la note dans le panneau.
+Sizes 1, 2, 3, 5 MB in addition to the previous ones, free entry via "Other...", 360p and 480p resolutions, and an
+HEVC (H.265) format: about 40% smaller at equal quality (3.4 MB in H.264 versus 2.1 MB on a 10 s test),
+but Twitter/X and some apps may reject it, hence the note in the panel.
 
-## Suivi sur du texte qui défile (2026-10-22)
+## Tracking on scrolling text (2026-10-22)
 
-Premier essai sur un vrai enregistrement (chat qui défile, jusqu'à ~130 px par image) : zone perdue au premier
-saut. Trois causes : la réduction d'image prenait un pixel sur trois (le texte fin se déformait dès qu'il
-bougeait d'une fraction de pixel), le meilleur alignement sur du texte est un creux d'un pixel que la recherche
-grossière (pas de 3 px) enjambait, et la fenêtre de recherche était trop étroite pour un défilement rapide.
-Maintenant : réduction par moyenne de blocs, recherche grossière sur une copie floue puis affinage sur l'image
-nette, recherche centrée sur la position prédite (dernier déplacement) avec une fenêtre d'un tiers de la hauteur.
-Piège de test : l'image de bruit générée par `geq` était périodique (120 px), le suivi trouvait donc de vrais
-doubles ; le filtre `noise` d'ffmpeg donne un bruit non périodique.
+First attempt on a real recording (scrolling chat, up to ~130 px per frame): area lost at the first
+jump. Three causes: the downscale took one pixel out of three (fine text distorted as soon as it
+moved by a fraction of a pixel), the best alignment on text is a one-pixel trough that the
+coarse search (3 px step) stepped over, and the search window was too narrow for fast scrolling.
+Now: downscale by block averaging, coarse search on a blurred copy then refinement on the
+sharp image, search centered on the predicted position (last displacement) with a window of one third of the height.
+Test pitfall: the noise image generated by `geq` was periodic (120 px), so the tracking found real
+duplicates; ffmpeg's `noise` filter gives non-periodic noise.

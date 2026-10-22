@@ -1,90 +1,90 @@
-# IA dans Méliès
+# AI in Méliès
 
-Idée : laisser une IA monter la vidéo (et plus tard enregistrer l'écran) à la demande, par trois chemins qui
-partagent la même couche d'outils.
+Idea: let an AI edit the video (and later record the screen) on request, through three paths that
+share the same tool layer.
 
-**Tout est optionnel** : rien ne change tant que l'utilisateur n'active pas la fonction (serveur MCP désactivé
-par défaut, aucune clé, aucun réseau). Les fonctions IA ne doivent jamais être nécessaires au reste de l'app.
+**Everything is optional**: nothing changes until the user enables the feature (MCP server off
+by default, no key, no network). AI features must never be required for the rest of the app.
 
-## Couche d'outils (fait)
+## Tool layer (done)
 
-`Sources/Melies/EditorTools.swift` : une façade sur `EditorModel`. Chaque outil a un nom, une description, un
-schéma JSON de paramètres, et s'appelle avec un dictionnaire JSON. Elle ne connaît ni MCP ni fournisseur d'IA.
+`Sources/Melies/EditorTools.swift`: a facade over `EditorModel`. Each tool has a name, a description, a
+JSON schema of parameters, and is called with a JSON dictionary. It knows neither MCP nor any AI provider.
 
-Conventions :
-- Temps en secondes de la vidéo source. Coordonnées normalisées 0...1 dans l'image source (origine en haut à
-  gauche), comme `Annotation` et `ZoomPoint`.
-- Une erreur d'outil est un texte lisible par le modèle (« end doit être > start »), jamais un crash.
-- Tout passe par les mêmes propriétés que l'UI : tout est annulable avec Cmd+Z, et un « tour » de l'IA forme
-  une seule étape d'annulation (`beginUndoGroup` / `endUndoGroup`).
+Conventions:
+- Times in seconds of the source video. Coordinates normalized 0...1 in the source image (origin at top
+  left), like `Annotation` and `ZoomPoint`.
+- A tool error is a model-readable text ("end must be > start"), never a crash.
+- Everything goes through the same properties as the UI: everything can be undone with Cmd+Z, and one AI "turn" forms
+  a single undo step (`beginUndoGroup` / `endUndoGroup`).
 
-Outils d'édition :
+Editing tools:
 
-| Outil | Rôle |
+| Tool | Role |
 |---|---|
-| `open_video(path?)` | ouvre un fichier (sans chemin : la dernière capture) ; refusé si la vidéo ouverte a des modifications non exportées, sauf `discard_edits` |
-| `get_state` | durée, durée du résultat, fps, taille, trim, crop, audio (`kept`/`removed`/`none`), zooms, annotations (avec leurs id) |
-| `get_frame(time, render?)` | JPEG de la vidéo. `render: false` : image source brute (les coordonnées des outils s'y rapportent). `render: true` : ce que l'export montrera (crop, zoom, annotations, clics) |
-| `seek(time)` | déplace la tête de lecture |
-| `set_trim(start, end)` | garde la portion entre start et end ; rien d'autre n'est décalé |
-| `set_crop(x, y, width, height)` / `clear_crop` | recadrage |
-| `add_zoom_segment(start, end, scale?, x?, y?)` | zoom plein de `start` à `end`, trajet avant et après ; c'est ce qu'on veut presque toujours |
-| `add_zoom(time, scale, x, y, ...)` | un point de caméra (arrivée à `time`) ; la caméra garde la dernière valeur : ajouter un point à `scale` 1 pour revenir |
-| `get_camera(time)` | échelle, centre et zone visible de la caméra à cet instant |
+| `open_video(path?)` | opens a file (without a path: the last capture); refused if the open video has unexported edits, unless `discard_edits` |
+| `get_state` | duration, result duration, fps, size, trim, crop, audio (`kept`/`removed`/`none`), zooms, annotations (with their ids) |
+| `get_frame(time, render?)` | JPEG of the video. `render: false`: raw source image (tool coordinates refer to it). `render: true`: what the export will show (crop, zoom, annotations, clicks) |
+| `seek(time)` | moves the playhead |
+| `set_trim(start, end)` | keeps the portion between start and end; nothing else is shifted |
+| `set_crop(x, y, width, height)` / `clear_crop` | crop |
+| `add_zoom_segment(start, end, scale?, x?, y?)` | full zoom from `start` to `end`, with travel before and after; this is what you want almost every time |
+| `add_zoom(time, scale, x, y, ...)` | one camera point (arrival at `time`); the camera keeps the last value: add a point at `scale` 1 to go back |
+| `get_camera(time)` | scale, center and visible area of the camera at that instant |
 | `update_zoom(id, ...)` / `delete_zoom(id)` | |
-| `add_annotation(kind, ...)` | flèche, texte, rectangle, spotlight, flou ; renvoie l'annotation créée |
+| `add_annotation(kind, ...)` | arrow, text, rectangle, spotlight, blur; returns the created annotation |
 | `update_annotation(id, ...)` / `delete_annotation(id)` | |
-| `track_annotation(id)` | l'annotation suit le contenu qui bouge ou défile (attend la fin du suivi) |
+| `track_annotation(id)` | the annotation follows moving or scrolling content (waits for tracking to finish) |
 | `undo` / `redo` | |
-| `export(path?)` | exporte la plage rognée avec les réglages d'export de l'app ; renvoie fichier, taille, résolution, durée |
+| `export(path?)` | exports the trimmed range with the app's export settings; returns file, size, resolution, duration |
 
-Outils d'enregistrement (à faire, branchés sur `ScreenRecorder`) :
+Recording tools (to do, wired to `ScreenRecorder`):
 
-| Outil | Rôle |
+| Tool | Role |
 |---|---|
-| `start_recording(region?, window?, audio?)` / `stop_recording` | l'éditeur s'ouvre sur le résultat |
-| `get_screenshot` | l'écran, pour viser une zone ou vérifier |
-| `list_windows` | cibler une fenêtre |
-| `wait(seconds)` | laisser tourner pendant que l'utilisateur fait sa démo |
+| `start_recording(region?, window?, audio?)` / `stop_recording` | the editor opens on the result |
+| `get_screenshot` | the screen, to target an area or verify |
+| `list_windows` | target a window |
+| `wait(seconds)` | let it run while the user does their demo |
 
-Hors périmètre : piloter la souris et le clavier (permission Accessibilité, beaucoup plus de risques).
+Out of scope: driving the mouse and keyboard (Accessibility permission, far more risk).
 
-## 1. Serveur MCP (fait, optionnel)
+## 1. MCP server (done, optional)
 
-Réglages > Avancé > « Serveur MCP (IA) », désactivé par défaut. Un serveur HTTP local (`MCPServer.swift`,
-protocole dans `MCPProtocol.swift`, JSON-RPC 2.0, transport « Streamable HTTP » en POST) à
+Settings > Advanced > "MCP server (AI)", off by default. A local HTTP server (`MCPServer.swift`,
+protocol in `MCPProtocol.swift`, JSON-RPC 2.0, "Streamable HTTP" transport over POST) at
 `http://127.0.0.1:47821/mcp`.
 
-- Sécurité : écoute sur la boucle locale uniquement, clé secrète obligatoire (`Authorization: Bearer <clé>`,
-  ou `?token=`), `Host` et `Origin` vérifiés (une page web du navigateur ne peut pas l'atteindre). « Nouvelle
-  clé » invalide les clients configurés.
-- Connexion : les Réglages copient la commande Claude Code
+- Security: listens on the loopback interface only, secret key required (`Authorization: Bearer <key>`,
+  or `?token=`), `Host` and `Origin` checked (a browser web page cannot reach it). "New
+  key" invalidates configured clients.
+- Connection: Settings copies the Claude Code command
   (`claude mcp add --transport http melies http://127.0.0.1:47821/mcp --header "Authorization: Bearer ..."`)
-  ou une config JSON pour les autres clients.
-- Les appels sont exécutés un par un (deux clients ne mélangent pas leurs modifications), une connexion qui n'envoie
-  pas sa requête en 30 s est coupée.
-- Chaque appel d'outil est une étape d'annulation (Cmd+Z). Une erreur est renvoyée avec `isError` pour que le
-  modèle la lise et corrige.
-- Port modifiable avec `defaults write <bundle id> mcpPort 50000`.
-- Conçu avec un vrai agent : un Claude Code branché dessus a monté une vidéo (annotation, zoom, trim, export) et
-  listé ses frictions ; les corrections (rendu dans `get_frame`, `add_zoom_segment`, `get_camera`, `open_video`,
-  retours complets, sens du temps et des tailles écrits dans les descriptions) viennent de là.
-- Testé en vrai (harnais sans UI + curl + Claude Code) : authentification, `initialize`, `tools/list`, tous les outils
-  d'édition, erreurs de validation, annulation, suivi, export.
+  or a JSON config for other clients.
+- Calls run one at a time (two clients do not mix their edits), a connection that does not send
+  its request within 30 s is cut.
+- Each tool call is an undo step (Cmd+Z). An error is returned with `isError` so that the
+  model reads it and corrects itself.
+- Port can be changed with `defaults write <bundle id> mcpPort 50000`.
+- Designed with a real agent: a Claude Code connected to it edited a video (annotation, zoom, trim, export) and
+  listed its frictions; the fixes (rendering in `get_frame`, `add_zoom_segment`, `get_camera`, `open_video`,
+  complete returns, direction of time and sizes written in the descriptions) come from there.
+- Tested for real (UI-less harness + curl + Claude Code): authentication, `initialize`, `tools/list`, all the
+  editing tools, validation errors, undo, tracking, export.
 
-## 2. Chat dans l'éditeur (après)
+## 2. Chat in the editor (later)
 
-Un bouton dans `TopBar` ouvre un panneau à droite : fil de messages, champ de saisie, bouton stop.
-- Clé API (Anthropic d'abord, OpenAI ensuite) dans le Keychain, fournisseur et modèle dans les Réglages.
-- Boucle d'agent : message + état + frames, le modèle répond par des appels d'outils, jusqu'à la fin.
-- Chaque action s'affiche dans le fil (« Zoom ajouté à 0:12 »). Un tour = un Cmd+Z.
-- Une clé API n'est pas un abonnement ChatGPT/Claude : il faut une vraie clé.
+A button in `TopBar` opens a panel on the right: message thread, input field, stop button.
+- API key (Anthropic first, OpenAI next) in the Keychain, provider and model in Settings.
+- Agent loop: message + state + frames, the model replies with tool calls, until done.
+- Each action is shown in the thread ("Zoom added at 0:12"). One turn = one Cmd+Z.
+- An API key is not a ChatGPT/Claude subscription: a real key is required.
 
-## Garde-fous (valables pour les deux)
+## Guardrails (apply to both)
 
-- Enregistrement lancé par l'IA : l'overlay reste visible, un toast annonce le début, durée maximale par défaut
-  (5 min), Esc et le bouton stop coupent toujours. Confirmation avant chaque `start_recording`, avec une option
-  « toujours autoriser » dans les réglages.
-- Vie privée : les frames et screenshots partent chez le fournisseur (chat) ou le client MCP. Mention au
-  premier usage, résolution réduite, possibilité de ne capturer qu'une fenêtre.
-- MCP : localhost uniquement, token obligatoire, désactivé par défaut.
+- Recording started by the AI: the overlay stays visible, a toast announces the start, default maximum duration
+  (5 min), Esc and the stop button always cut it. Confirmation before each `start_recording`, with an
+  "always allow" option in the settings.
+- Privacy: frames and screenshots go to the provider (chat) or to the MCP client. Notice on
+  first use, reduced resolution, option to capture only one window.
+- MCP: localhost only, token required, off by default.

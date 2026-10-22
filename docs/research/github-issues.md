@@ -1,81 +1,81 @@
-# Concurrents : ce que disent les tickets GitHub (2026-10-22)
+# Competitors: what GitHub issues say (2026-10-22)
 
-Rapport d'un sous-agent de recherche, relu et condensé. Données : tous les tickets des dépôts publics
-(`gh issue list`, PR exclues), classés par commentaires et réactions.
+Report from a research subagent, reviewed and condensed. Data: all issues of the public repos
+(`gh issue list`, PRs excluded), ranked by comments and reactions.
 
-## Limites à connaître
+## Limits to keep in mind
 
-- **Les comptes par thème sont des correspondances sur les titres seulement**, depuis avril 2025 (Kap :
-  depuis 2021, car il n'a que 28 tickets récents). Ils se recouvrent, certains mots sont larges : ce sont
-  des ordres de grandeur, pas des chiffres exacts. Environ 35 tickets lus en détail sur environ 3 000.
-- Peu de réactions partout, sauf Kap (vieux tickets à 40 à 80 pouces levés). Les traqueurs de bugs
-  surreprésentent les pannes et sous-représentent les satisfactions silencieuses.
-- Le traqueur de Cap contient beaucoup de tickets générés par des robots (audits de sécurité), ce qui
-  gonfle le thème « cloud ».
+- **Counts per theme are title matches only**, since April 2025 (Kap: since
+  2021, because it only has 28 recent issues). They overlap, and some words are broad: they are
+  orders of magnitude, not exact figures. About 35 issues read in detail out of about 3,000.
+- Few reactions everywhere, except Kap (old issues with 40 to 80 thumbs up). Bug trackers
+  over-represent breakages and under-represent silent satisfaction.
+- Cap's tracker contains many bot-generated issues (security audits), which
+  inflates the "cloud" theme.
 
-## Les dépôts
+## The repos
 
-| Projet | Étoiles | Activité | Tickets | Remarque |
+| Project | Stars | Activity | Issues | Note |
 |---|---|---|---|---|
-| Cap (Rust, Tauri) | 23,5 k | quotidienne | 806 (178 ouverts) | enregistreur open source, alternative à Loom |
-| Kap (Electron) | 19,4 k | dernier envoi 2024-11 | 840 (230 ouverts) | pas de version depuis 2022 selon un ticket, la communauté se demande s'il est abandonné |
-| Recordly (Electron) | 34,8 k | 2026-10-17 | 505 (268 ouverts) | copie libre de Screen Studio, tous les tickets depuis mars 2026 |
-| OpenScreen | 39,9 k | archivé | 368 | continué dans `getopenscreen/openscreen` (4,8 k, actif, 355) |
-| Screenize (Swift natif) | 0,6 k | en pause (mai 2026) | 30 | petit mais très pertinent |
-| BetterCapture, better-shot, Azayaka (Swift) | 0,8 à 2,4 k | variable | 34 à 105 | signaux « app macOS native » |
+| Cap (Rust, Tauri) | 23.5k | daily | 806 (178 open) | open source recorder, Loom alternative |
+| Kap (Electron) | 19.4k | last push 2024-11 | 840 (230 open) | no release since 2022 according to one issue, the community wonders whether it is abandoned |
+| Recordly (Electron) | 34.8k | 2026-10-17 | 505 (268 open) | free copy of Screen Studio, all issues since March 2026 |
+| OpenScreen | 39.9k | archived | 368 | continued in `getopenscreen/openscreen` (4.8k, active, 355) |
+| Screenize (native Swift) | 0.6k | paused (May 2026) | 30 | small but very relevant |
+| BetterCapture, better-shot, Azayaka (Swift) | 0.8 to 2.4k | varies | 34 to 105 | "native macOS app" signals |
 
-## Thèmes qui reviennent, par ordre d'importance entre dépôts
+## Recurring themes, in order of importance across repos
 
-1. **Fiabilité de l'export** : blocages, fichiers tronqués ou corrompus, export différent de l'aperçu,
-   échecs sur gros fichiers. Plus grande catégorie de bugs partout (centaines de titres).
-   Ex. Recordly : une vidéo d'une minute qui sort à 41 s, impossible d'exporter plus de 2 Go, blocage à 99 %.
-   OpenScreen : « video decode ended early », MP4 corrompus. Cap : export figé à 102 % sur 13 min.
-   Screenize : l'export ne correspond pas à l'aperçu.
-2. **Audio** : micro manquant ou silencieux, son du système, écho, mauvais périphérique, décalage,
-   corruption à la pause et reprise, dérive sur les longues prises. Domine chez Recordly (environ 93
-   titres) et reste le plus ancien ticket non résolu de Kap (son du système, ouvert depuis 2017).
-3. **Plantages au lancement, au démarrage ou à l'arrêt, et enregistrements qui ne produisent rien.**
-4. **Autorisations, signature et confiance macOS** : boucles de demande d'autorisation, « endommagé » ou
-   « logiciel malveillant » de Gatekeeper, applications non signées. Screenize : l'app supprimée
-   automatiquement par macOS après la révocation d'une clé de signature. Reviennent presque partout.
-5. **Performance et mémoire** : mémoire qui grossit sur les longs enregistrements (Cap : jusqu'à 15 Go),
-   limite de 10 minutes (OpenScreen : tout l'enregistrement tenait en mémoire), CPU, export lent.
-6. **Zoom auto, lissage du curseur, effets de clic** : le vœu n°1 (« pourquoi pas comme Screen Studio »).
-   Les plaintes portent sur des bugs, pas sur l'idée : double curseur, curseur lissé en retard sur les
-   clics, décalage en capture de fenêtre, dérive sur les longues prises.
-7. **Choix de la cible de capture, multi-écrans** : de 80 à 100 tickets chez Cap et Recordly.
-8. **Bases de l'éditeur** : annuler, couper, scinder, raccourcis, fusionner des clips, vitesse au-delà
-   de 2×.
-9. **Annotations, flou, clavier** : « le flou est une fonction de base » (OpenScreen), affichage des
-   touches « essentiel pour les tutoriels » (Cap).
-10. **Contrôle de la sortie** : dossier d'enregistrement, qualité et débit, **taille estimée du fichier**,
-    compression, GIF, format pour Twitter (Kap).
-11. Webcam en incrustation, distribution (Homebrew demandé dans 4 dépôts), santé des projets.
+1. **Export reliability**: hangs, truncated or corrupted files, export differing from the preview,
+   failures on large files. Largest bug category everywhere (hundreds of titles).
+   E.g. Recordly: a one-minute video that comes out at 41 s, impossible to export more than 2 GB, hang at 99%.
+   OpenScreen: "video decode ended early", corrupted MP4s. Cap: export frozen at 102% on 13 min.
+   Screenize: the export does not match the preview.
+2. **Audio**: missing or silent mic, system sound, echo, wrong device, offset,
+   corruption on pause and resume, drift on long takes. Dominates Recordly (about 93
+   titles) and remains Kap's oldest unresolved issue (system sound, open since 2017).
+3. **Crashes at launch, start or stop, and recordings that produce nothing.**
+4. **macOS permissions, signing and trust**: permission request loops, Gatekeeper "damaged" or
+   "malware" warnings, unsigned apps. Screenize: the app automatically deleted by macOS after a
+   signing key was revoked. Show up almost everywhere.
+5. **Performance and memory**: memory that grows on long recordings (Cap: up to 15 GB),
+   10-minute limit (OpenScreen: the whole recording fit in memory), CPU, slow export.
+6. **Auto zoom, cursor smoothing, click effects**: the #1 wish ("why not like Screen Studio").
+   Complaints are about bugs, not the idea: double cursor, smoothed cursor lagging
+   behind clicks, offset in window capture, drift on long takes.
+7. **Choice of capture target, multi-display**: 80 to 100 issues on Cap and Recordly.
+8. **Editor basics**: undo, cut, split, shortcuts, merging clips, speed beyond
+   2x.
+9. **Annotations, blur, keyboard**: "blur is a basic feature" (OpenScreen), key display
+   "essential for tutorials" (Cap).
+10. **Output control**: recording folder, quality and bitrate, **estimated file size**,
+    compression, GIF, Twitter format (Kap).
+11. Webcam overlay, distribution (Homebrew requested in 4 repos), project health.
 
-## Ce que les utilisateurs apprécient (peu de données)
+## What users like (little data)
 
-Rendu soigné et résultat « à la Screen Studio » ; gratuit, sans filigrane ni abonnement ; mainteneur
-qui répond vite ; pour Kap, la simplicité (barre de menu, zone, export).
+Polished rendering and a "Screen Studio-like" result; free, no watermark or subscription; a maintainer
+who answers quickly; for Kap, simplicity (menu bar, area, export).
 
-## Pour Méliès : ce que ça implique
+## For Méliès: what this implies
 
-1. **Export ennuyeux et infaillible** : durée exportée égale à la source, aperçu identique à l'export,
-   progression avec annulation.
-2. **Écrire sur le disque pendant la capture** et pouvoir récupérer le dernier enregistrement après un
-   plantage ; ne jamais écraser ni déplacer le fichier source (Screenize en a consommé un).
-3. **L'audio comme citoyen de première classe** : pistes séparées, bon micro, changement de périphérique,
-   pas de dérive sur 10 minutes et plus, pause et reprise corrects. À tester sur de longs clips.
-4. **Export à taille cible avec estimation avant l'encodage** ; débit choisi selon le contenu (un débit
-   trop bas rend le texte flou : OpenScreen).
-5. **Zoom auto à partir des clics et du curseur, modifiable**. Éviter les pièges : double curseur, curseur
-   lissé en retard, décalage en capture de fenêtre, dérive. Enregistrer la télémétrie du curseur à la
-   capture (déjà fait).
-6. **Choix de cible soigné** : zone, fenêtre, écran, mémorisation, déconnexion d'un écran, écran noir.
-7. **Confiance macOS d'emblée** : signature développeur et notarisation, identifiant stable, assistant
-   d'autorisation, détection « autorisé mais sans effet » avec relance, mise à jour automatique, Homebrew.
-8. **Bases de l'éditeur avant les extras** ; puis annotations, flou, affichage des touches. Si on capte
-   les touches, **ne jamais stocker le texte brut** (Screenize : les mots de passe étaient stockés en clair).
-9. **Démarrage rapide et léger** (Kap : 3 à 10 s pour afficher la sélection, 45 à 61 réactions). Une app
-   native évite la classe de bugs d'Electron.
-10. **Éviter** : cloud, comptes, transcription, place de marché ; sorties de versions non testées et
-    régressions à chaque version ; oublier une version de macOS (Sonoma, Sequoia, Tahoe, 27 bêta).
+1. **Boring, infallible export**: exported duration equal to the source, preview identical to the export,
+   progress with cancellation.
+2. **Write to disk during capture** and be able to recover the last recording after a
+   crash; never overwrite or move the source file (Screenize ate one).
+3. **Audio as a first-class citizen**: separate tracks, right mic, device switching,
+   no drift over 10 minutes and more, correct pause and resume. To be tested on long clips.
+4. **Target-size export with an estimate before encoding**; bitrate chosen according to content (a bitrate
+   that is too low makes text blurry: OpenScreen).
+5. **Auto zoom from clicks and cursor, editable**. Avoid the traps: double cursor, smoothed
+   cursor that lags, offset in window capture, drift. Record cursor telemetry at
+   capture time (already done).
+6. **Careful target selection**: area, window, display, remembering, display disconnection, black screen.
+7. **macOS trust from the start**: developer signing and notarization, stable identifier, permission
+   assistant, detection of "allowed but with no effect" with retry, automatic update, Homebrew.
+8. **Editor basics before extras**; then annotations, blur, key display. If keys are
+   captured, **never store the raw text** (Screenize: passwords were stored in plain text).
+9. **Fast, light startup** (Kap: 3 to 10 s to show the selection, 45 to 61 reactions). A native
+   app avoids Electron's class of bugs.
+10. **Avoid**: cloud, accounts, transcription, marketplace; untested releases and
+    regressions with every release; forgetting a macOS version (Sonoma, Sequoia, Tahoe, 27 beta).
