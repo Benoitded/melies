@@ -37,7 +37,7 @@ struct OnboardingView: View {
                     }
                     openedSettings = true
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.glassProminent)
                 .controlSize(.large)
 
                 if openedSettings {
@@ -59,7 +59,7 @@ struct OnboardingView: View {
                 shortcutRow(L("onb.editor_row"), .openEditor)
             }
             Button(L("onb.ok")) { done() }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.glassProminent)
                 .controlSize(.large)
                 .keyboardShortcut(.defaultAction)
         }

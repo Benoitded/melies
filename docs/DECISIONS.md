@@ -77,3 +77,16 @@ panneau flottant apparaît en haut à droite de l'image (chevron pour le replier
 (`ToolPanel`, `IconSegments`, `WedgeSlider`) pour les points de zoom maintenant, et pour les
 flèches, le texte et les rectangles ensuite. La piste de zoom trace la courbe du niveau
 de zoom pour qu'on voie la dynamique d'un coup d'oeil.
+
+## Liquid Glass partout où ça flotte (2026-10-22)
+
+Minimum macOS 26, sans code de secours : outil perso sur un Mac en macOS 27. Le verre sert aux
+surfaces qui flottent au-dessus du contenu, jamais au contenu lui-même : les trois capsules de la
+barre d'outils (`GlassEffectContainer`), le panneau des réglages d'outil, les infobulles, la
+bulle "Copié", le bouton lecture et les boutons de l'écran vide (`.buttonStyle(.glass)`), le
+bouton principal de l'accueil (`.glassProminent`). La timeline, la piste de zoom et la vidéo
+restent du contenu. Les Réglages utilisent le style toolbar natif d'AppKit.
+
+Piège : le rendu hors écran (`cacheDisplay`) ne dessine pas le verre. Pour juger l'apparence, il
+faut capturer la vraie fenêtre (l'app doit être lancée avec sa fenêtre ouverte pour être
+ciblable par l'outil de capture).

@@ -65,9 +65,7 @@ struct ToolPanel<Content: View>: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(Color.primary.opacity(0.1)))
-        .shadow(color: .black.opacity(0.18), radius: 10, y: 3)
+        .glassEffect(.regular, in: .rect(cornerRadius: 16))
     }
 }
 

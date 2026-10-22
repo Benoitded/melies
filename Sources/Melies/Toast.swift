@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 
 /// Small "Copied" pill shown at the top of the screen after the editor closes itself.
 @MainActor
@@ -8,32 +9,28 @@ enum Toast {
     static func show(_ text: String) {
         panel?.orderOut(nil)
 
-        let label = NSTextField(labelWithString: text)
-        label.font = .systemFont(ofSize: 14, weight: .medium)
-        label.textColor = .white
-        label.sizeToFit()
-
-        let size = NSSize(width: label.frame.width + 36, height: label.frame.height + 18)
-        let effect = NSVisualEffectView(frame: NSRect(origin: .zero, size: size))
-        effect.material = .hudWindow
-        effect.state = .active
-        effect.wantsLayer = true
-        effect.layer?.cornerRadius = size.height / 2
-        effect.layer?.masksToBounds = true
-        label.frame.origin = NSPoint(x: 18, y: 9)
-        effect.addSubview(label)
+        let host = NSHostingView(rootView:
+            Text(text)
+                .font(.system(size: 14, weight: .medium))
+                .padding(.horizontal, 18)
+                .padding(.vertical, 9)
+                .glassEffect(.regular, in: .capsule)
+                .padding(12) // room for the glass shadow
+        )
+        let size = host.fittingSize
+        host.frame = NSRect(origin: .zero, size: size)
 
         let p = NSPanel(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         p.isOpaque = false
         p.backgroundColor = .clear
-        p.hasShadow = true
+        p.hasShadow = false
         p.level = .floating
         p.ignoresMouseEvents = true
         p.collectionBehavior = [.canJoinAllSpaces, .stationary]
-        p.contentView = effect
+        p.contentView = host
 
         let screen = NSScreen.main ?? NSScreen.screens[0]
-        p.setFrameOrigin(NSPoint(x: screen.visibleFrame.midX - size.width / 2, y: screen.visibleFrame.maxY - size.height - 24))
+        p.setFrameOrigin(NSPoint(x: screen.visibleFrame.midX - size.width / 2, y: screen.visibleFrame.maxY - size.height - 12))
         p.alphaValue = 0
         p.orderFrontRegardless()
         panel = p

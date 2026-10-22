@@ -8,13 +8,17 @@ struct TopBar: View {
 
     var body: some View {
         HStack(spacing: 4) {
+            GlassEffectContainer(spacing: 10) {
+                HStack(spacing: 10) {
+                    group {
             BarButton(symbol: "doc.on.doc", title: L("tip.copy"), shortcut: "(⌘C)", disabled: model.busy) {
                 Task { await model.copy() }
             }
             BarButton(symbol: "square.and.arrow.down", title: L("tip.save"), shortcut: "(⌘S)", disabled: model.busy) {
                 Task { await model.save() }
             }
-            divider
+                    }
+                    group {
             BarButton(symbol: session.pinned ? "pin.fill" : "pin", title: L("tip.pin"), active: session.pinned) {
                 session.pinned.toggle()
             }
@@ -26,7 +30,8 @@ struct TopBar: View {
                       shortcut: "(⇧⌘6)", active: recorder.isRecording) {
                 ScreenRecorder.shared.toggle()
             }
-            divider
+                    }
+                    group {
             BarButton(symbol: "scissors", title: L("tip.trim"), shortcut: "(I / O)") {}
             BarButton(symbol: "crop", title: L("tip.crop"), shortcut: "(C)", active: model.cropMode || model.cropRect != nil) {
                 model.toggleCrop()
@@ -40,6 +45,9 @@ struct TopBar: View {
             }
             BarButton(symbol: "pencil", title: L("tip.pencil"), shortcut: L("tip.soon"), disabled: true) {}
             BarButton(symbol: "ellipsis", title: L("tip.more"), shortcut: L("tip.soon"), disabled: true) {}
+                    }
+                }
+            }
 
             Spacer(minLength: 12)
 
@@ -51,7 +59,7 @@ struct TopBar: View {
             divider
             info(value: "\(model.zoomPercent)%", label: L("info.zoom"))
         }
-        .padding(.leading, 78) // room for the traffic lights
+        .padding(.leading, 88) // room for the traffic lights
         .padding(.trailing, 16)
         .frame(height: 52)
     }
@@ -64,6 +72,14 @@ struct TopBar: View {
 
     private var fpsText: String {
         model.fps > 0 ? "\(Int(model.fps.rounded())) → 30 fps" : "..."
+    }
+
+    /// One Liquid Glass capsule holding a related set of buttons.
+    private func group<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        HStack(spacing: 0) { content() }
+            .padding(.horizontal, 4)
+            .frame(height: 38)
+            .glassEffect(.regular, in: .capsule)
     }
 
     private var divider: some View {
@@ -96,8 +112,8 @@ struct BarButton: View {
                 .font(.system(size: 15, weight: .regular))
                 .frame(width: 34, height: 30)
                 .background(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(Color.primary.opacity(active ? 0.16 : (hovering && !disabled ? 0.09 : 0)))
+                    Capsule()
+                        .fill(active ? Color.accentColor.opacity(0.3) : Color.primary.opacity(hovering && !disabled ? 0.1 : 0))
                 )
                 .opacity(disabled ? 0.35 : 1)
                 .contentShape(Rectangle())
@@ -143,11 +159,6 @@ struct Tooltip: View {
         .fixedSize()
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(
-            Capsule(style: .continuous)
-                .fill(.regularMaterial)
-                .overlay(Capsule(style: .continuous).stroke(Color.primary.opacity(0.14), lineWidth: 1))
-                .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
-        )
+        .glassEffect(.regular, in: .capsule)
     }
 }

@@ -64,8 +64,8 @@ struct EditorView: View {
                 Text(L("empty.hint"))
                     .foregroundStyle(.secondary)
                 HStack {
-                    Button(L("empty.latest")) { session.openLatest() }
-                    Button(L("empty.open")) { session.chooseFile() }
+                    Button(L("empty.latest")) { session.openLatest() }.buttonStyle(.glass)
+                    Button(L("empty.open")) { session.chooseFile() }.buttonStyle(.glass)
                 }
             }
         }
@@ -133,11 +133,10 @@ struct EditorView: View {
                     Button { model.togglePlay() } label: {
                         Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
                             .font(.system(size: 12))
-                            .frame(width: 28, height: 28)
-                            .background(Circle().fill(Color.primary.opacity(0.1)))
-                            .contentShape(Circle())
+                            .frame(width: 20, height: 20)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
                     HStack(spacing: 5) {
                         Text(timecode(max(model.current - model.start, 0)))
                         Text("/").foregroundStyle(.tertiary)
