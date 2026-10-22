@@ -90,6 +90,20 @@ enum ObjectTracker {
         }
     }
 
+    /// Frames per second used to size the thinning. Variable frame rate screen recordings report 0 as the nominal
+    /// rate: that is unknown, so estimate from the shortest frame duration, else assume 60.
+    static func frameRate(of video: AVAssetTrack) async -> Double {
+        let nominal = Double((try? await video.load(.nominalFrameRate)) ?? 0)
+        let minDuration = (try? await video.load(.minFrameDuration))?.seconds ?? 0
+        return usableFrameRate(nominal: nominal, minFrameDuration: minDuration)
+    }
+
+    static func usableFrameRate(nominal: Double, minFrameDuration: Double) -> Double {
+        if nominal.isFinite, nominal > 0 { return nominal }
+        if minFrameDuration.isFinite, minFrameDuration > 0 { return min(max(1 / minFrameDuration, 1), 240) }
+        return 60
+    }
+
     /// Tracks `box` (normalized, origin top left) found in the frame at `from`, forward until `to` and, when
     /// `lowerBound` is earlier than `from`, backward until `lowerBound`: a tracking started in the middle of an
     /// annotation must follow the object on both sides of that frame.
@@ -148,7 +162,7 @@ enum ObjectTracker {
             var frames: [(t: Double, frame: Luma)] = []
             // Decimate while reading (a 10 min 60 fps stretch would otherwise hold gigabytes): keep about 400
             // frames, every thin-th one plus always the last (the reference at `from`).
-            let fps = max(Double((try? await video.load(.nominalFrameRate)) ?? 60), 1)
+            let fps = await Self.frameRate(of: video)
             let thin = max(1, Int((before * fps / 400).rounded(.up)))
             let (reader, output) = try reader(for: CMTimeRange(start: seconds(lowerBound), end: seconds(from + 0.001)))
             defer { reader.cancelReading() }

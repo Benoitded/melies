@@ -77,9 +77,11 @@ final class LiveRecordingBackend: RecordingBackend {
     var isRecording: Bool { recorder.isRecording }
     var lastOutcome: RecordingOutcome? { recorder.lastOutcome }
 
-    func start(_ plan: RecordingPlan) async throws {
+    var currentRecordingID: UUID? { recorder.currentRecordingID }
+
+    func start(_ plan: RecordingPlan) async throws -> UUID {
         try await recorder.startForAI(displayID: plan.display.id, rect: plan.rect, audio: plan.audio, countdown: plan.countdown)
     }
 
-    func stop() async throws -> RecordingOutcome { try await recorder.stopForAI() }
+    func stop(recordingID: UUID) async throws -> RecordingOutcome { try await recorder.stopForAI(recordingID: recordingID) }
 }

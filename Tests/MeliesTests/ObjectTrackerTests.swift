@@ -5,6 +5,13 @@ import XCTest
 final class ObjectTrackerTests: XCTestCase {
     private let w = 320, h = 180
 
+    func testVariableFrameRateFallsBackInsteadOfOneFps() {
+        XCTAssertEqual(ObjectTracker.usableFrameRate(nominal: 0, minFrameDuration: 0), 60)
+        XCTAssertEqual(ObjectTracker.usableFrameRate(nominal: 0, minFrameDuration: 1.0 / 120), 120, accuracy: 0.001)
+        XCTAssertEqual(ObjectTracker.usableFrameRate(nominal: -3, minFrameDuration: .nan), 60)
+        XCTAssertEqual(ObjectTracker.usableFrameRate(nominal: 30, minFrameDuration: 1.0 / 120), 30)
+    }
+
     private func cleanup(_ url: URL) { addTeardownBlock { try? FileManager.default.removeItem(at: url) } }
 
     private func track(_ url: URL, box: CGRect, from: Double, to: Double, lowerBound: Double? = nil) async throws -> ObjectTracker.Result {

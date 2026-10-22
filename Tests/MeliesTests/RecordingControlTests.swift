@@ -26,20 +26,34 @@ private final class FakeConfirmer: RecordingConfirming {
 
 @MainActor
 private final class FakeBackend: RecordingBackend {
-    var isRecording = false
+    var currentRecordingID: UUID?
+    var isRecording: Bool { currentRecordingID != nil }
     var lastOutcome: RecordingOutcome?
     var started: [RecordingPlan] = []
     var failStart = false
-    func start(_ plan: RecordingPlan) async throws {
+    func start(_ plan: RecordingPlan) async throws -> UUID {
         if failStart { throw ToolError("no permission") }
         started.append(plan)
-        isRecording = true
+        let id = UUID()
+        currentRecordingID = id
+        return id
     }
-    func stop() async throws -> RecordingOutcome {
-        isRecording = false
-        let outcome = RecordingOutcome(path: "/tmp/demo.mov", duration: 4.5, hasClicks: true)
-        lastOutcome = outcome
-        return outcome
+    func stop(recordingID: UUID) async throws -> RecordingOutcome {
+        guard currentRecordingID == recordingID else { throw ToolError("That recording is no longer running.") }
+        return end(path: "/tmp/demo.mov") ?? RecordingOutcome(path: "", duration: 0, hasClicks: false)
+    }
+    /// A recording started by the user (shortcut), not by the AI.
+    @discardableResult func startManual() -> UUID {
+        let id = UUID()
+        currentRecordingID = id
+        return id
+    }
+    /// The current recording ends (red button, or a stop). `path: nil` means it left no file.
+    @discardableResult func end(path: String? = "/tmp/demo.mov") -> RecordingOutcome? {
+        let id = currentRecordingID
+        currentRecordingID = nil
+        lastOutcome = path.map { RecordingOutcome(path: $0, duration: 4.5, hasClicks: true, recordingID: id) }
+        return lastOutcome
     }
 }
 
@@ -207,7 +221,7 @@ final class RecordingControllerTests: XCTestCase {
         // A recording the user started by hand counts too.
         let other = make()
         let busyBackend = FakeBackend()
-        busyBackend.isRecording = true
+        busyBackend.startManual()
         let manual = RecordingController(layout: layout, confirmer: confirmer, backend: busyBackend)
         do { _ = try await manual.start(region()); XCTFail("must throw") } catch {}
         _ = other
@@ -289,10 +303,70 @@ final class RecordingControllerTests: XCTestCase {
     func testAStopByTheUserIsReportedAsSuch() async throws {
         let controller = make()
         _ = try await controller.start(region())
-        _ = try await backend.stop() // the user pressed the red button
+        backend.end() // the user pressed the red button
         XCTAssertEqual(controller.status()["state"] as? String, "idle")
         let result = try await controller.stop()
         XCTAssertEqual(result["stopped_by"] as? String, "user")
+    }
+
+    func testAutoStopNeverTouchesARecordingTheUserStartedLater() async throws {
+        let controller = make(sleep: true)
+        var told: RecordingOutcome?
+        controller.onAutoStop = { told = $0 }
+        _ = try await controller.start(region(["max_seconds": 5]))
+        await Task.yield()
+        backend.end(path: "/tmp/ai.mov") // the user stops the AI recording with the red button
+        let manual = backend.startManual() // then starts their own
+        release?.resume() // the AI timer fires
+        await controller.waitForAutoStop()
+        XCTAssertEqual(backend.currentRecordingID, manual, "the user's recording keeps running")
+        XCTAssertNil(told)
+        XCTAssertEqual(controller.state, .idle)
+    }
+
+    func testStopRecordingNeverReturnsTheFileOfAManualRecording() async throws {
+        let controller = make()
+        _ = try await controller.start(region())
+        backend.end(path: "/tmp/ai.mov")
+        let manual = backend.startManual()
+        let result = try await controller.stop() // the AI's own file, ended by the user
+        XCTAssertEqual(result["file"] as? String, "/tmp/ai.mov")
+        XCTAssertEqual(result["stopped_by"] as? String, "user")
+        XCTAssertEqual(backend.currentRecordingID, manual, "still running")
+        do { _ = try await controller.stop(); XCTFail("nothing of the AI left") } catch {}
+        XCTAssertEqual(backend.currentRecordingID, manual)
+        XCTAssertNil(controller.status()["ended_recording"])
+    }
+
+    func testAManualRecordingEndingLaterIsNotReportedToTheAI() async throws {
+        let controller = make()
+        _ = try await controller.start(region())
+        backend.end(path: nil) // the AI recording ended without a file
+        backend.startManual()
+        backend.end(path: "/tmp/manual.mov") // a manual recording is now the last outcome
+        XCTAssertEqual(controller.status()["state"] as? String, "idle")
+        XCTAssertNil(controller.status()["ended_recording"], "the manual file must not reach the AI")
+        do { _ = try await controller.stop(); XCTFail("nothing to report") } catch {}
+    }
+
+    func testAnAIRecordingThatEndsWithoutAFileDoesNotReportAStaleOutcome() async throws {
+        backend.startManual()
+        backend.end(path: "/tmp/old-manual.mov") // stale outcome from an earlier manual recording
+        let controller = make()
+        _ = try await controller.start(region())
+        backend.end(path: nil) // no file this time
+        XCTAssertNil(backend.lastOutcome, "an outcome with no file replaces the previous one")
+        XCTAssertNil(controller.status()["ended_recording"])
+        do { _ = try await controller.stop(); XCTFail("no file to return") } catch {}
+    }
+
+    func testStopRecordingDoesNotStopAManualRecording() async throws {
+        let controller = make()
+        _ = try await controller.start(region())
+        backend.end(path: nil)
+        let manual = backend.startManual()
+        do { _ = try await controller.stop(); XCTFail("must throw") } catch {}
+        XCTAssertEqual(backend.currentRecordingID, manual)
     }
 
     func testTheLayoutDoesNotLeakTitlesAndMarksUntrustedData() throws {

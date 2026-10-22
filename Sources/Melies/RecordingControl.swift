@@ -55,6 +55,8 @@ struct RecordingOutcome: Equatable {
     var duration: Double
     var hasClicks: Bool
     var stoppedBy: RecordingStop = .client
+    /// The backend recording that produced this file (nil when unknown).
+    var recordingID: UUID?
 }
 
 /// What the AI asked for, as parsed from the tool arguments.
@@ -86,10 +88,14 @@ protocol RecordingConfirming {
 @MainActor
 protocol RecordingBackend: AnyObject {
     var isRecording: Bool { get }
-    /// The result of the last recording that ended, however it ended.
+    /// Identity of the recording in progress, whoever started it (nil when none).
+    var currentRecordingID: UUID? { get }
+    /// The result of the last recording that ended, however it ended; nil when it left no file. Carries `recordingID`.
     var lastOutcome: RecordingOutcome? { get }
-    func start(_ plan: RecordingPlan) async throws
-    func stop() async throws -> RecordingOutcome
+    /// Starts a recording and returns its identity.
+    func start(_ plan: RecordingPlan) async throws -> UUID
+    /// Stops that recording only: throws when it is not the one running.
+    func stop(recordingID: UUID) async throws -> RecordingOutcome
 }
 
 // MARK: Pure rules
@@ -179,6 +185,8 @@ enum RecordingState: Equatable {
 
 struct RecordingSession: Equatable {
     var id = UUID()
+    /// Identity of the backend recording this session started.
+    var recordingID: UUID
     var displayID: Int
     var rect: CGRect
     var startedAt: Date
@@ -283,11 +291,12 @@ final class RecordingController {
             state = .idle
             throw ToolError("An export started while waiting for the user. Try again when it ends.")
         }
-        do { try await backend.start(plan) } catch {
+        let recordingID: UUID
+        do { recordingID = try await backend.start(plan) } catch {
             state = .idle
             throw error
         }
-        let session = RecordingSession(displayID: plan.display.id, rect: plan.rect, startedAt: now(), maxSeconds: plan.maxSeconds, audio: plan.audio)
+        let session = RecordingSession(recordingID: recordingID, displayID: plan.display.id, rect: plan.rect, startedAt: now(), maxSeconds: plan.maxSeconds, audio: plan.audio)
         state = .recording(session)
         autoStop = Task { [weak self] in await self?.runAutoStop(session) }
         return [
@@ -299,9 +308,12 @@ final class RecordingController {
     private func runAutoStop(_ session: RecordingSession) async {
         do { try await sleep(session.maxSeconds) } catch { return }
         guard !Task.isCancelled, case .recording(let current) = state, current.id == session.id else { return }
+        // The user may have stopped it and started their own: never touch a recording this session did not start.
+        reconcile()
+        guard case .recording = state else { return }
         state = .stopping
         do {
-            var outcome = try await backend.stop()
+            var outcome = try await backend.stop(recordingID: session.recordingID)
             outcome.stoppedBy = .timeLimit
             finished = outcome
             state = .idle
@@ -322,12 +334,12 @@ final class RecordingController {
             guard let outcome = finished else { throw ToolError("No recording is running.") }
             finished = nil
             return Self.json(outcome, note: "This recording had already ended (\(outcome.stoppedBy.rawValue)).")
-        case .recording:
+        case .recording(let session):
             autoStop?.cancel()
             autoStop = nil
             state = .stopping
             do {
-                var outcome = try await backend.stop()
+                var outcome = try await backend.stop(recordingID: session.recordingID)
                 outcome.stoppedBy = .client
                 state = .idle
                 return Self.json(outcome, note: "Recording saved and opened in the editor. Call get_state, then edit and export.")
@@ -357,10 +369,11 @@ final class RecordingController {
 
     /// The user can stop with the red menu bar button: the recording is over and its result waits to be read.
     private func reconcile() {
-        guard case .recording = state, !backend.isRecording else { return }
+        guard case .recording(let session) = state, backend.currentRecordingID != session.recordingID else { return }
         autoStop?.cancel()
         autoStop = nil
-        if var outcome = backend.lastOutcome {
+        // Only the outcome of this session's own recording: a later manual recording is none of the AI's business.
+        if var outcome = backend.lastOutcome, outcome.recordingID == session.recordingID {
             outcome.stoppedBy = .user
             finished = outcome
         }

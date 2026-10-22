@@ -8,6 +8,8 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
     static let shared = ScreenRecorder()
 
     @Published private(set) var isRecording = false
+    /// Identity of the recording in progress (manual or AI), nil when none. An AI client may only stop its own.
+    private(set) var currentRecordingID: UUID?
     @Published private(set) var elapsed: TimeInterval = 0
 
     private var stream: SCStream?
@@ -128,6 +130,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         startedAt = clockStart
         elapsed = 0
         isRecording = true
+        currentRecordingID = UUID()
         showStatusItem()
         startCursorSampling(region: selection.rect, screen: selection.screen)
     }
@@ -146,7 +149,8 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
     }
 
     /// Starts a recording asked by an AI client (already validated and approved by the user): no selector.
-    func startForAI(displayID: Int, rect: CGRect, audio: RecordingAudio, countdown: Int) async throws {
+    @discardableResult
+    func startForAI(displayID: Int, rect: CGRect, audio: RecordingAudio, countdown: Int) async throws -> UUID {
         guard !busy, !isRecording, !Countdown.isRunning else { throw RecorderError.busy }
         busy = true
         defer { busy = false }
@@ -168,11 +172,13 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
             closeOverlay()
             throw error
         }
+        guard let id = currentRecordingID else { throw RecorderError.busy }
+        return id
     }
 
     /// Stops and reports the file. The editor opens on it like after any recording.
-    func stopForAI() async throws -> RecordingOutcome {
-        guard isRecording else { throw RecorderError.busy }
+    func stopForAI(recordingID: UUID) async throws -> RecordingOutcome {
+        guard isRecording, currentRecordingID == recordingID else { throw ToolError("That recording is no longer running.") }
         guard let outcome = await stop() else { throw ToolError("The recording produced no file.") }
         return outcome
     }
@@ -185,6 +191,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
     @discardableResult
     private func stop() async -> RecordingOutcome? {
         guard let stream, isRecording else { return nil }
+        let recordingID = currentRecordingID
         stopCursorSampling()
         closeOverlay()
         busy = true
@@ -206,19 +213,21 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         self.stream = nil
         self.recordingOutput = nil
         isRecording = false
+        currentRecordingID = nil
         hideStatusItem()
         var outcome: RecordingOutcome?
         if let url = outputURL, FileManager.default.fileExists(atPath: url.path) {
             var seconds = Date().timeIntervalSince(startedAt)
             if let real = try? await AVURLAsset(url: url).load(.duration).seconds, real.isFinite, real > 0 { seconds = real }
-            outcome = RecordingOutcome(path: url.path, duration: seconds, hasClicks: !clickSamples.isEmpty)
-            lastOutcome = outcome
+            outcome = RecordingOutcome(path: url.path, duration: seconds, hasClicks: !clickSamples.isEmpty, recordingID: recordingID)
             if UserDefaults.standard.object(forKey: Pref.openEditorAfterRecording) as? Bool ?? true {
                 EditorWindowController.shared.open(url)
             } else {
                 Toast.show(L("toast.recorded"))
             }
         }
+        // Always replaced, even without a file, so a stale outcome is never read as this recording's.
+        lastOutcome = outcome
         return outcome
     }
 
