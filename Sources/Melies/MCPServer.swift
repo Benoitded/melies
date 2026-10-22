@@ -143,13 +143,20 @@ final class MCPServer: ObservableObject {
     func regenerateToken() {
         clientName = nil; lastTool = nil; lastToolAt = nil; rejectedAt = nil
         token = Self.makeToken()
-        UserDefaults.standard.set(token, forKey: "mcpToken")
+        TokenStore.write(token)
     }
 
+    /// The key lives in the Keychain, not in the preferences file (readable by any program of the user, and copied
+    /// into backups). A key left in the preferences by an older version is moved there.
     private static func loadToken() -> String {
-        if let saved = UserDefaults.standard.string(forKey: "mcpToken"), saved.count >= 32 { return saved }
+        if let saved = TokenStore.read(), saved.count >= 32 { return saved }
+        if let legacy = UserDefaults.standard.string(forKey: "mcpToken"), legacy.count >= 32 {
+            TokenStore.write(legacy)
+            UserDefaults.standard.removeObject(forKey: "mcpToken")
+            return legacy
+        }
         let fresh = makeToken()
-        UserDefaults.standard.set(fresh, forKey: "mcpToken")
+        TokenStore.write(fresh)
         return fresh
     }
 
@@ -348,5 +355,30 @@ final class HTTPConnection: @unchecked Sendable {
 
     private func send(_ reply: HTTPReply) {
         connection.send(content: reply.bytes, completion: .contentProcessed { [connection] _ in connection.cancel() })
+    }
+}
+
+/// Keychain storage for the MCP key (a generic password, only readable while the Mac is unlocked, never synced).
+private enum TokenStore {
+    private static let service = "dev.melies.app.mcp-key"
+    private static var query: [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: "mcp"]
+    }
+
+    static func read() -> String? {
+        var request = query
+        request[kSecReturnData as String] = true
+        request[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(request as CFDictionary, &result) == errSecSuccess, let data = result as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    static func write(_ token: String) {
+        SecItemDelete(query as CFDictionary)
+        var item = query
+        item[kSecValueData as String] = Data(token.utf8)
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        SecItemAdd(item as CFDictionary, nil)
     }
 }

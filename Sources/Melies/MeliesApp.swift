@@ -84,7 +84,12 @@ func demoEffects() -> [Annotation] {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillTerminate(_ notification: Notification) {
+        TempFiles.sweep(olderThan: 0) // at quit nothing of ours in the temporary folder is still needed
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        DispatchQueue.global(qos: .utility).async { TempFiles.sweep() }
         NSApp.setActivationPolicy(.accessory)
         Appearance.apply()
         MainMenu.install()

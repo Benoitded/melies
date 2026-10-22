@@ -67,6 +67,9 @@ enum ObjectTracker {
                 originY = Int((box.minY * Double(frame.height)).rounded())
                 tw = max(min(Int((box.width * Double(frame.width)).rounded()), frame.width - originX), 4)
                 th = max(min(Int((box.height * Double(frame.height)).rounded()), frame.height - originY), 4)
+                // A box ending within 4 px of an edge was widened to 4: pull it back inside so no read goes past the image.
+                originX = max(min(originX, frame.width - tw), 0)
+                originY = max(min(originY, frame.height - th), 0)
                 template = patch(of: frame, x: originX, y: originY, w: tw, h: th)
                 templateBlur = patch(of: soft, x: originX, y: originY, w: tw, h: th)
                 x = originX; y = originY

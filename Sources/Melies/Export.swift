@@ -118,7 +118,8 @@ enum VideoExport {
             width: max((region.width * srcW).rounded(), 2), height: max((region.height * srcH).rounded(), 2)
         )
 
-        let scale = min(1, CGFloat(settings.maxWidth) / base.width)
+        // Width is capped by the settings; height too (a crafted 100 x 1,000,000 video must not allocate gigabytes).
+        let scale = min(1, CGFloat(settings.maxWidth) / base.width, 8192 / base.height)
         var contentW = (base.width * scale).rounded()
         var contentH = (base.height * scale).rounded()
 

@@ -29,8 +29,8 @@ case "$(xcode-select -p 2>/dev/null)" in
     ;;
 esac
 
-swift build -c release
-BIN=$(swift build -c release --show-bin-path)
+swift build -c release --force-resolved-package-versions
+BIN=$(swift build -c release --force-resolved-package-versions --show-bin-path)
 
 STAGE=$(mktemp -d "${TMPDIR:-/tmp}/melies-build.XXXXXX")
 trap 'rm -rf "$STAGE"' EXIT
@@ -53,6 +53,9 @@ cp -RX Localization/*.lproj "$APP/Contents/Resources/"
 mkdir -p "$APP/Contents/Frameworks"
 cp -RX "$BIN/Sparkle.framework" "$APP/Contents/Frameworks/"
 install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/Melies" 2>/dev/null || true
+# Without this path the app cannot find Sparkle and crashes at launch: fail here, not on the user's Mac.
+otool -l "$APP/Contents/MacOS/Melies" | grep -q "@executable_path/../Frameworks" \
+  || { echo "Sparkle search path missing in the executable."; exit 1; }
 
 # SwiftPM resource bundles (KeyboardShortcuts localizations)
 for b in "$BIN"/*.bundle; do [ -e "$b" ] && cp -RX "$b" "$APP/Contents/Resources/"; done
@@ -63,13 +66,14 @@ SIGN_AS="${IDENTITY:--}"
 FLAGS=(--force --sign "$SIGN_AS")
 [ "${MELIES_HARDENED:-0}" = "1" ] && FLAGS+=(--options runtime --timestamp)
 xattr -cr "$APP" 2>/dev/null || true
-# Inside out: Sparkle's helpers first, then the framework, then the app (--deep would skip their entitlements).
+# Inside out: Sparkle's helpers first, then the framework, then the app (--deep would not sign them in this order).
 SPARKLE="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
 for part in "$SPARKLE/XPCServices/Installer.xpc" "$SPARKLE/XPCServices/Downloader.xpc" "$SPARKLE/Autoupdate" "$SPARKLE/Updater.app"; do
   [ -e "$part" ] && codesign "${FLAGS[@]}" "$part"
 done
 codesign "${FLAGS[@]}" "$APP/Contents/Frameworks/Sparkle.framework"
-codesign "${FLAGS[@]}" "$APP"
+# The app gets the entitlements (microphone, needed once the hardened runtime is on); Sparkle's parts keep none.
+codesign "${FLAGS[@]}" --entitlements Scripts/Melies.entitlements "$APP"
 codesign --verify --deep --strict "$APP"
 echo "Signed with: ${MELIES_SIGN_NAME:-${IDENTITY:-ad hoc}}"
 
@@ -83,7 +87,10 @@ fi
 # One installed copy only. ditto keeps the signature and drops extended attributes.
 pkill -x Melies 2>/dev/null || true
 mkdir -p "$HOME/Applications"
+# Copy beside, check, then swap: a failed copy never leaves the Mac without the app.
+rm -rf "$HOME/Applications/.Melies-new.app"
+ditto --noextattr --noqtn "$APP" "$HOME/Applications/.Melies-new.app"
+codesign --verify --deep --strict "$HOME/Applications/.Melies-new.app"
 rm -rf "$HOME/Applications/Melies.app"
-ditto --noextattr --noqtn "$APP" "$HOME/Applications/Melies.app"
-codesign --verify --deep --strict "$HOME/Applications/Melies.app"
+mv "$HOME/Applications/.Melies-new.app" "$HOME/Applications/Melies.app"
 echo "Installed ~/Applications/Melies.app"
