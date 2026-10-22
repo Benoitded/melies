@@ -3,7 +3,7 @@ import SwiftUI
 /// Crop rectangle over the video. Drag inside to move, drag an edge or corner to resize.
 /// `videoRect` is where the video is actually drawn inside this view.
 struct CropOverlay: View {
-    @ObservedObject var model: EditorModel
+    var model: EditorModel
     let videoRect: CGRect
 
     private enum Part { case move, left, right, top, bottom, topLeft, topRight, bottomLeft, bottomRight }

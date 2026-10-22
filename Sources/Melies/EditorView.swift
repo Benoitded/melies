@@ -74,7 +74,7 @@ struct EditorView: View {
 
     private struct Loaded: View {
         @ObservedObject var session: EditorSession
-        @ObservedObject var model: EditorModel
+        var model: EditorModel
         @State private var lastDrag: CGSize = .zero
 
         private func updateCanvas(_ geo: GeometryProxy) {
@@ -152,7 +152,7 @@ struct EditorView: View {
                     .clickCursor()
                     .buttonBorderShape(.circle)
                     HStack(spacing: 5) {
-                        Text(timecode(max(model.current - model.start, 0)))
+                        ElapsedLabel(model: model)
                         Text("/").foregroundStyle(.tertiary)
                         Text(timecode(model.end - model.start)).foregroundStyle(.secondary)
                     }
@@ -193,15 +193,25 @@ struct EditorView: View {
             .padding(.bottom, 14)
         }
 
-        private func timecode(_ seconds: Double) -> String {
-            let s = max(seconds, 0)
-            return String(format: "%d:%02d.%d", Int(s) / 60, Int(s) % 60, Int((s * 10).truncatingRemainder(dividingBy: 10)))
-        }
+        private func timecode(_ seconds: Double) -> String { Timecode.format(seconds) }
     }
 }
 
+enum Timecode {
+    static func format(_ seconds: Double) -> String {
+        let s = max(seconds, 0)
+        return String(format: "%d:%02d.%d", Int(s) / 60, Int(s) % 60, Int((s * 10).truncatingRemainder(dividingBy: 10)))
+    }
+}
+
+/// Elapsed time in the kept range: the one label that follows the playhead, so it is its own view.
+private struct ElapsedLabel: View {
+    var model: EditorModel
+    var body: some View { Text(Timecode.format(max(model.current - model.start, 0))) }
+}
+
 private struct ExportOptionsButton: View {
-    @ObservedObject var model: EditorModel
+    var model: EditorModel
     @State private var open = false
 
     var body: some View {

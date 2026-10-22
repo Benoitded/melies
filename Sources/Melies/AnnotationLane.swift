@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Bars showing when each annotation is on screen. Drag a bar to move it, drag its ends to retime it.
 struct AnnotationLane: View {
-    @ObservedObject var model: EditorModel
+    var model: EditorModel
 
     private let handleWidth: CGFloat = 14 // must match RangeSlider so the lanes line up
     private let rowHeight: CGFloat = 22

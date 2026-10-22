@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 /// Shottr-style toolbar: actions, tools, then source info on the right.
 struct TopBar: View {
     @ObservedObject var session: EditorSession
-    @ObservedObject var model: EditorModel
+    var model: EditorModel
     @ObservedObject private var recorder = ScreenRecorder.shared
 
     var body: some View {
@@ -193,7 +193,7 @@ struct Tooltip: View {
 /// The handle sits in the title bar, where a mouse press normally moves the whole window, so the press and
 /// the drag are handled by an AppKit view that refuses to move the window and starts a real file drag.
 struct DragHandle: View {
-    @ObservedObject var model: EditorModel
+    var model: EditorModel
     @State private var hovering = false
 
     var body: some View {

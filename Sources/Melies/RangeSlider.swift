@@ -6,7 +6,7 @@ import SwiftUI
 /// All gestures read the pointer in one fixed coordinate space ("track"), never in the moving
 /// handle's own space, and remember where the handle was grabbed so it follows the pointer 1:1.
 struct RangeSlider: View {
-    @ObservedObject var model: EditorModel
+    var model: EditorModel
 
     private let handleWidth: CGFloat = 14
     private let height: CGFloat = 52
@@ -59,12 +59,13 @@ struct RangeSlider: View {
                     .allowsHitTesting(false)
 
                 // Playhead.
-                Rectangle()
-                    .fill(Color.white)
-                    .frame(width: 2.5, height: height + 6)
-                    .shadow(color: .black.opacity(0.5), radius: 1.5)
-                    .offset(x: x(model.current) - 1.25, y: -3)
-                    .allowsHitTesting(false)
+                PlayheadView(model: model, x: x, shift: -1.25) {
+                    Rectangle()
+                        .fill(Color.white)
+                        .frame(width: 2.5, height: height + 6)
+                        .shadow(color: .black.opacity(0.5), radius: 1.5)
+                        .offset(y: -3)
+                }
 
                 // Start handle sits just left of the kept range.
                 handle(systemImage: "chevron.compact.right", leading: true)
@@ -118,5 +119,18 @@ struct RangeSlider: View {
         .frame(width: handleWidth, height: height)
         .contentShape(Rectangle())
         .pointerStyle(.columnResize)
+    }
+}
+
+/// Places `line` at the playhead. It is the only part of the lanes that reads `model.current`, so the playback ticks
+/// (60 per second) re-evaluate this small view and not the whole lane around it.
+struct PlayheadView<Line: View>: View {
+    var model: EditorModel
+    let x: (Double) -> CGFloat
+    var shift: CGFloat = 0
+    @ViewBuilder var line: () -> Line
+
+    var body: some View {
+        line().offset(x: x(model.current) + shift).allowsHitTesting(false)
     }
 }

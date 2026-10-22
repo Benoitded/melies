@@ -4,7 +4,7 @@ import SwiftUI
 /// The curve shows the dynamics at a glance (a long ramp is a slow zoom, a steep one is a fast zoom).
 /// Drag a diamond to retime it, click it to edit it.
 struct ZoomLane: View {
-    @ObservedObject var model: EditorModel
+    var model: EditorModel
 
     private let handleWidth: CGFloat = 14 // must match RangeSlider so both lanes line up
     private let height: CGFloat = 42
@@ -70,10 +70,9 @@ struct ZoomLane: View {
                 }
 
                 // Playhead, continuing the one in the frame strip.
-                Rectangle().fill(Color.primary.opacity(0.4))
-                    .frame(width: 1, height: height)
-                    .offset(x: x(model.current))
-                    .allowsHitTesting(false)
+                PlayheadView(model: model, x: x) {
+                    Rectangle().fill(Color.primary.opacity(0.4)).frame(width: 1, height: height)
+                }
 
                 ForEach(model.zoomPoints) { point in
                     let selected = point.id == model.selectedPointID
@@ -110,7 +109,7 @@ struct ZoomLane: View {
 
 /// Settings of the selected zoom point, in the floating panel: level, travel speed, style, delete.
 struct ZoomPanel: View {
-    @ObservedObject var model: EditorModel
+    var model: EditorModel
 
     private let speeds: [(seconds: Double, symbol: String, tip: String)] = [
         (0.25, "hare.fill", "0.25 s"), (0.6, "figure.walk", "0.6 s"), (1.2, "tortoise.fill", "1.2 s"),
@@ -155,7 +154,7 @@ struct ZoomPanel: View {
 /// The region the camera shows at the selected point, drawn over the full frame.
 /// Drag inside to move it, drag a corner to change the zoom level.
 struct ZoomRegionOverlay: View {
-    @ObservedObject var model: EditorModel
+    var model: EditorModel
     let videoRect: CGRect
 
     private enum Part { case move, corner }
