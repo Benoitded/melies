@@ -259,9 +259,17 @@ private struct MCPSettings: View {
             if let failure = server.failure {
                 Text(L("set.adv.mcp.failed", failure)).font(.callout).foregroundStyle(.red)
             } else if enabled && server.running {
-                Text(L("set.adv.mcp.running", server.url)).font(.callout).textSelection(.enabled)
+                Label(L("set.adv.mcp.running", server.url), systemImage: "circle.fill")
+                    .font(.callout).textSelection(.enabled)
+                    .symbolRenderingMode(.palette).foregroundStyle(.green, .primary)
+                Text(L("set.adv.mcp.steps"))
+                    .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
                 HStack {
                     Button(L("set.adv.mcp.copy_cmd")) { copy(server.claudeCodeCommand) }
+                    Button(L("set.adv.mcp.copy_url")) { copy(server.urlWithKey) }
+                }
+                HStack {
                     Button(L("set.adv.mcp.copy_json")) { copy(server.jsonConfig) }
                     Button(L("set.adv.mcp.new_key")) { server.regenerateToken() }
                     if copied { Text(L("set.adv.mcp.copied")).foregroundStyle(.secondary) }

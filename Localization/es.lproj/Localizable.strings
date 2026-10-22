@@ -119,6 +119,8 @@
 "set.adv.mcp.copy_json" = "Copiar config JSON";
 "set.adv.mcp.new_key" = "Nueva clave";
 "set.adv.mcp.copied" = "Copiado";
+"set.adv.mcp.steps" = "1. Copia el comando de abajo.\n2. Pégalo en una terminal: Claude Code queda conectado.\n3. Pide una edición, p. ej. «haz zoom en el botón en 0:12». La IA puede abrir tu última grabación por sí misma.";
+"set.adv.mcp.copy_url" = "Copiar URL (otras apps)";
 "toast.recorded" = "Grabación guardada";
 "menu.reopen" = "Reabrir Méliès";
 "menu.more" = "Más";

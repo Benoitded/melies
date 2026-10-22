@@ -25,7 +25,7 @@ struct MCPProtocol {
                 "protocolVersion": Self.supportedVersions.contains(asked) ? asked : Self.supportedVersions[0],
                 "capabilities": ["tools": ["listChanged": false]],
                 "serverInfo": ["name": "melies", "version": Self.appVersion],
-                "instructions": "Méliès is a video editor. Call get_state first. Times are seconds, coordinates are 0...1 with the origin at the top left of the frame. Use get_frame to see the video before placing annotations.",
+                "instructions": "Méliès is a video editor; you edit the video open in it. Call get_state first. All times are seconds of the SOURCE video (trimming does not shift them). Tool coordinates are 0...1 across the source frame, origin top left. Use get_frame to see the video, and get_frame with render true to check your edits as the export will show them. Every call can be undone with undo.",
             ])
         case "ping":
             return result(id, [:])

@@ -22,18 +22,21 @@ Outils d'édition :
 
 | Outil | Rôle |
 |---|---|
-| `get_state` | durée, fps, taille, trim, crop, zooms, annotations (avec leurs id) |
-| `get_frame(time)` | image JPEG de la vidéo à cet instant, pour que le modèle voie |
+| `open_video(path?)` | ouvre un fichier (sans chemin : la dernière capture) ; refusé si la vidéo ouverte a des modifications non exportées, sauf `discard_edits` |
+| `get_state` | durée, durée du résultat, fps, taille, trim, crop, audio (`kept`/`removed`/`none`), zooms, annotations (avec leurs id) |
+| `get_frame(time, render?)` | JPEG de la vidéo. `render: false` : image source brute (les coordonnées des outils s'y rapportent). `render: true` : ce que l'export montrera (crop, zoom, annotations, clics) |
 | `seek(time)` | déplace la tête de lecture |
-| `set_trim(start, end)` | garde la portion entre start et end |
+| `set_trim(start, end)` | garde la portion entre start et end ; rien d'autre n'est décalé |
 | `set_crop(x, y, width, height)` / `clear_crop` | recadrage |
-| `add_zoom(time, scale, x, y, ...)` | point de caméra (la caméra y arrive à `time`) ; ajouter un point à `scale` 1 pour revenir |
+| `add_zoom_segment(start, end, scale?, x?, y?)` | zoom plein de `start` à `end`, trajet avant et après ; c'est ce qu'on veut presque toujours |
+| `add_zoom(time, scale, x, y, ...)` | un point de caméra (arrivée à `time`) ; la caméra garde la dernière valeur : ajouter un point à `scale` 1 pour revenir |
+| `get_camera(time)` | échelle, centre et zone visible de la caméra à cet instant |
 | `update_zoom(id, ...)` / `delete_zoom(id)` | |
-| `add_annotation(kind, start, end, ...)` | flèche, texte, rectangle, spotlight, flou |
+| `add_annotation(kind, ...)` | flèche, texte, rectangle, spotlight, flou ; renvoie l'annotation créée |
 | `update_annotation(id, ...)` / `delete_annotation(id)` | |
-| `track_annotation(id)` | l'annotation suit le contenu (attend la fin du suivi) |
+| `track_annotation(id)` | l'annotation suit le contenu qui bouge ou défile (attend la fin du suivi) |
 | `undo` / `redo` | |
-| `export(path?)` | exporte avec les réglages d'export actuels |
+| `export(path?)` | exporte la plage rognée avec les réglages d'export de l'app ; renvoie fichier, taille, résolution, durée |
 
 Outils d'enregistrement (à faire, branchés sur `ScreenRecorder`) :
 
@@ -58,10 +61,15 @@ protocole dans `MCPProtocol.swift`, JSON-RPC 2.0, transport « Streamable HTTP �
 - Connexion : les Réglages copient la commande Claude Code
   (`claude mcp add --transport http melies http://127.0.0.1:47821/mcp --header "Authorization: Bearer ..."`)
   ou une config JSON pour les autres clients.
+- Les appels sont exécutés un par un (deux clients ne mélangent pas leurs modifications), une connexion qui n'envoie
+  pas sa requête en 30 s est coupée.
 - Chaque appel d'outil est une étape d'annulation (Cmd+Z). Une erreur est renvoyée avec `isError` pour que le
   modèle la lise et corrige.
 - Port modifiable avec `defaults write <bundle id> mcpPort 50000`.
-- Testé en vrai (harnais sans UI + curl) : authentification, `initialize`, `tools/list`, tous les outils
+- Conçu avec un vrai agent : un Claude Code branché dessus a monté une vidéo (annotation, zoom, trim, export) et
+  listé ses frictions ; les corrections (rendu dans `get_frame`, `add_zoom_segment`, `get_camera`, `open_video`,
+  retours complets, sens du temps et des tailles écrits dans les descriptions) viennent de là.
+- Testé en vrai (harnais sans UI + curl + Claude Code) : authentification, `initialize`, `tools/list`, tous les outils
   d'édition, erreurs de validation, annulation, suivi, export.
 
 ## 2. Chat dans l'éditeur (après)

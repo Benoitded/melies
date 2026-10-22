@@ -14,7 +14,14 @@ final class MCPServer: ObservableObject {
     @Published private(set) var token = MCPServer.loadToken()
 
     private var listener: NWListener?
-    private lazy var mcp = MCPProtocol(tools: EditorTools(session: EditorWindowController.shared.session))
+    private lazy var mcp = MCPProtocol(tools: EditorTools(
+        model: { EditorWindowController.shared.session.model },
+        openVideo: { url in
+            guard let target = url ?? LatestRecording.find() else { return nil }
+            EditorWindowController.shared.open(target)
+            return target
+        }
+    ))
 
     static var enabled: Bool {
         get { UserDefaults.standard.bool(forKey: "mcpEnabled") }
@@ -27,6 +34,9 @@ final class MCPServer: ObservableObject {
     }
 
     var url: String { "http://127.0.0.1:\(Self.port)/mcp" }
+
+    /// For clients that only take a URL: the key rides in the address.
+    var urlWithKey: String { "\(url)?token=\(token)" }
 
     /// The command that registers Méliès in Claude Code.
     var claudeCodeCommand: String {
@@ -130,6 +140,9 @@ final class MCPServer: ObservableObject {
         guard authorized(request) else { return .status(401, "Unauthorized") }
         switch request.method {
         case "POST":
+            // One call at a time: two clients (or two calls) must not interleave their edits and undo steps.
+            await acquire()
+            defer { release() }
             guard let reply = await mcp.handle(body: request.body) else { return .status(202, "Accepted") }
             return .json(reply)
         case "DELETE":
@@ -137,6 +150,17 @@ final class MCPServer: ObservableObject {
         default:
             return .status(405, "Method Not Allowed")
         }
+    }
+
+    private var locked = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    private func acquire() async {
+        if locked { await withCheckedContinuation { waiters.append($0) } } else { locked = true }
+    }
+
+    private func release() {
+        if waiters.isEmpty { locked = false } else { waiters.removeFirst().resume() }
     }
 
     private func authorized(_ request: HTTPRequest) -> Bool {
@@ -223,8 +247,14 @@ final class HTTPConnection: @unchecked Sendable {
         self.handler = handler
     }
 
+    private var idleTimeout: DispatchWorkItem?
+
     func start() {
         connection.start(queue: .global(qos: .userInitiated))
+        // A client that connects and never finishes its request is dropped.
+        let timeout = DispatchWorkItem { [connection] in connection.cancel() }
+        idleTimeout = timeout
+        DispatchQueue.global().asyncAfter(deadline: .now() + 30, execute: timeout)
         receive()
     }
 
@@ -233,6 +263,7 @@ final class HTTPConnection: @unchecked Sendable {
             if let data { buffer.append(data) }
             switch HTTPRequest.parse(buffer) {
             case .some(.some(let request)):
+                idleTimeout?.cancel() // the request is complete; a long tool call is not idle
                 Task {
                     let reply = await handler(request)
                     send(reply)
