@@ -85,10 +85,10 @@ struct AnnotationOverlay: View {
     private func selection(for a: Annotation) -> some View {
         switch a.kind {
         case .arrow:
-            handleDot(toView(a.p1))
-            handleDot(toView(a.p2))
+            handleDot(toView(a.p1), hot: activePart == .tail)
+            handleDot(toView(a.p2), hot: activePart == .head)
         case .rect, .spotlight, .blur:
-            ForEach(Array(cornerPoints(a).enumerated()), id: \.offset) { _, p in handleDot(p) }
+            ForEach(Array(cornerPoints(a).enumerated()), id: \.offset) { i, p in handleDot(p, hot: activePart == .corner(i)) }
             if a.kind != .rect {
                 let r = viewRect(fromSource: AnnotationRenderer.normalizedRect(a, source))
                 Rectangle().stroke(Color.accentColor, style: StrokeStyle(lineWidth: 1.2, dash: [5, 3]))
@@ -103,10 +103,17 @@ struct AnnotationOverlay: View {
         }
     }
 
-    private func handleDot(_ p: CGPoint) -> some View {
-        Circle().fill(Color.white)
-            .overlay(Circle().stroke(Color.accentColor, lineWidth: 2))
-            .frame(width: 11, height: 11)
+    /// The part under the pointer, or being dragged: its handle lights up so it is clear what a click will grab.
+    private var activePart: Part? {
+        if case .edit(_, let part, _)? = mode { return part }
+        return model.tool == .select ? hoverPart : nil
+    }
+
+    private func handleDot(_ p: CGPoint, hot: Bool = false) -> some View {
+        Circle().fill(hot ? Color.accentColor : Color.white)
+            .overlay(Circle().stroke(hot ? Color.white : Color.accentColor, lineWidth: 2))
+            .frame(width: hot ? 15 : 11, height: hot ? 15 : 11)
+            .animation(.easeOut(duration: 0.12), value: hot)
             .shadow(color: .black.opacity(0.3), radius: 1.5, y: 1)
             .position(p)
     }
@@ -249,7 +256,7 @@ struct AnnotationOverlay: View {
 
     /// Finds what is under `point` (view coordinates): a handle of the selection first, then the top-most annotation.
     private func hit(at point: CGPoint) -> (UUID, Part)? {
-        let reach: CGFloat = 12
+        let reach: CGFloat = 14
         if let selected = model.selectedAnnotation, AnnotationRenderer.isVisible(selected, at: model.current) {
             let a = selected.moved(at: model.current)
             switch a.kind {
