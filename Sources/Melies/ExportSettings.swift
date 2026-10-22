@@ -17,6 +17,8 @@ struct ExportSettings: Equatable {
     var maxWidth: Int = 1920
     /// Margins, rounded corners, shadow around the picture (one style for the whole app).
     var frame = FrameStyle.load()
+    /// Blur during zoom and pan transitions (export only: the editor preview does not use Core Image).
+    var motionBlur = MotionBlurLevel.current
 
     static let sizeChoices: [Int] = [1, 2, 3, 5, 8, 15, 25, 50, 100]
     /// 360p, 480p, 720p, 1080p

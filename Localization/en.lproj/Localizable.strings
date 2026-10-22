@@ -198,6 +198,11 @@
 "tip.track.cancel" = "Stop analysis";
 "exp.other" = "Other...";
 "exp.hevc.note" = "HEVC (H.265) makes files about 40% smaller. Twitter/X and some apps may not accept it.";
+"exp.motionblur" = "Motion blur";
+"exp.motionblur.off" = "Off";
+"exp.motionblur.light" = "Light";
+"exp.motionblur.strong" = "Strong";
+"exp.motionblur.help" = "Blurs the picture during zoom and pan transitions, like a camera shutter. Applied on export (the editor preview stays sharp).";
 "exp.estimating" = "Estimating the size...";
 "exp.estimate.range" = "Between %@ and %@ MB, depending on the content. Set a maximum size for an exact result.";
 "status.cancelled" = "Export cancelled";
@@ -246,6 +251,11 @@
 "zoom.auto.done" = "%d zooms from %d clicks. Cmd+Z undoes it.";
 "zoom.auto.none" = "No click here is worth a zoom.";
 "zoom.auto.tip" = "Makes the zooms for you from the clicks. The arrow changes how close it goes.";
+"cursor.smoothing" = "Cursor smoothing";
+"cursor.smoothing.off" = "Off";
+"cursor.smoothing.light" = "Light";
+"cursor.smoothing.smooth" = "Smooth";
+"cursor.smoothing.tip" = "Smooths the cursor path the zoom camera follows when a zoom is placed. Preview and export use the same zooms.";
 "error.unreadable" = "“%@” cannot be opened as a video";
 "error.unreadable.hint" = "The file may be damaged, still being written, or in a format macOS cannot read.";
 "error.close" = "Close";
@@ -280,3 +290,30 @@
 "frame.preset.white" = "White";
 "frame.preset.gray" = "Gray";
 "frame.preset.black" = "Black";
+
+// Captions
+"cap.title" = "Captions";
+"cap.show" = "Show in export";
+"cap.language" = "Language";
+"cap.generate" = "Generate captions";
+"cap.regenerate" = "Generate again";
+"cap.cancel" = "Cancel";
+"cap.cancelled" = "Generation cancelled.";
+"cap.local" = "On this Mac only";
+"cap.position" = "Position";
+"cap.position.bottom" = "Bottom";
+"cap.position.top" = "Top";
+"cap.size" = "Size";
+"cap.background" = "Background pill";
+"cap.delete" = "Delete this line";
+"cap.clear" = "Delete all";
+"cap.srt" = "Export .srt";
+"cap.srt.empty" = "No caption in the kept range.";
+"cap.srt.saved" = "Saved %@";
+"cap.err.noaudio" = "This video has no audio track, so there is nothing to caption.";
+"cap.err.permission" = "Speech recognition is not allowed. Turn it on for Méliès in System Settings > Privacy & Security > Speech Recognition.";
+"cap.err.unsupported" = "On-device speech recognition is not available on this Mac.";
+"cap.err.language" = "The on-device model for this language is not installed. Méliès never uses the network: add the language in System Settings > Keyboard > Dictation, then try again.";
+"cap.err.nospeech" = "No speech was found in the audio.";
+"cap.err.failed" = "Captions could not be generated.";
+"cap.err.nolocale" = "No on-device language is installed. Méliès never sends audio to a server: add a language in System Settings > Keyboard > Dictation.";

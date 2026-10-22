@@ -25,8 +25,12 @@ struct RenderPlan {
     var points: [ZoomPoint]
     var annotations: [Annotation] = []
     var clicks: ClickSet?
+    /// Captions burned into the picture area, in canvas space (not moved by the zoom camera).
+    var captions: CaptionPlan?
     /// Set when the picture is framed on a background (margins, rounded corners, shadow).
     var frameLayers: FrameLayers?
+    /// Smears the picture while the zoom camera moves (never touches overlays).
+    var motionBlur: MotionBlurLevel = .off
 
     /// Draws the frame for `time` (asset time, seconds) from the raw source image.
     func render(_ source: CIImage, at time: Double) -> CIImage {
@@ -42,11 +46,15 @@ struct RenderPlan {
         // Core Image has a bottom-left origin.
         let region = CGRect(x: x, y: uprightSize.height - (y + h), width: w, height: h)
 
-        let placed = image
+        var placed = image
             .cropped(to: region)
             .transformed(by: CGAffineTransform(translationX: -region.minX, y: -region.minY))
             .transformed(by: CGAffineTransform(scaleX: content.width / w, y: content.height / h))
             .transformed(by: CGAffineTransform(translationX: content.minX, y: canvas.height - content.maxY))
+        if motionBlur != .off, let blur = MotionBlur.params(velocity: MotionBlur.velocity(at: time, points: points), scale: state.scale,
+                                                            content: content.size, canvas: canvas, level: motionBlur) {
+            placed = MotionBlur.apply(blur, to: placed, center: CGPoint(x: content.midX, y: canvas.height - content.midY))
+        }
 
         var frame: CIImage
         if let layers = frameLayers {
@@ -62,6 +70,9 @@ struct RenderPlan {
                                                     region: CGRect(x: x, y: y, width: w, height: h),
                                                     content: content, canvas: canvas) {
             if let layers = frameLayers { overlay = overlay.cropped(to: layers.contentCI) } // nothing drawn on the margins
+            frame = overlay.composited(over: frame)
+        }
+        if let plan = captions, let overlay = CaptionRenderer.overlay(plan, at: time, content: content, canvas: canvas) {
             frame = overlay.composited(over: frame)
         }
         return frame
@@ -118,7 +129,7 @@ enum VideoExport {
     static let fps: Int32 = 30
 
     /// Where everything goes for one export: crop, output size, padding. Also used to draw single frames.
-    static func makePlan(natural: CGSize, preferred: CGAffineTransform, crop: CGRect?, points: [ZoomPoint], annotations: [Annotation], clicks: ClickSet?, settings: ExportSettings) -> RenderPlan {
+    static func makePlan(natural: CGSize, preferred: CGAffineTransform, crop: CGRect?, points: [ZoomPoint], annotations: [Annotation], clicks: ClickSet?, captions: CaptionPlan? = nil, settings: ExportSettings) -> RenderPlan {
         let oriented = natural.applying(preferred)
         let srcW = abs(oriented.width)
         let srcH = abs(oriented.height)
@@ -157,14 +168,16 @@ enum VideoExport {
             content: CGRect(x: (outW - contentW) / 2, y: (outH - contentH) / 2, width: contentW, height: contentH),
             points: points.sorted { $0.time < $1.time },
             annotations: annotations,
-            clicks: clicks
+            clicks: clicks,
+            captions: captions,
+            motionBlur: settings.motionBlur
         )
         if frame.enabled { plan.frameLayers = FrameLayers(style: frame, canvas: plan.canvas, content: plan.content) }
         return plan
     }
 
     /// `crop` is normalized (0...1) in the upright frame, origin top-left.
-    static func run(asset: AVAsset, range: CMTimeRange, crop: CGRect? = nil, points: [ZoomPoint] = [], annotations: [Annotation] = [], clicks: ClickSet? = nil, includeAudio: Bool = true, settings: ExportSettings = .current, control: ExportControl? = nil, to url: URL) async throws {
+    static func run(asset: AVAsset, range: CMTimeRange, crop: CGRect? = nil, points: [ZoomPoint] = [], annotations: [Annotation] = [], clicks: ClickSet? = nil, includeAudio: Bool = true, captions: CaptionPlan? = nil, settings: ExportSettings = .current, control: ExportControl? = nil, to url: URL) async throws {
         guard let track = try await asset.loadTracks(withMediaType: .video).first else {
             throw ExportError.noVideoTrack
         }
@@ -172,7 +185,7 @@ enum VideoExport {
         let preferred = try await track.load(.preferredTransform)
         let assetDuration = try await asset.load(.duration)
 
-        let plan = makePlan(natural: natural, preferred: preferred, crop: crop, points: points, annotations: annotations, clicks: clicks, settings: settings)
+        let plan = makePlan(natural: natural, preferred: preferred, crop: crop, points: points, annotations: annotations, clicks: clicks, captions: captions, settings: settings)
 
         let composition = AVMutableVideoComposition()
         composition.customVideoCompositorClass = FrameCompositor.self

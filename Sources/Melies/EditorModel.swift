@@ -43,6 +43,8 @@ final class EditorModel {
     var includeAudio = true { didSet { editRevision += 1 } }
     /// Background, margins, rounded corners, shadow (shared with the export through UserDefaults).
     var frame = FrameStyle.load() { didSet { frame.save(); editRevision += 1 } }
+    /// Automatic captions (session only), generated on the Mac and burned into the export.
+    let captions = CaptionsModel()
     var thumbnails: [NSImage] = []
     var zoomPoints: [ZoomPoint] = [] { didSet { noteChange() } }
     var selectedPointID: UUID?
@@ -103,6 +105,7 @@ final class EditorModel {
         self.asset = AVURLAsset(url: url)
         self.player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
         player.actionAtItemEnd = .pause
+        captions.onChange = { [weak self] in self?.editRevision += 1 }
         let output = AVPlayerItemVideoOutput(pixelBufferAttributes: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA])
         player.currentItem?.add(output)
         frameOutput = output
@@ -382,7 +385,7 @@ final class EditorModel {
     /// Where a new zoom should point: under the recorded cursor when we have it, else the middle.
     private func smartCenter(at t: Double, scale: Double) -> CGPoint {
         var center = CGPoint(x: 0.5, y: 0.5)
-        if let p = cursor?.position(at: t) {
+        if let p = cursor?.smoothed(strength: .saved).position(at: t) {
             let b = baseRect
             center = CGPoint(x: (p.x - b.minX) / b.width, y: (p.y - b.minY) / b.height)
         }
@@ -739,7 +742,7 @@ final class EditorModel {
         }
         defer { if !quiet { busy = false; activeExport = nil; exportProgress = 0 } }
         do {
-            try await VideoExport.run(asset: asset, range: range, crop: cropRect, points: zoomPoints, annotations: annotations, clicks: showClicks ? ClickSet.current(for: cursor) : nil, includeAudio: includeAudio, control: control, to: destination)
+            try await VideoExport.run(asset: asset, range: range, crop: cropRect, points: zoomPoints, annotations: annotations, clicks: showClicks ? ClickSet.current(for: cursor) : nil, includeAudio: includeAudio, captions: captions.plan, control: control, to: destination)
             return true
         } catch is CancellationError {
             try? FileManager.default.removeItem(at: destination)
@@ -772,7 +775,7 @@ final class EditorModel {
             if Task.isCancelled { return }
             let file = FileManager.default.temporaryDirectory.appendingPathComponent("melies-estimate-\(UUID().uuidString).mp4")
             defer { try? FileManager.default.removeItem(at: file) }
-            guard (try? await VideoExport.run(asset: asset, range: window, crop: cropRect, points: zoomPoints, annotations: annotations, clicks: showClicks ? ClickSet.current(for: cursor) : nil, includeAudio: false, settings: settings, to: file)) != nil else { return }
+            guard (try? await VideoExport.run(asset: asset, range: window, crop: cropRect, points: zoomPoints, annotations: annotations, clicks: showClicks ? ClickSet.current(for: cursor) : nil, includeAudio: false, captions: captions.plan, settings: settings, to: file)) != nil else { return }
             bytes += MP4Writer.fileSize(file)
             seconds += window.duration.seconds
         }

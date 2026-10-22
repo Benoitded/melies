@@ -22,6 +22,7 @@
 - [x] Edge handles in the middle of the sides of blur, rectangle and spotlight
 - [ ] Priorities from the competitor study: see `docs/COMPETITORS.md`
 - [x] Animated zooms: camera points (level, speed, style), automatic centering on the recorded cursor, identical preview and export
+- [x] Motion blur during zoom and pan transitions (Off / Light / Strong, default Light), export only; the editor preview stays sharp
 - [x] Cmd+Z / Cmd+Shift+Z (undo / redo: annotations, zooms, crop, trim)
 - [x] Background, margins, rounded corners and shadow around the picture (gradient or solid presets), identical preview and export
 
@@ -30,10 +31,13 @@
 - [x] Two videos side by side, stacked, or picture in picture ("Combine" window, result reopened in the editor)
 - [x] Audio: system sound and microphone while recording, sound kept or muted on export
 - [x] Automatic zoom from recorded clicks (button in the zoom lane): clicks grouped by time and area, three strengths (Subtle, Normal, Strong), the camera glides between zooms that follow each other closely
+- [x] Cursor smoothing (Off / Light / Smooth, default Light): the recorded cursor path is smoothed before the zoom camera is centered on it; the captured cursor itself is not redrawn
 - [x] Optional countdown before recording (3, 5 or 10 s, off by default)
 - [x] Drag handle: the editor steps aside while the file is dragged (like Shottr)
 - [x] Settings tabs aligned at the top, window follows the size of the content
 - [x] Cancellable export with progress (Esc)
+- [x] Automatic captions: generated on the Mac from the audio (Speech framework, installed languages only, never the network), editable lines, shown in the preview and burned into the export (position, size, background pill), `.srt` export
+- [ ] Captions: keep them with the video between sessions, word-by-word highlight, MCP tool
 
 ## AI (see `docs/AI.md`)
 - [x] Editing tool layer (JSON facade over `EditorModel`)

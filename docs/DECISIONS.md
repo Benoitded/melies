@@ -323,3 +323,41 @@ The local MCP server lets an AI app drive the editor, so its inputs are treated 
   Scripts/build.sh`. A release build has none, so no environment variable can change what the published app does.
 - Also changed in the same pass: the microphone entitlement is declared (needed once the hardened runtime is on),
   temporary files are cleaned up, and the release script checks notarization and publishes as a draft first.
+
+## Cursor smoothing (2026-10-22)
+
+- `CursorTrack.smoothed(strength:)` is a pure exponential smoothing of the sampled path (time constants 0 / 0.08 s /
+  0.22 s for Off / Light / Smooth, default Light, saved in `Pref.cursorSmoothing`). First and last samples are kept.
+- It only feeds the camera: the center of a new zoom point is read from the smoothed path. Zoom points store plain
+  centers, so preview and export (both evaluated by `ZoomCamera`) agree by construction.
+- Out of scope: drawing a synthetic cursor over the video. The real cursor baked into the capture stays as recorded,
+  and click rings stay on the raw click positions.
+## Motion blur on camera moves (2026-10-22)
+
+- The blur comes from the camera velocity (central difference of `ZoomCamera.state`, +-1/120 s): CIZoomBlur for log-scale
+  speed, CIMotionBlur (angle of the center displacement) for pans. Strength is the travel during a virtual shutter
+  (1/60 s Light, 1/30 s Strong), capped at 12 / 24 px at 1920 px wide and scaled with the output width.
+- Applied to the picture only, before the frame mask, annotations and click rings, so overlays stay sharp. Exactly no
+  filter (pixel identical output) when the camera is still or the smear is under 0.75 px.
+- Export only: the editor preview plays through AVPlayer layers, not Core Image, so it cannot show the blur. The
+  tooltip says "applied on export". Default Light, stored in `Pref.motionBlur`.
+## Automatic captions: on-device only (2026-10-22)
+
+Méliès is free and local-only, so captions are generated with Apple's `SpeechTranscriber` / `SpeechAnalyzer` (Speech
+framework, macOS 26) and never with a server.
+- **Why on-device:** the audio of a screen recording often holds passwords read aloud, customer names, private
+  meetings. No upload also means no account, no key, no cost, no rate limit.
+- **No network, even for models:** the framework can download a language model, but Méliès does not trigger it. Only
+  locales reported by `SpeechTranscriber.installedLocales` are offered, and a language whose model is missing gets a
+  message pointing to System Settings > Keyboard > Dictation. The `SFSpeechRecognizer` fallback was not written: macOS 26
+  is the minimum, so the new API is always there, and the old one can silently use a server unless
+  `requiresOnDeviceRecognition` is set.
+- **Pipeline:** `AVAssetReader` mixes the audio tracks (system sound and microphone) to linear PCM in the analyzer's
+  preferred format and streams it as `AnalyzerInput`; word times come from the `audioTimeRange` attribute of the result.
+  `CaptionLayout` (pure code, unit tested) groups words into captions: at most 2 lines of 42 characters, 6 s, split on
+  pauses (0.8 s) and after a finished sentence.
+- **Drawing:** captions are drawn in canvas space, inside the picture area (`content`), above the zoomed video. They do
+  not follow the zoom camera or the crop, so their size and position stay constant and readable while the camera moves.
+  The preview and the export call the same `CaptionRenderer.draw`. Captions are session only (not saved with the video).
+- **Permission:** `NSSpeechRecognitionUsageDescription` is declared (English, plus localized `InfoPlist.strings`). The
+  hardened runtime needs no extra entitlement for speech recognition.

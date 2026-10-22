@@ -108,6 +108,9 @@ struct EditorView: View {
                         if !model.annotations.isEmpty || model.tool != .select || (model.showClicks && model.hasClicks), !model.cropMode, model.selectedPoint == nil {
                             AnnotationOverlay(model: model, video: video, region: region)
                         }
+                        if model.captions.showInExport, !model.captions.lines.isEmpty {
+                            CaptionOverlay(model: model, video: video)
+                        }
                         if model.cropMode || (model.cropRect != nil && !model.previewingCamera) {
                             CropOverlay(model: model, videoRect: video)
                         }
@@ -186,6 +189,7 @@ struct EditorView: View {
                         .buttonBorderShape(.circle)
                         .tip(model.includeAudio ? L("tip.audio.on") : L("tip.audio.off"), trailing: true)
                     }
+                    CaptionsButton(model: model)
                     FrameOptionsButton(model: model)
                     ExportOptionsButton(model: model)
                 }

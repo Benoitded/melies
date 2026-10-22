@@ -20,4 +20,6 @@ enum Pref {
     static let mcpEnabled = "mcpEnabled"
     static let mcpPort = "mcpPort"
     static let autoZoomStrength = "autoZoomStrength"
+    static let cursorSmoothing = "cursorSmoothing"
+    static let motionBlur = "motionBlur"
 }

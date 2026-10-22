@@ -32,13 +32,16 @@ smart zooms, cursor smoothing, backgrounds). Try it for real before deciding.
 |---|---|
 | Area, trim, crop, undo | done |
 | Animated zoom (points, speed, styles), centering on the cursor | done |
+| Motion blur on zoom and pan transitions (Screen Studio look) | done on export (Off / Light / Strong); not in the editor preview |
 | Annotations with a duration: arrow, text, rectangle, spotlight, blur | done |
 | Visible clicks | done |
+| Automatic captions, burned into the export, local only | done (on-device Speech framework, no network; not covered by the three studies, so how competitors do it was not compared) |
 | Mic and system sound, sound muted or kept on export | done (mic to be tested) |
 | Combine two videos | done (rare among the competitors read, not specifically searched) |
 | File drag-and-drop handle | done (the drop still needs trying) |
 | Target-size export, GIF | **done** (options panel: MP4 or GIF, maximum size, resolution) |
 | Export identical to preview | by construction (same drawing), to be tested on real cases |
+| Cursor smoothing | camera follow only (Off / Light / Smooth); the baked-in real cursor is not redrawn, so not on par yet |
 | Auto zoom from clicks | done (three strengths, glides between close zooms); quality against CleanShot X 5.0 not compared yet |
 | Background, margins, rounded corners, shadow | done (gradient or solid presets, identical preview and export) |
 | Webcam overlay | to do |

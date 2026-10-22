@@ -198,6 +198,11 @@
 "tip.track.cancel" = "Annuler l'analyse";
 "exp.other" = "Autre...";
 "exp.hevc.note" = "HEVC (H.265) donne des fichiers environ 40 % plus petits. Twitter/X et certaines apps peuvent le refuser.";
+"exp.motionblur" = "Flou de mouvement";
+"exp.motionblur.off" = "Désactivé";
+"exp.motionblur.light" = "Léger";
+"exp.motionblur.strong" = "Fort";
+"exp.motionblur.help" = "Floute l'image pendant les zooms et les déplacements de caméra, comme un obturateur. Appliqué à l'export (l'aperçu de l'éditeur reste net).";
 "exp.estimating" = "Estimation de la taille...";
 "exp.estimate.range" = "Entre %@ et %@ Mo selon le contenu. Fixe une taille maximale pour un résultat exact.";
 "status.cancelled" = "Export annulé";
@@ -246,6 +251,11 @@
 "zoom.auto.done" = "%d zooms créés à partir de %d clics. ⌘Z pour annuler.";
 "zoom.auto.none" = "Aucun clic ici ne mérite un zoom.";
 "zoom.auto.tip" = "Crée les zooms à partir des clics. La flèche règle l'intensité.";
+"cursor.smoothing" = "Lissage du curseur";
+"cursor.smoothing.off" = "Désactivé";
+"cursor.smoothing.light" = "Léger";
+"cursor.smoothing.smooth" = "Fluide";
+"cursor.smoothing.tip" = "Lisse la trajectoire du curseur suivie par la caméra de zoom quand un zoom est placé. L'aperçu et l'export utilisent les mêmes zooms.";
 "error.unreadable" = "« %@ » ne peut pas être ouvert comme vidéo";
 "error.unreadable.hint" = "Le fichier est peut-être abîmé, encore en cours d'écriture, ou dans un format que macOS ne sait pas lire.";
 "error.close" = "Fermer";
@@ -280,3 +290,30 @@
 "frame.preset.white" = "Blanc";
 "frame.preset.gray" = "Gris";
 "frame.preset.black" = "Noir";
+
+// Captions
+"cap.title" = "Sous-titres";
+"cap.show" = "Afficher dans l'export";
+"cap.language" = "Langue";
+"cap.generate" = "Générer les sous-titres";
+"cap.regenerate" = "Générer à nouveau";
+"cap.cancel" = "Annuler";
+"cap.cancelled" = "Génération annulée.";
+"cap.local" = "Uniquement sur ce Mac";
+"cap.position" = "Position";
+"cap.position.bottom" = "Bas";
+"cap.position.top" = "Haut";
+"cap.size" = "Taille";
+"cap.background" = "Pastille de fond";
+"cap.delete" = "Supprimer cette ligne";
+"cap.clear" = "Tout supprimer";
+"cap.srt" = "Exporter en .srt";
+"cap.srt.empty" = "Aucun sous-titre dans la plage conservée.";
+"cap.srt.saved" = "%@ enregistré";
+"cap.err.noaudio" = "Cette vidéo n'a pas de piste audio, il n'y a rien à sous-titrer.";
+"cap.err.permission" = "La reconnaissance vocale n'est pas autorisée. Activez-la pour Méliès dans Réglages Système > Confidentialité et sécurité > Reconnaissance vocale.";
+"cap.err.unsupported" = "La reconnaissance vocale sur l'appareil n'est pas disponible sur ce Mac.";
+"cap.err.language" = "Le modèle sur l'appareil pour cette langue n'est pas installé. Méliès n'utilise jamais le réseau : ajoutez la langue dans Réglages Système > Clavier > Dictée, puis réessayez.";
+"cap.err.nospeech" = "Aucune parole détectée dans l'audio.";
+"cap.err.failed" = "Impossible de générer les sous-titres.";
+"cap.err.nolocale" = "Aucune langue sur l'appareil n'est installée. Méliès n'envoie jamais d'audio à un serveur : ajoutez une langue dans Réglages Système > Clavier > Dictée.";
