@@ -10,10 +10,16 @@ struct ExportOptionsView: View {
 
     private static let customTag = -1
 
+    /// The presets, plus the current value when it was typed by hand (so the menu always shows what is set).
+    private var choices: [Int] {
+        let extra = maxMB > 0 && !ExportSettings.sizeChoices.contains(maxMB) ? [maxMB] : []
+        return (ExportSettings.sizeChoices + extra).sorted()
+    }
+
     /// The picker shows a preset, "no limit", or "Other..." when the value is typed by hand.
     private var sizeSelection: Binding<Int> {
         Binding(
-            get: { custom || (maxMB != 0 && !ExportSettings.sizeChoices.contains(maxMB)) ? Self.customTag : maxMB },
+            get: { custom ? Self.customTag : maxMB },
             set: { value in
                 if value == Self.customTag { custom = true; if maxMB == 0 { maxMB = 20 } }
                 else { custom = false; maxMB = value }
@@ -34,7 +40,7 @@ struct ExportOptionsView: View {
             LabeledContent(L("exp.size")) {
                 Picker("", selection: sizeSelection) {
                     Text(L("exp.nolimit")).tag(0)
-                    ForEach(ExportSettings.sizeChoices, id: \.self) { Text("\($0) \(L("exp.mb"))").tag($0) }
+                    ForEach(choices, id: \.self) { Text("\($0) \(L("exp.mb"))").tag($0) }
                     Divider()
                     Text(L("exp.other")).tag(Self.customTag)
                 }
