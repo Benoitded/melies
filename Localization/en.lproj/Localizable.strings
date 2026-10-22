@@ -246,3 +246,9 @@
 "zoom.auto.done" = "%d zooms from %d clicks. Cmd+Z undoes it.";
 "zoom.auto.none" = "No click here is worth a zoom.";
 "zoom.auto.tip" = "Makes the zooms for you from the clicks. The arrow changes how close it goes.";
+"error.unreadable" = ""%@" cannot be opened as a video";
+"error.unreadable.hint" = "The file may be damaged, still being written, or in a format macOS cannot read.";
+"error.close" = "Close";
+"toast.norecording" = "No recording found in %@";
+"toast.toosmall" = "Too small: draw at least 40 × 40";
+"rec.perm.open" = "Open System Settings";

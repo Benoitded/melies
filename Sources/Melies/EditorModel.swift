@@ -14,7 +14,21 @@ final class EditorModel: ObservableObject {
     @Published var current: Double = 0
     @Published var isPlaying = false
     @Published var busy = false
-    @Published var status: String?
+    @Published var status: String? {
+        didSet {
+            // "Copied", "Saved", "Export failed"... said once, then gone: a status line left for hours looks like a
+            // current state. A running export keeps its message until it ends.
+            statusClear?.cancel()
+            guard status != nil else { return }
+            statusClear = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(8))
+                if !Task.isCancelled, let self, !self.busy { self.status = nil }
+            }
+        }
+    }
+    private var statusClear: Task<Void, Never>?
+    /// Set when the file could not be opened as a video: the editor then explains it instead of showing an empty player.
+    @Published var loadError: String?
     @Published var sourceSize: CGSize = .zero
     @Published var fps: Double = 0
     /// Crop region, normalized (0...1) in the upright frame, origin top-left. nil means no crop.
@@ -101,6 +115,13 @@ final class EditorModel: ObservableObject {
     }
 
     private func load() async {
+        // A file that is not a readable video (corrupt, unsupported, deleted): say so, do not show an empty player.
+        let playable = (try? await asset.load(.isPlayable)) ?? false
+        let hasVideo = !((try? await asset.loadTracks(withMediaType: .video)) ?? []).isEmpty
+        guard playable, hasVideo else {
+            loadError = L("error.unreadable", url.lastPathComponent)
+            return
+        }
         let d = (try? await asset.load(.duration).seconds) ?? 0
         if let track = try? await asset.loadTracks(withMediaType: .video).first {
             if let rate = try? await track.load(.nominalFrameRate), rate > 0 {

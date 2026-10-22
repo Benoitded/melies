@@ -88,7 +88,10 @@ private final class SelectorView: NSView {
     override func mouseUp(with event: NSEvent) {
         current = convert(event.locationInWindow, from: nil)
         let rect = selection
-        finish((rect?.width ?? 0) >= 40 && (rect?.height ?? 0) >= 40 ? rect : nil)
+        let bigEnough = (rect?.width ?? 0) >= 40 && (rect?.height ?? 0) >= 40
+        // A real drag that is too small says so; a plain click (nothing dragged) just cancels.
+        if !bigEnough, (rect?.width ?? 0) > 4 || (rect?.height ?? 0) > 4 { Toast.show(L("toast.toosmall")) }
+        finish(bigEnough ? rect : nil)
     }
 
     override func keyDown(with event: NSEvent) {

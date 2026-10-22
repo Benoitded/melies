@@ -45,8 +45,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
         guard CGPreflightScreenCaptureAccess() else {
             CGRequestScreenCaptureAccess()
-            alert(L("rec.perm.title"),
-                  L("rec.perm.text"))
+            alert(L("rec.perm.title"), L("rec.perm.text"), openSettings: true)
             return
         }
         let chosen: (rect: CGRect, screen: NSScreen)?
@@ -283,14 +282,18 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         return LatestRecording.watchedFolder().appendingPathComponent("Melies Recording \(formatter.string(from: Date())).mov")
     }
 
-    private func alert(_ title: String, _ text: String) {
+    private func alert(_ title: String, _ text: String, openSettings: Bool = false) {
 #if DEBUG || MELIES_HOOKS
         if ProcessInfo.processInfo.environment["MELIES_RECORD_TEST"] != nil { print("[record] alert: \(title) | \(text)"); return }
 #endif
         let a = NSAlert()
         a.messageText = title
         a.informativeText = text
+        if openSettings { a.addButton(withTitle: L("rec.perm.open")); a.addButton(withTitle: L("error.close")) }
         NSApp.activate(ignoringOtherApps: true)
-        a.runModal()
+        if a.runModal() == .alertFirstButtonReturn, openSettings,
+           let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+            NSWorkspace.shared.open(url) // straight to the switch, not a dead-end message
+        }
     }
 }

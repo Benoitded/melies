@@ -15,7 +15,7 @@ final class EditorSession: ObservableObject {
     }
 
     func openLatest() {
-        if let url = LatestRecording.find() { open(url) }
+        if let url = LatestRecording.find() { open(url) } else { Toast.show(L("toast.norecording", LatestRecording.watchedFolder().lastPathComponent)) }
     }
 
     func chooseFile() {

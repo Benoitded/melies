@@ -246,3 +246,9 @@
 "zoom.auto.done" = "%d zooms créés à partir de %d clics. ⌘Z pour annuler.";
 "zoom.auto.none" = "Aucun clic ici ne mérite un zoom.";
 "zoom.auto.tip" = "Crée les zooms à partir des clics. La flèche règle l'intensité.";
+"error.unreadable" = "« %@ » ne peut pas être ouvert comme vidéo";
+"error.unreadable.hint" = "Le fichier est peut-être abîmé, encore en cours d'écriture, ou dans un format que macOS ne sait pas lire.";
+"error.close" = "Fermer";
+"toast.norecording" = "Aucun enregistrement trouvé dans %@";
+"toast.toosmall" = "Trop petit : dessine au moins 40 × 40";
+"rec.perm.open" = "Ouvrir les Réglages Système";
