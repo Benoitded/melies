@@ -113,5 +113,6 @@ struct RangeSlider: View {
         }
         .frame(width: handleWidth, height: height)
         .contentShape(Rectangle())
+        .pointerStyle(.columnResize)
     }
 }

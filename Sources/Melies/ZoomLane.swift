@@ -77,6 +77,7 @@ struct ZoomLane: View {
                         .frame(width: 24, height: 24)
                         .contentShape(Rectangle())
                         .position(x: x(point.time), y: y(point.scale))
+                        .pointerStyle(.grabIdle)
                         .highPriorityGesture(
                             DragGesture(minimumDistance: 0, coordinateSpace: .named(space))
                                 .onChanged { value in
