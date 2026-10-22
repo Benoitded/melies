@@ -21,6 +21,7 @@ struct MeliesApp: App {
                 EditorWindowController.shared.show()
                 EditorWindowController.shared.session.chooseFile()
             }
+            Button(L("menu.combine")) { CombineWindowController.shared.show(current: EditorWindowController.shared.session.model?.url) }
             Menu(L("menu.more")) {
                 Button(L("menu.show_folder")) { NSWorkspace.shared.open(LatestRecording.watchedFolder()) }
                 Button(L("menu.help")) { OnboardingWindowController.shared.show() }
@@ -141,6 +142,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 m.redo(); line("redo 2")
                 m.redo(); line("redo 3")
                 m.redo(); line("redo 4 (nothing left)")
+                NSApp.terminate(nil)
+            }
+        }
+
+        // Debug: MELIES_COMBINE_UI=b.mp4 with MELIES_OPEN=a.mp4 opens the Combine window with both videos loaded.
+        if let b = ProcessInfo.processInfo.environment["MELIES_COMBINE_UI"], let a = ProcessInfo.processInfo.environment["MELIES_OPEN"] {
+            Task { @MainActor in
+                CombineWindowController.shared.show(current: URL(fileURLWithPath: a), preloadB: URL(fileURLWithPath: b))
+            }
+        }
+
+        // Debug: MELIES_COMBINE_TEST=out.mp4 MELIES_OPEN=a.mp4 MELIES_COMBINE_B=b.mp4 [MELIES_COMBINE_LAYOUT=sideBySide|stacked|pip]
+        let combineEnv = ProcessInfo.processInfo.environment
+        if let out = combineEnv["MELIES_COMBINE_TEST"], let a = combineEnv["MELIES_OPEN"], let b = combineEnv["MELIES_COMBINE_B"] {
+            Task { @MainActor in
+                var options = ComposeOptions()
+                options.layout = ComposeLayout(rawValue: combineEnv["MELIES_COMBINE_LAYOUT"] ?? "") ?? .sideBySide
+                do {
+                    try await ComposeExport.run(a: URL(fileURLWithPath: a), b: URL(fileURLWithPath: b), options: options, to: URL(fileURLWithPath: out))
+                    print("[combine] done")
+                } catch { print("[combine] failed: \(error)") }
                 NSApp.terminate(nil)
             }
         }

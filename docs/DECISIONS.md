@@ -123,3 +123,16 @@ Cmd+Z appartient au champ de texte.
   0). L'éditeur affiche maintenant les objets pleinement quand la lecture est en pause.
 - Le champ de texte n'était pas actif juste après la création d'un texte : les lettres tapées
   déclenchaient des raccourcis (I, O, A, V...). Le focus est pris à l'apparition du panneau.
+
+## Combiner deux vidéos : un fichier, puis l'éditeur (2026-10-22)
+
+Choix : « Combiner » produit un nouveau MP4 (côte à côte, empilées ou en incrustation) qui
+s'ouvre ensuite dans l'éditeur, plutôt que de rendre tout l'éditeur multi-pistes. Raison : le
+recadrage, les zooms, les annotations et le trim restent écrits pour une seule vidéo ; la
+combinaison est une étape en amont, simple à comprendre. Compromis : un encodage de plus (qualité
+maximale pour limiter la perte).
+
+Le compositeur (`ComposeCompositor`) dessine les deux vidéos avec la même géométrie que l'aperçu
+de la fenêtre (`ComposeGeometry`). Quand une vidéo finit avant l'autre, sa dernière image reste
+affichée. L'incrustation a des coins arrondis, un liseré et une ombre. Le son des deux vidéos est
+conservé s'il existe.

@@ -25,6 +25,9 @@ struct TopBar: View {
             BarButton(symbol: "square.and.arrow.up", title: L("tip.share"), disabled: model.busy) {
                 Task { await model.share(from: NSApp.keyWindow?.contentView) }
             }
+            BarButton(symbol: "rectangle.on.rectangle", title: L("tip.combine")) {
+                CombineWindowController.shared.show(current: model.url)
+            }
             BarButton(symbol: recorder.isRecording ? "stop.circle.fill" : "record.circle",
                       title: recorder.isRecording ? L("tip.stop") : L("tip.record"),
                       shortcut: "(⇧⌘6)", active: recorder.isRecording) {

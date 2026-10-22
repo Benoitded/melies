@@ -36,6 +36,10 @@ final class MenuActions: NSObject, NSMenuItemValidation {
         session.model?.redo()
     }
 
+    @objc func combineVideos() {
+        CombineWindowController.shared.show(current: session.model?.url)
+    }
+
     @objc func copyVideo() { Task { await session.model?.copy() } }
     @objc func saveVideo() { Task { await session.model?.save() } }
 
@@ -135,6 +139,7 @@ enum MainMenu {
         let menu = NSMenu(title: L("mm.file"))
         add(menu, L("mm.open"), #selector(MenuActions.openFile), "o", target: MenuActions.shared)
         add(menu, L("sc.paste"), #selector(MenuActions.loadClipboard), "v", [.command, .shift], target: MenuActions.shared)
+        add(menu, L("menu.combine"), #selector(MenuActions.combineVideos), target: MenuActions.shared)
         menu.addItem(.separator())
         add(menu, L("sc.save"), #selector(MenuActions.saveVideo), "s", target: MenuActions.shared)
         menu.addItem(.separator())
