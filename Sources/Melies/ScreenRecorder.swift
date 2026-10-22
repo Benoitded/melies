@@ -1,4 +1,5 @@
 import AppKit
+import AVFoundation
 import ScreenCaptureKit
 
 /// Records a dragged region of the screen to a .mov in the watched folder, then opens the editor on it.
@@ -30,7 +31,12 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
     // MARK: Start
 
-    private func begin() async {
+    /// Debug: records a fixed region without the selection overlay (MELIES_RECORD_TEST).
+    func beginFixed(region: CGRect, screen: NSScreen) async { await begin(fixed: (region, screen)) }
+
+    func stopNow() async { await stop() }
+
+    private func begin(fixed: (rect: CGRect, screen: NSScreen)? = nil) async {
         busy = true
         defer { busy = false }
 
@@ -40,7 +46,9 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
                   L("rec.perm.text"))
             return
         }
-        guard let selection = await RegionSelector.select() else { return }
+        let chosen: (rect: CGRect, screen: NSScreen)?
+        if let fixed { chosen = fixed } else { chosen = await RegionSelector.select() }
+        guard let selection = chosen else { return }
         overlay = RecordingOverlay(screen: selection.screen, region: selection.rect)
         try? await Task.sleep(for: .milliseconds(220)) // let the selector disappear before capturing
 
@@ -59,7 +67,18 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
             config.height = even(selection.rect.height * scale)
             config.minimumFrameInterval = CMTime(value: 1, timescale: 60)
             config.showsCursor = true
-            config.capturesAudio = false
+
+            // Audio: the system sound and/or the microphone, both written into the same movie.
+            let defaults = UserDefaults.standard
+            config.capturesAudio = defaults.bool(forKey: "recordSystemAudio")
+            config.excludesCurrentProcessAudio = true
+            if defaults.bool(forKey: "recordMicrophone") {
+                if await Self.microphoneAllowed() {
+                    config.captureMicrophone = true
+                } else {
+                    Toast.show(L("rec.mic.denied")) // recording goes on without the voice
+                }
+            }
 
             let url = Self.newOutputURL()
             let recordingConfig = SCRecordingOutputConfiguration()
@@ -178,6 +197,15 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
     @objc private func stopFromButton() { toggle() }
 
+    /// Asks for microphone access the first time; false if the user said no.
+    private static func microphoneAllowed() async -> Bool {
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .authorized: return true
+        case .notDetermined: return await AVCaptureDevice.requestAccess(for: .audio)
+        default: return false
+        }
+    }
+
     // MARK: Cursor track (lets the editor center a zoom on the mouse)
 
     private func startCursorSampling(region: CGRect, screen: NSScreen) {
@@ -221,6 +249,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
     }
 
     private func alert(_ title: String, _ text: String) {
+        if ProcessInfo.processInfo.environment["MELIES_RECORD_TEST"] != nil { print("[record] alert: \(title) | \(text)"); return }
         let a = NSAlert()
         a.messageText = title
         a.informativeText = text

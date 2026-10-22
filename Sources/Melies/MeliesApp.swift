@@ -8,6 +8,8 @@ import SwiftUI
 struct MeliesApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @ObservedObject private var recorder = ScreenRecorder.shared
+    @AppStorage("recordMicrophone") private var recordMicrophone = false
+    @AppStorage("recordSystemAudio") private var recordSystemAudio = false
 
     var body: some Scene {
         // While recording, this icon is removed: the red timer is then the only item, and one click stops.
@@ -22,6 +24,8 @@ struct MeliesApp: App {
                 EditorWindowController.shared.session.chooseFile()
             }
             Button(L("menu.combine")) { CombineWindowController.shared.show(current: EditorWindowController.shared.session.model?.url) }
+            Toggle(L("set.audio.mic"), isOn: $recordMicrophone)
+            Toggle(L("set.audio.system"), isOn: $recordSystemAudio)
             Menu(L("menu.more")) {
                 Button(L("menu.show_folder")) { NSWorkspace.shared.open(LatestRecording.watchedFolder()) }
                 Button(L("menu.help")) { OnboardingWindowController.shared.show() }
@@ -116,7 +120,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     let duration = try await asset.load(.duration)
                     let demoKind = ProcessInfo.processInfo.environment["MELIES_ANNOTATION_DEMO"]
                     let notes = demoKind == "fx" ? demoEffects() : (demoKind != nil ? demoAnnotations() : [])
-                    try await VideoExport.run(asset: asset, range: CMTimeRange(start: .zero, duration: duration), points: points, annotations: notes, to: URL(fileURLWithPath: out))
+                    try await VideoExport.run(asset: asset, range: CMTimeRange(start: .zero, duration: duration), points: points, annotations: notes, includeAudio: ProcessInfo.processInfo.environment["MELIES_EXPORT_MUTE"] == nil, to: URL(fileURLWithPath: out))
                     print("[export] done")
                 } catch { print("[export] failed: \(error)") }
                 NSApp.terminate(nil)
@@ -177,6 +181,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     }
                     DispatchQueue.main.async { NSApp.terminate(nil) }
                 }
+            }
+        }
+
+        // Debug: MELIES_RECORD_TEST=seconds records a 480x270 region for that long, then reports the tracks.
+        if let seconds = ProcessInfo.processInfo.environment["MELIES_RECORD_TEST"].flatMap(Double.init) {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                guard let screen = NSScreen.main else { return }
+                await ScreenRecorder.shared.beginFixed(region: CGRect(x: 200, y: 200, width: 480, height: 270), screen: screen)
+                print("[record] started: \(ScreenRecorder.shared.isRecording)")
+                try? await Task.sleep(for: .seconds(seconds))
+                await ScreenRecorder.shared.stopNow()
+                print("[record] stopped")
+                NSApp.terminate(nil)
             }
         }
 
