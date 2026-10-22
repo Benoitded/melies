@@ -54,10 +54,12 @@ $PB -c "Set :CFBundleShortVersionString $VERSION" "$PLIST"
 $PB -c "Set :CFBundleVersion $NEXT_BUILD" "$PLIST"
 
 # Signing: Developer ID if available, else the development certificate (fine to test, not to distribute).
-DEVID=$(security find-identity -v -p codesigning | grep -m1 "Developer ID Application" | sed -E 's/.*"(.*)"/\1/' || true)
+# Identified by its SHA-1 hash: names with accents (Benoît) get mangled when copied through the shell.
+DEVID=$(security find-identity -v -p codesigning | grep -m1 "Developer ID Application" | awk '{print $2}' || true)
+DEVID_NAME=$(security find-identity -v -p codesigning | grep -m1 "Developer ID Application" | sed -E 's/.*"(.*)"/\1/' || true)
 if [ -n "$DEVID" ]; then
-  echo "==> Signing with: $DEVID (hardened runtime)"
-  MELIES_SIGN_IDENTITY="$DEVID" MELIES_HARDENED=1 MELIES_OUT="$DIST/stage" Scripts/build.sh
+  echo "==> Signing with: $DEVID_NAME (hardened runtime)"
+  MELIES_SIGN_IDENTITY="$DEVID" MELIES_SIGN_NAME="$DEVID_NAME" MELIES_HARDENED=1 MELIES_OUT="$DIST/stage" Scripts/build.sh
 else
   echo "!! No \"Developer ID Application\" certificate: this build will not pass Gatekeeper on other Macs."
   MELIES_OUT="$DIST/stage" Scripts/build.sh
