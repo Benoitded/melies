@@ -10,6 +10,7 @@ struct AnnotationLane: View {
 
     private enum Drag { case move(grab: Double, length: Double), start, end }
     @State private var drag: Drag?
+    @State private var hoveredID: UUID?
 
     /// Greedy row assignment so overlapping bars do not hide each other.
     private var rows: [UUID: Int] {
@@ -52,17 +53,20 @@ struct AnnotationLane: View {
                                 Image(systemName: icon(a.kind))
                                     .font(.system(size: 10, weight: .bold))
                                     .foregroundStyle(a.color.luminance > 0.6 ? Color.black.opacity(0.7) : Color.white)
-                                    .padding(.leading, 7)
+                                    .padding(.leading, 17)
                             }
+                            .overlay { grips(visible: selected || hoveredID == a.id) }
                             .frame(width: width, height: rowHeight - 4)
                             .contentShape(Rectangle())
+                            .pointerStyle(.grabIdle)
+                            .onHover { inside in hoveredID = inside ? a.id : (hoveredID == a.id ? nil : hoveredID) }
                             .offset(x: x(a.start), y: CGFloat(layout[a.id] ?? 0) * rowHeight + 2)
                             .highPriorityGesture(
                                 DragGesture(minimumDistance: 0, coordinateSpace: .named(space))
                                     .onChanged { value in
                                         if drag == nil {
                                             model.selectAnnotation(a.id)
-                                            let edge: CGFloat = 8
+                                            let edge: CGFloat = 12
                                             if value.startLocation.x - x(a.start) < edge { drag = .start }
                                             else if x(a.end) - value.startLocation.x < edge { drag = .end }
                                             else { drag = .move(grab: time(value.startLocation.x) - a.start, length: a.end - a.start) }
@@ -85,6 +89,31 @@ struct AnnotationLane: View {
             }
             .frame(height: CGFloat(rowCount) * rowHeight + 4)
         }
+    }
+
+    /// Two small grips at the ends of a bar: they appear on hover and on the selected bar, and show the
+    /// resize cursor, so it is clear the ends can be dragged to change when the annotation starts and stops.
+    private func grips(visible: Bool) -> some View {
+        HStack {
+            grip(visible)
+            Spacer(minLength: 0)
+            grip(visible)
+        }
+    }
+
+    private func grip(_ visible: Bool) -> some View {
+        ZStack {
+            Color.clear
+            Capsule()
+                .fill(Color.white)
+                .overlay(Capsule().stroke(Color.black.opacity(0.35), lineWidth: 0.8))
+                .frame(width: 4, height: 11)
+                .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)
+                .opacity(visible ? 1 : 0)
+        }
+        .frame(width: 12)
+        .contentShape(Rectangle())
+        .pointerStyle(.columnResize)
     }
 
     private func icon(_ kind: AnnotationKind) -> String {
