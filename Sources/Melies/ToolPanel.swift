@@ -66,6 +66,7 @@ struct ToolPanel<Content: View>: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .clickCursor()
             if !collapsed { content.transition(.opacity) }
         }
         .padding(.horizontal, 10)
@@ -101,6 +102,7 @@ struct IconSegments<Value: Hashable>: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .clickCursor()
                 .tip(item.tip, trailing: true)
             }
         }
@@ -116,6 +118,7 @@ struct WedgeSlider: View {
     var width: CGFloat = 108
 
     private let knob: CGFloat = 20
+    @State private var dragging = false
 
     var body: some View {
         let t = (value - range.lowerBound) / (range.upperBound - range.lowerBound)
@@ -131,11 +134,14 @@ struct WedgeSlider: View {
         }
         .frame(width: width, height: 24)
         .contentShape(Rectangle())
+        .grabCursor(dragging: dragging)
         .gesture(
             DragGesture(minimumDistance: 0).onChanged { drag in
+                dragging = true
                 let f = min(max(Double((drag.location.x - knob / 2) / (width - knob)), 0), 1)
                 value = range.lowerBound + f * (range.upperBound - range.lowerBound)
             }
+            .onEnded { _ in dragging = false }
         )
     }
 }

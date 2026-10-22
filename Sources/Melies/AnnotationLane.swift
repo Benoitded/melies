@@ -76,7 +76,7 @@ struct AnnotationLane: View {
                             .overlay { grips(visible: selected || hoveredID == a.id) }
                             .frame(width: width, height: rowHeight - 4)
                             .contentShape(Rectangle())
-                            .pointerStyle(.grabIdle)
+                            .grabCursor(dragging: drag != nil)
                             .onHover { inside in hoveredID = inside ? a.id : (hoveredID == a.id ? nil : hoveredID) }
                             .offset(x: x(a.start), y: CGFloat(layout[a.id] ?? 0) * rowHeight + 2)
                             .highPriorityGesture(

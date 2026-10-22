@@ -138,6 +138,7 @@ struct BarButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .clickCursor(!disabled)
         .disabled(disabled)
         .onHover { inside in
             hovering = inside
