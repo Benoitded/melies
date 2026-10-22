@@ -33,10 +33,18 @@ Editing tools:
 | `get_camera(time)` | scale, center and visible area of the camera at that instant |
 | `update_zoom(id, ...)` / `delete_zoom(id)` | |
 | `add_annotation(kind, ...)` | arrow, text, rectangle, spotlight, blur; returns the created annotation |
-| `update_annotation(id, ...)` / `delete_annotation(id)` | |
-| `track_annotation(id)` | the annotation follows moving or scrolling content (waits for tracking to finish) |
+| `update_annotation(id, ...)` / `delete_annotation(id)` | moving an annotation clears its tracking |
+| `track_annotation(id, from?)` | the annotation follows moving or scrolling content from `from` (default: its start) to its end, and ends early if the content leaves the frame or is covered (waits for tracking to finish) |
 | `undo` / `redo` | |
-| `export(path?)` | exports the trimmed range with the app's export settings; returns file, size, resolution, duration |
+| `export(path?)` | exports the trimmed range with the app's export settings (format, maximum size, resolution); returns file, size, resolution, duration. See the path rules below |
+
+Export path rules (the path comes from an AI client, so it is untrusted):
+- Without `path`, the file is saved next to the original as `name-optimized.<ext>`.
+- The extension is forced to the one of the current export format (`mp4` or `gif`), whatever the client asks.
+- The folder must be under `~/Movies`, `~/Desktop`, `~/Documents`, `~/Downloads` or `~/Pictures`, or be the watched
+  folder, the folder of the open video or the temporary folder (symbolic links are resolved first). Hidden folders and
+  anything inside an `.app` are refused.
+- An existing file is never overwritten: a free name `-2`, `-3`... is used instead.
 
 Recording tools (done, same MCP server; logic in `RecordingControl.swift`, real screen parts in `RecordingLive.swift`):
 
@@ -75,13 +83,21 @@ protocol in `MCPProtocol.swift`, JSON-RPC 2.0, "Streamable HTTP" transport over 
 `http://127.0.0.1:47821/mcp`.
 
 - Security: listens on the loopback interface only, secret key required (`Authorization: Bearer <key>`,
-  or `?token=`), `Host` and `Origin` checked (a browser web page cannot reach it). "New
-  key" invalidates configured clients.
+  or `?token=`), `Host` must be `127.0.0.1` or `localhost`, and `Origin`, when present, must have exactly that host
+  (a browser web page cannot reach it). Request bodies are limited to 1 MB, at most 8 connections are open at once.
+  "New key" invalidates configured clients.
+- The key is stored in the macOS Keychain (readable only while the Mac is unlocked, never synced), not in the
+  preferences file. A key left in the preferences by an older version is moved to the Keychain.
 - Connection: Settings copies the Claude Code command
-  (`claude mcp add --transport http melies http://127.0.0.1:47821/mcp --header "Authorization: Bearer ..."`)
-  or a JSON config for other clients.
+  (`claude mcp add --transport http melies http://127.0.0.1:47821/mcp --header "Authorization: Bearer ..."`),
+  a URL with the key (for apps that cannot send a header) or a JSON config for other clients.
+- Feedback (Settings > Advanced > MCP server): a status line (waiting for an AI app, connected with the client name,
+  "working" with the tool in progress, last action and when, a red message when an app used a wrong key), and a
+  three-step checklist (copy the command, paste it in a terminal, ask for an edit). While an AI app edits, the editor
+  shows a badge at the top ("<app> is editing...", then "is done") with the name of the tool.
 - Calls run one at a time (two clients do not mix their edits), a connection that does not send
-  its request within 30 s is cut.
+  its request within 30 s is cut, and a single call that runs longer than 120 s has its tracking and export cancelled
+  so that it returns.
 - Each tool call is an undo step (Cmd+Z). An error is returned with `isError` so that the
   model reads it and corrects itself.
 - Port can be changed with `defaults write <bundle id> mcpPort 50000`.
@@ -89,7 +105,10 @@ protocol in `MCPProtocol.swift`, JSON-RPC 2.0, "Streamable HTTP" transport over 
   listed its frictions; the fixes (rendering in `get_frame`, `add_zoom_segment`, `get_camera`, `open_video`,
   complete returns, direction of time and sizes written in the descriptions) come from there.
 - Tested for real (UI-less harness + curl + Claude Code): authentication, `initialize`, `tools/list`, all the
-  editing tools, validation errors, undo, tracking, export.
+  editing tools, validation errors, undo, tracking, export. Unit tests (`swift test`) cover the export path rules,
+  HTTP request parsing limits and JSON-RPC error handling (`Tests/MeliesTests/SafetyTests.swift`).
+- The `MELIES_*` test hooks are compiled only into debug builds (or with `MELIES_HOOKS=1 Scripts/build.sh`): a
+  release build has none, so no environment variable can change what the published app does.
 
 ## 2. Chat in the editor (later)
 
@@ -106,4 +125,5 @@ A button in `TopBar` opens a panel on the right: message thread, input field, st
   "always allow" option (see the safety model above).
 - Privacy: frames and screenshots go to the provider (chat) or to the MCP client. Notice on
   first use, reduced resolution, option to capture only one window.
-- MCP: localhost only, token required, off by default.
+- MCP: localhost only, token required (kept in the Keychain), off by default, export limited to safe folders and never
+  overwriting a file.
