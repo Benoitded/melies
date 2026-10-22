@@ -62,7 +62,8 @@ struct AnnotationLane: View {
                                 // Tracked: the followed span is lighter, with a target icon where it starts and,
                                 // when the object was lost, a red cross where it stopped.
                                 if a.isTracked, let last = a.track.last {
-                                    let from = x(min(max(a.trackStart, a.start), a.end)) - x(a.start)
+                                    let first = a.track.first?.t ?? a.trackStart // followed on both sides of where it was started
+                                    let from = x(min(max(first, a.start), a.end)) - x(a.start)
                                     let followed = max(x(min(last.t, a.end)) - x(a.start) - from, 0)
                                     ZStack(alignment: .leading) {
                                         RoundedRectangle(cornerRadius: 4, style: .continuous)

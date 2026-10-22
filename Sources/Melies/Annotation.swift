@@ -81,7 +81,7 @@ struct TrackSample: Equatable {
 extension Annotation {
     /// How far tracking has moved the annotation at time `t` (held at the last sample after the end).
     func offset(at t: Double) -> CGSize {
-        guard let first = track.first, let last = track.last, t > trackStart else { return .zero }
+        guard let first = track.first, let last = track.last else { return .zero }
         if t >= last.t { return CGSize(width: last.dx, height: last.dy) }
         if t <= first.t { return CGSize(width: first.dx, height: first.dy) }
         var low = 0, high = track.count - 1

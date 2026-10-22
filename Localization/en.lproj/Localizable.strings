@@ -224,7 +224,7 @@
 "ai.done" = "%@ is done";
 "export.failed" = "The export could not be written. Check the free space and try again.";
 "trk.button" = "Track object";
-"tip.track" = "Sticks this annotation to what is under it, from the playhead on. Put the playhead where the object is clearly visible, then press.";
+"tip.track" = "Sticks the annotation to what is under it, before and after the playhead. Put the playhead where the object is clearly visible, then press.";
 "trk.state.done" = "Followed %@ s";
 "trk.state.done.tip" = "Followed from %@ s to %@ s";
 "trk.state.lost" = "Lost at %@ s";
@@ -246,7 +246,7 @@
 "zoom.auto.done" = "%d zooms from %d clicks. Cmd+Z undoes it.";
 "zoom.auto.none" = "No click here is worth a zoom.";
 "zoom.auto.tip" = "Makes the zooms for you from the clicks. The arrow changes how close it goes.";
-"error.unreadable" = ""%@" cannot be opened as a video";
+"error.unreadable" = "“%@” cannot be opened as a video";
 "error.unreadable.hint" = "The file may be damaged, still being written, or in a format macOS cannot read.";
 "error.close" = "Close";
 "toast.norecording" = "No recording found in %@";

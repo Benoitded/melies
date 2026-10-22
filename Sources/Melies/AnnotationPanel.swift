@@ -25,7 +25,11 @@ struct AnnotationPanel: View {
                 case .blur: blurStyles(a)
                 }
 
+                // The tracking control sits between two thin separators, as its own zone of the panel: a flat
+                // button, not a second glass button inside the glass panel.
+                PanelSeparator()
                 trackButton(a)
+                PanelSeparator()
 
                 Button { model.deleteSelected() } label: {
                     Image(systemName: "trash").font(.system(size: 13)).foregroundStyle(.secondary)
@@ -57,7 +61,7 @@ struct AnnotationPanel: View {
                 }
                 .buttonStyle(.plain).clickCursor().tip(L("tip.track.cancel"), trailing: true)
             } else if a.isTracked {
-                let from = a.trackStart
+                let from = a.track.first?.t ?? a.trackStart
                 let to = a.track.last?.t ?? from
                 if let loss = a.trackLoss {
                     Label(L("trk.state.lost", String(format: "%.1f", loss.at)), systemImage: "exclamationmark.triangle.fill")
@@ -77,11 +81,8 @@ struct AnnotationPanel: View {
                 }
                 .buttonStyle(.plain).clickCursor().tip(L("tip.track.clear"), trailing: true)
             } else {
-                Button { model.startTracking(a.id) } label: {
-                    Label(L("trk.button"), systemImage: "scope").font(.system(size: 12, weight: .medium))
-                }
-                .buttonStyle(.glass).buttonBorderShape(.capsule).controlSize(.small).clickCursor()
-                .tip(L("tip.track"), trailing: true)
+                FlatPanelButton(title: L("trk.button"), symbol: "scope") { model.startTracking(a.id) }
+                    .tip(L("tip.track"), trailing: true)
             }
         }
     }
@@ -296,5 +297,34 @@ final class ColorPanelBridge: NSObject {
     @objc func colorChanged(_ sender: NSColorPanel) {
         let c = sender.color.usingColorSpace(.sRGB) ?? sender.color
         onChange?(RGBA(r: Double(c.redComponent), g: Double(c.greenComponent), b: Double(c.blueComponent), a: 1))
+    }
+}
+
+/// A thin vertical line between two groups of controls in a floating panel.
+struct PanelSeparator: View {
+    var body: some View {
+        Rectangle().fill(Color.primary.opacity(0.16)).frame(width: 1, height: 20)
+    }
+}
+
+/// A text button without its own background: it only lights up under the pointer. Inside a glass panel, a glass
+/// button would be a button inside a button.
+struct FlatPanelButton: View {
+    let title: String
+    let symbol: String
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .font(.system(size: 12, weight: .medium))
+                .padding(.horizontal, 7).padding(.vertical, 5)
+                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.primary.opacity(hovering ? 0.10 : 0)))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .clickCursor()
+        .onHover { hovering = $0 }
     }
 }

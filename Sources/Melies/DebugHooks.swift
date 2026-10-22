@@ -85,7 +85,10 @@ enum DebugHooks {
                 let v = (ProcessInfo.processInfo.environment["MELIES_TRACK_BOX"] ?? "100,120,120,120").split(separator: ",").compactMap { Double($0) }
                 let box = CGRect(x: v[0] / 640, y: v[1] / 360, width: v[2] / 640, height: v[3] / 360)
                 let to = Double(ProcessInfo.processInfo.environment["MELIES_TRACK_TO"] ?? "2") ?? 2
-                let r = try? await ObjectTracker.track(asset: AVURLAsset(url: URL(fileURLWithPath: path)), box: box, from: 0, to: to) { _ in }
+                let fromT = Double(ProcessInfo.processInfo.environment["MELIES_TRACK_FROM"] ?? "0") ?? 0
+                let lowerT = ProcessInfo.processInfo.environment["MELIES_TRACK_LOWER"].flatMap(Double.init)
+                let r = try? await ObjectTracker.track(asset: AVURLAsset(url: URL(fileURLWithPath: path)), box: box, from: fromT, to: to, lowerBound: lowerT) { _ in }
+                print("TRACK first=\(String(describing: r?.samples.first)) startAt=\(String(describing: r?.startAt))")
                 let last = r?.samples.last
                 print("TRACK samples=\(r?.samples.count ?? -1) lostAt=\(String(describing: r?.lostAt)) last=\(String(describing: last))")
                 exit(0)

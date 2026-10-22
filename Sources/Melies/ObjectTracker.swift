@@ -10,6 +10,8 @@ enum ObjectTracker {
         /// When the region was lost before `to`, nil if it was followed to the end.
         var lostAt: Double?
         var offscreen = false
+        /// When tracking backward: the earlier moment where the object was lost (it was not visible before it).
+        var startAt: Double?
         var lost: Bool { lostAt != nil }
     }
 
@@ -31,43 +33,21 @@ enum ObjectTracker {
         var data: [UInt8]
     }
 
-    /// Tracks `box` (normalized, origin top left) found in the frame at `from`.
-    /// `progress` is called with 0...1 from a background queue. Throws CancellationError when cancelled.
-    static func track(
-        asset: AVAsset, box: CGRect, from: Double, to: Double,
-        progress: @escaping @Sendable (Double) -> Void,
-        onSample: (@Sendable (TrackSample) -> Void)? = nil
-    ) async throws -> Result {
-        guard let video = try await asset.loadTracks(withMediaType: .video).first else { return Result(samples: [], lostAt: nil) }
-        let composition = try await AVMutableVideoComposition.videoComposition(withPropertiesOf: asset)
-        let reader = try AVAssetReader(asset: asset)
-        let output = AVAssetReaderVideoCompositionOutput(
-            videoTracks: [video],
-            videoSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
-        )
-        output.videoComposition = composition
-        reader.add(output)
-        reader.timeRange = CMTimeRange(start: CMTime(seconds: from, preferredTimescale: 600),
-                                       end: CMTime(seconds: to, preferredTimescale: 600))
-        guard reader.startReading() else { throw reader.error ?? CocoaError(.fileReadUnknown) }
-        defer { reader.cancelReading() }
-
+    /// The state of one pass of the tracker: the region as it looked, where it is now, how it was moving.
+    /// One walker goes forward in time from the reference frame, another goes backward.
+    private struct Walker {
         var template: [Float] = []
         var templateBlur: [Float] = []
         var tw = 0, th = 0, originX = 0, originY = 0
         var x = 0, y = 0
         var vx = 0, vy = 0 // last movement per frame, to look where a fast scroll is going
-        var samples: [TrackSample] = []
         var badSince: Double?
         var badOffscreen = false
-        let span = max(to - from, 0.001)
 
-        while let buffer = output.copyNextSampleBuffer() {
-            try Task.checkCancellation()
-            guard let pixels = CMSampleBufferGetImageBuffer(buffer), let frame = luma(of: pixels) else { continue }
+        enum Step { case reference(TrackSample), sample(TrackSample), skipped, lost(at: Double, offscreen: Bool) }
+
+        mutating func step(box: CGRect, frame: Luma, t: Double) -> Step {
             let soft = blurred(frame)
-            let t = CMSampleBufferGetPresentationTimeStamp(buffer).seconds
-
             if template.isEmpty {
                 originX = Int((box.minX * Double(frame.width)).rounded())
                 originY = Int((box.minY * Double(frame.height)).rounded())
@@ -79,23 +59,20 @@ enum ObjectTracker {
                 template = patch(of: frame, x: originX, y: originY, w: tw, h: th)
                 templateBlur = patch(of: soft, x: originX, y: originY, w: tw, h: th)
                 x = originX; y = originY
-                let first = TrackSample(t: t, dx: 0, dy: 0)
-                samples.append(first)
-                onSample?(first)
-                continue
+                return .reference(TrackSample(t: t, dx: 0, dy: 0))
             }
 
             let (bx, by, score) = bestMatch(of: template, blurTemplate: templateBlur, tw: tw, th: th, in: frame, blurFrame: soft, around: (x + vx, y + vy))
-            // Touching a frame edge it was not on at the start means it is leaving the frame.
             if debugTrace { FileHandle.standardError.write(Data("t=\(String(format: "%.3f", t)) pos=(\(bx),\(by)) from=(\(x),\(y)) score=\(String(format: "%.2f", score)) frame=\(frame.width)x\(frame.height)\n".utf8)) }
+            // Touching a frame edge it was not on at the start means it is leaving the frame.
             let leaving = (bx <= 0 && originX > 0) || (by <= 0 && originY > 0)
                 || (bx >= frame.width - tw && originX < frame.width - tw)
                 || (by >= frame.height - th && originY < frame.height - th)
             if score > lostThreshold || leaving {
                 // Tolerate a couple of noisy frames (a flash, a compression glitch) before giving up.
                 if badSince == nil { badSince = t; badOffscreen = leaving }
-                if t - (badSince ?? t) > 0.12 { return Result(samples: samples, lostAt: badSince, offscreen: badOffscreen) }
-                continue
+                if abs(t - (badSince ?? t)) > 0.12 { return .lost(at: badSince ?? t, offscreen: badOffscreen) }
+                return .skipped
             }
             badSince = nil
             vx = bx - x; vy = by - y
@@ -109,16 +86,96 @@ enum ObjectTracker {
                     templateBlur[i] += (nowBlur[i] - templateBlur[i]) * 0.08
                 }
             }
-            let sample = TrackSample(
-                t: t,
-                dx: Double(x - originX) / Double(frame.width),
-                dy: Double(y - originY) / Double(frame.height)
-            )
-            samples.append(sample)
-            onSample?(sample)
-            progress(min(max((t - from) / span, 0), 1))
+            return .sample(TrackSample(t: t, dx: Double(x - originX) / Double(frame.width), dy: Double(y - originY) / Double(frame.height)))
         }
-        return Result(samples: samples, lostAt: nil)
+    }
+
+    /// Tracks `box` (normalized, origin top left) found in the frame at `from`, forward until `to` and, when
+    /// `lowerBound` is earlier than `from`, backward until `lowerBound`: a tracking started in the middle of an
+    /// annotation must follow the object on both sides of that frame.
+    /// `progress` is called with 0...1 from a background queue. Throws CancellationError when cancelled.
+    static func track(
+        asset: AVAsset, box: CGRect, from: Double, to: Double, lowerBound: Double? = nil,
+        progress: @escaping @Sendable (Double) -> Void,
+        onSample: (@Sendable (TrackSample) -> Void)? = nil
+    ) async throws -> Result {
+        guard let video = try await asset.loadTracks(withMediaType: .video).first else { return Result(samples: [], lostAt: nil) }
+        let composition = try await AVMutableVideoComposition.videoComposition(withPropertiesOf: asset)
+        let before = max(from - (lowerBound ?? from), 0)
+        let after = max(to - from, 0.001)
+        let forwardShare = after / (after + before)
+
+        func reader(for range: CMTimeRange) throws -> (AVAssetReader, AVAssetReaderVideoCompositionOutput) {
+            let reader = try AVAssetReader(asset: asset)
+            let output = AVAssetReaderVideoCompositionOutput(videoTracks: [video], videoSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA])
+            output.videoComposition = composition
+            reader.add(output)
+            reader.timeRange = range
+            guard reader.startReading() else { throw reader.error ?? CocoaError(.fileReadUnknown) }
+            return (reader, output)
+        }
+        func seconds(_ t: Double) -> CMTime { CMTime(seconds: t, preferredTimescale: 600) }
+
+        // Forward pass: frames are read and matched one by one.
+        var forward: [TrackSample] = []
+        var lostAt: Double?
+        var lostOffscreen = false
+        do {
+            let (reader, output) = try reader(for: CMTimeRange(start: seconds(from), end: seconds(to)))
+            defer { reader.cancelReading() }
+            var walker = Walker()
+            while let buffer = output.copyNextSampleBuffer() {
+                try Task.checkCancellation()
+                guard let pixels = CMSampleBufferGetImageBuffer(buffer), let frame = luma(of: pixels) else { continue }
+                let t = CMSampleBufferGetPresentationTimeStamp(buffer).seconds
+                switch walker.step(box: box, frame: frame, t: t) {
+                case .reference(let sample), .sample(let sample):
+                    forward.append(sample)
+                    onSample?(sample)
+                    progress(min(max((t - from) / after, 0), 1) * forwardShare)
+                case .skipped: continue
+                case .lost(let at, let offscreen): lostAt = at; lostOffscreen = offscreen
+                }
+                if lostAt != nil { break }
+            }
+        }
+
+        // Backward pass: a reader cannot play backward, so the frames before `from` are read first (kept small,
+        // and thinned when there are very many), then walked from the reference frame back in time.
+        var backward: [TrackSample] = []
+        var startAt: Double?
+        if let lowerBound, before > 0.05 {
+            var frames: [(t: Double, frame: Luma)] = []
+            let (reader, output) = try reader(for: CMTimeRange(start: seconds(lowerBound), end: seconds(from + 0.02)))
+            defer { reader.cancelReading() }
+            while let buffer = output.copyNextSampleBuffer() {
+                try Task.checkCancellation()
+                guard let pixels = CMSampleBufferGetImageBuffer(buffer), let frame = luma(of: pixels) else { continue }
+                frames.append((CMSampleBufferGetPresentationTimeStamp(buffer).seconds, frame))
+            }
+            // Very long stretches: keep about 400 frames (the tracker follows bigger steps without trouble).
+            let thin = max(1, Int((Double(frames.count) / 400).rounded(.up)))
+            var walker = Walker()
+            var step = 0
+            for (t, frame) in frames.reversed() {
+                try Task.checkCancellation()
+                step += 1
+                // The frame at `from` is the reference and must never be skipped.
+                if walker.template.isEmpty == false, (step - 1) % thin != 0 { continue }
+                switch walker.step(box: box, frame: frame, t: t) {
+                case .reference: continue // the same reference sample as the forward pass
+                case .sample(let sample):
+                    backward.append(sample)
+                    onSample?(sample)
+                    progress(forwardShare + min(max((from - t) / before, 0), 1) * (1 - forwardShare))
+                case .skipped: continue
+                case .lost(let at, _): startAt = at
+                }
+                if startAt != nil { break }
+            }
+        }
+
+        return Result(samples: backward.reversed() + forward, lostAt: lostAt, offscreen: lostOffscreen, startAt: startAt)
     }
 
     /// Grayscale copy of the frame, at most ~640 px wide so matching stays fast.
