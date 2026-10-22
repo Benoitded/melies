@@ -16,15 +16,13 @@ full.fill()
 
 // A thin grey arrow between the two icons (app at x=180, Applications at x=480, icon centers at y=205 from the top).
 let y = CGFloat(height) - 205
-NSColor(calibratedWhite: 0.55, alpha: 0.85).setStroke()
-let shaft = NSBezierPath()
-shaft.lineWidth = 2.5; shaft.lineCapStyle = .round
-shaft.move(to: NSPoint(x: 262, y: y)); shaft.line(to: NSPoint(x: 398, y: y))
-shaft.stroke()
-let head = NSBezierPath()
-head.lineWidth = 2.5; head.lineCapStyle = .round; head.lineJoinStyle = .round
-head.move(to: NSPoint(x: 382, y: y + 14)); head.line(to: NSPoint(x: 398, y: y)); head.line(to: NSPoint(x: 382, y: y - 14))
-head.stroke()
+// One opaque path for the shaft and the head: two translucent strokes would show a dark spot where they overlap.
+NSColor(calibratedWhite: 0.62, alpha: 1).setStroke()
+let arrow = NSBezierPath()
+arrow.lineWidth = 2.5; arrow.lineCapStyle = .round; arrow.lineJoinStyle = .round
+arrow.move(to: NSPoint(x: 262, y: y)); arrow.line(to: NSPoint(x: 398, y: y))
+arrow.move(to: NSPoint(x: 382, y: y + 14)); arrow.line(to: NSPoint(x: 398, y: y)); arrow.line(to: NSPoint(x: 382, y: y - 14))
+arrow.stroke()
 
 func draw(_ text: String, size: CGFloat, weight: NSFont.Weight, color: NSColor, centerY: CGFloat) {
     let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: size, weight: weight), .foregroundColor: color]
