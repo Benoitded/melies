@@ -41,6 +41,19 @@ struct MeliesApp: App {
     }
 }
 
+/// Debug: sample annotations used by MELIES_ANNOTATION_DEMO.
+func demoAnnotations() -> [Annotation] {
+    func make(_ kind: AnnotationKind, _ p1: CGPoint, _ p2: CGPoint, color: RGBA, width: Double, text: String = "") -> Annotation {
+        Annotation(kind: kind, start: 0.5, end: 3.5, p1: p1, p2: p2, color: color, width: width,
+                   arrow: .block, rect: .rounded, text: text, font: .sans, bold: true, box: .badge)
+    }
+    return [
+        make(.arrow, CGPoint(x: 0.12, y: 0.82), CGPoint(x: 0.40, y: 0.50), color: .red, width: 7),
+        make(.rect, CGPoint(x: 0.55, y: 0.18), CGPoint(x: 0.88, y: 0.55), color: .yellow, width: 4),
+        make(.text, CGPoint(x: 0.08, y: 0.08), CGPoint(x: 0.08, y: 0.08), color: .blue, width: 34, text: "Nouveau !"),
+    ]
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -88,11 +101,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 ]
                 do {
                     let duration = try await asset.load(.duration)
-                    try await VideoExport.run(asset: asset, range: CMTimeRange(start: .zero, duration: duration), points: points, to: URL(fileURLWithPath: out))
+                    let notes = ProcessInfo.processInfo.environment["MELIES_ANNOTATION_DEMO"] != nil ? demoAnnotations() : []
+                    try await VideoExport.run(asset: asset, range: CMTimeRange(start: .zero, duration: duration), points: points, annotations: notes, to: URL(fileURLWithPath: out))
                     print("[export] done")
                 } catch { print("[export] failed: \(error)") }
                 NSApp.terminate(nil)
             }
+        }
+
+        if ProcessInfo.processInfo.environment["MELIES_SHOW_ONBOARDING"] != nil {
+            Task { @MainActor in OnboardingWindowController.shared.show() }
+        }
+
+        if let tab = ProcessInfo.processInfo.environment["MELIES_SHOW_SETTINGS"] {
+            Task { @MainActor in SettingsWindowController.shared.show(tab: Int(tab) ?? 0) }
         }
 
         // Debug: MELIES_MENU_DUMP=1 prints the main menu after launch settles.
@@ -116,6 +138,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let path = env["MELIES_OPEN"] {
             Task { @MainActor in
                 EditorWindowController.shared.open(URL(fileURLWithPath: path))
+                if env["MELIES_ANNOTATION_DEMO"] != nil {
+                    try? await Task.sleep(for: .seconds(1))
+                    if let model = EditorWindowController.shared.session.model {
+                        model.annotations = demoAnnotations()
+                        model.seek(to: 1.5)
+                        model.selectAnnotation(model.annotations[0].id)
+                    }
+                }
                 if env["MELIES_ZOOM_DEMO"] != nil {
                     try? await Task.sleep(for: .seconds(1))
                     EditorWindowController.shared.session.model?.addZoom()

@@ -90,3 +90,20 @@ restent du contenu. Les Réglages utilisent le style toolbar natif d'AppKit.
 Piège : le rendu hors écran (`cacheDisplay`) ne dessine pas le verre. Pour juger l'apparence, il
 faut capturer la vraie fenêtre (l'app doit être lancée avec sa fenêtre ouverte pour être
 ciblable par l'outil de capture).
+
+## Annotations : un seul dessin pour l'aperçu et l'export (2026-10-22)
+
+Flèche, texte et rectangle sont des objets avec une durée (début, fin) et une géométrie normalisée
+dans l'image source : ils suivent donc le recadrage et les zooms animés. `AnnotationRenderer` les
+dessine en Core Graphics dans l'espace des pixels source ; l'aperçu (Canvas SwiftUI) et l'export
+(compositeur Core Image) appliquent seulement une transformation différente. Les réglages (couleur,
+épaisseur ou taille, style, police) sont mémorisés par type d'objet.
+
+Piège : les raccourcis à une touche (A, T, R...) sont des boutons cachés ; ils sont désactivés
+pendant la saisie de texte (`isEditingText`), sinon taper "a" lancerait l'outil flèche.
+
+## Accueil en vrai Liquid Glass, icône en couches (2026-10-22)
+
+L'accueil est une fenêtre `NSGlassEffectView` : le contenu reste plat dessus (pas de verre sur
+du verre). L'icône est un fichier Icon Composer `Resources/Melies.icon` (fond dégradé, pellicule,
+bouton lecture en verre) compilé par `actool` en `Assets.car` plus un `.icns` de secours.

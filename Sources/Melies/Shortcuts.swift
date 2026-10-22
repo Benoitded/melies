@@ -18,6 +18,8 @@ enum EditorShortcuts {
         ("O", "sc.out"),
         ("←  →", "sc.frame"),
         ("⇧←  ⇧→", "sc.frames10"),
+        ("V  A  T  R", "sc.tools"),
+        ("⌫", "sc.delete"),
         ("C", "sc.crop"),
         ("↩", "sc.crop_confirm"),
         ("⌘C", "sc.copy"),

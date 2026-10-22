@@ -16,9 +16,11 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp -X "$BIN/Melies" "$APP/Contents/MacOS/Melies"
 cp -X Scripts/Info.plist "$APP/Contents/Info.plist"
 
-# Icon
-swift Scripts/make-icon.swift "$STAGE/AppIcon.iconset"
-iconutil -c icns "$STAGE/AppIcon.iconset" -o "$APP/Contents/Resources/AppIcon.icns"
+# Liquid Glass icon: the layered Resources/Melies.icon becomes Assets.car (+ a flat fallback .icns).
+xcrun actool Resources/Melies.icon --compile "$APP/Contents/Resources" \
+  --platform macosx --target-device mac --minimum-deployment-target 26.0 \
+  --app-icon Melies --include-all-app-icons \
+  --output-partial-info-plist "$STAGE/icon-partial.plist" > /dev/null
 
 # Localizations (en, fr, it, es)
 cp -RX Localization/*.lproj "$APP/Contents/Resources/"

@@ -74,7 +74,7 @@ final class EditorWindowController {
     func show() {
         if window == nil {
             let w = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 920, height: 580),
+                contentRect: NSRect(x: 0, y: 0, width: 1000, height: 640),
                 styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
@@ -83,7 +83,7 @@ final class EditorWindowController {
             w.titlebarAppearsTransparent = true
             w.titleVisibility = .hidden
             w.isReleasedWhenClosed = false
-            w.minSize = NSSize(width: 800, height: 420)
+            w.minSize = NSSize(width: 900, height: 460)
             // An empty unified toolbar makes the title bar tall, so the traffic lights sit centered
             // on the same row as our own toolbar.
             let toolbar = NSToolbar(identifier: "melies.editor")

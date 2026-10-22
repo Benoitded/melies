@@ -3,33 +3,45 @@ import KeyboardShortcuts
 import SwiftUI
 
 /// Shown only while screen recording is not allowed. One job: get the switch turned on.
+/// The window itself is Liquid Glass (see `OnboardingWindowController`), so the content stays flat.
 struct OnboardingView: View {
     let done: () -> Void
 
-    @State private var allowed = CGPreflightScreenCaptureAccess()
+    /// Debug: MELIES_FORCE_MISSING=1 shows the permission step even when it is already granted.
+    private static let forceMissing = ProcessInfo.processInfo.environment["MELIES_FORCE_MISSING"] != nil
+
+    @State private var allowed = !forceMissing && CGPreflightScreenCaptureAccess()
     @State private var openedSettings = false
     private let poll = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(spacing: 22) {
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .frame(width: 76, height: 76)
+                .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
             if allowed { ready } else { needsPermission }
         }
-        .padding(28)
+        .padding(.horizontal, 36)
+        .padding(.top, 40)
+        .padding(.bottom, 30)
         .frame(width: 440)
-        .onReceive(poll) { _ in allowed = CGPreflightScreenCaptureAccess() }
+        .onReceive(poll) { _ in
+            if !Self.forceMissing { allowed = CGPreflightScreenCaptureAccess() }
+        }
         .animation(.easeInOut(duration: 0.25), value: allowed)
     }
 
     private var needsPermission: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 20) {
             VStack(spacing: 6) {
                 Text(L("onb.title"))
                     .font(.system(size: 20, weight: .semibold))
-                Text(L("onb.sub"))
-                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Text(L("onb.sub")).foregroundStyle(.secondary)
             }
             PermissionDemo(granted: allowed)
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 Button(L("onb.open")) {
                     CGRequestScreenCaptureAccess()
                     if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
@@ -52,7 +64,7 @@ struct OnboardingView: View {
     }
 
     private var ready: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 20) {
             Text(L("onb.ready")).font(.system(size: 20, weight: .semibold))
             VStack(spacing: 10) {
                 shortcutRow(L("onb.rec_row"), .record)
@@ -70,9 +82,9 @@ struct OnboardingView: View {
             Text(label)
             Spacer()
             Text(shortcutLabel(name))
-                .font(.system(size: 13, design: .rounded).weight(.medium))
-                .padding(.horizontal, 9).padding(.vertical, 3)
-                .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(.quaternary))
+                .font(.system(size: 13, design: .rounded).weight(.semibold))
+                .padding(.horizontal, 11).padding(.vertical, 4)
+                .background(Capsule().fill(Color.primary.opacity(0.1)))
         }
     }
 
@@ -107,7 +119,7 @@ private struct PermissionDemo: View {
                 Divider().padding(.leading, 52)
                 row("Shottr", icon: icon(at: "/Applications/Shottr.app"), on: .constant(true))
             }
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(.quaternary.opacity(0.6)))
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.07)))
             .frame(width: width)
 
             Image(systemName: "cursorarrow")
@@ -163,11 +175,23 @@ final class OnboardingWindowController {
 
     func show() {
         if window == nil {
+            let host = NSHostingView(rootView: OnboardingView(done: { [weak self] in self?.window?.orderOut(nil) }))
+            host.sizingOptions = [.intrinsicContentSize]
+
+            // The whole window is a Liquid Glass surface.
+            let glass = NSGlassEffectView()
+            glass.cornerRadius = 26
+            glass.contentView = host
+
             let w = NSWindow(contentRect: .zero, styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
             w.titlebarAppearsTransparent = true
             w.titleVisibility = .hidden
+            w.isMovableByWindowBackground = true
             w.isReleasedWhenClosed = false
-            w.contentView = NSHostingView(rootView: OnboardingView(done: { [weak self] in self?.window?.orderOut(nil) }))
+            w.isOpaque = false
+            w.backgroundColor = .clear
+            w.contentView = glass
+            w.setContentSize(host.fittingSize)
             w.center()
             window = w
         }

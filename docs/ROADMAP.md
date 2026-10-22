@@ -13,9 +13,10 @@
 - [x] Crop de l'image (poignées, appliqué à l'export)
 - [x] Aperçu des images sur la timeline, quadrillage derrière la vidéo
 - [x] Réglages à onglets (Général, Raccourcis, Avancé), thème clair / sombre / système
-- [ ] Flèches, texte, rectangle, spotlight, blur
+- [x] Flèches, texte, rectangle (panneau de réglages, durée sur la timeline)
+- [ ] Spotlight, blur
 - [x] Zooms animés : points de caméra (niveau, vitesse, style), centrage auto sur le curseur enregistré, aperçu et export identiques
-- [ ] Cmd+Z / Cmd+Shift+Z
+- [ ] Cmd+Z / Cmd+Shift+Z (annuler / rétablir les annotations)
 
 ## v3
 - [ ] Deux vidéos côte à côte (hstack / vstack)

@@ -30,13 +30,22 @@ struct EditorView: View {
     private var shortcuts: some View {
         Group {
             Button("") {
-                if let model = session.model, model.cropMode { model.cancelCrop() }
-                else if let model = session.model, model.selectedPointID != nil { model.selectPoint(nil) }
-                else { close() }
+                if let model = session.model {
+                    if model.cropMode { model.cancelCrop(); return }
+                    if model.tool != .select { model.setTool(.select); return }
+                    if model.selectedAnnotationID != nil { model.selectAnnotation(nil); return }
+                    if model.selectedPointID != nil { model.selectPoint(nil); return }
+                }
+                close()
             }.keyboardShortcut(.escape, modifiers: [])
             Button("") { session.chooseFile() }.keyboardShortcut("o", modifiers: [.command, .shift])
-            if let model = session.model {
+            // Single-key shortcuts stay quiet while a text field has the keyboard.
+            if let model = session.model, !model.isEditingText {
                 Button("") { model.togglePlay() }.keyboardShortcut(.space, modifiers: [])
+                Button("") { model.setTool(.select) }.keyboardShortcut("v", modifiers: [])
+                Button("") { model.setTool(.arrow) }.keyboardShortcut("a", modifiers: [])
+                Button("") { model.setTool(.text) }.keyboardShortcut("t", modifiers: [])
+                Button("") { model.setTool(.rect) }.keyboardShortcut("r", modifiers: [])
                 Button("") { model.toggleCrop() }.keyboardShortcut("c", modifiers: [])
                 Button("") { model.addZoom() }.keyboardShortcut("z", modifiers: [])
                 Button("") { model.deleteSelected() }.keyboardShortcut(.delete, modifiers: [])
@@ -100,6 +109,9 @@ struct EditorView: View {
                         .frame(width: video.width, height: video.height, alignment: .topLeading)
                         .clipped()
                         .position(x: video.midX, y: video.midY)
+                        if !model.annotations.isEmpty || model.tool != .select, !model.cropMode, model.selectedPoint == nil {
+                            AnnotationOverlay(model: model, video: video, region: region)
+                        }
                         if model.cropMode || (model.cropRect != nil && !model.previewingCamera) {
                             CropOverlay(model: model, videoRect: video)
                         }
@@ -114,7 +126,7 @@ struct EditorView: View {
                     })
                     // Grab and drag the video when it is zoomed in.
                     .simultaneousGesture(DragGesture(minimumDistance: 2).onChanged { value in
-                        guard !model.cropMode, model.zoom > 1.0001 else { return }
+                        guard !model.cropMode, !model.annotationGestureActive, model.zoom > 1.0001 else { return }
                         model.panBy(CGSize(width: value.translation.width - lastDrag.width,
                                            height: value.translation.height - lastDrag.height))
                         lastDrag = value.translation
@@ -123,11 +135,15 @@ struct EditorView: View {
                     .onChange(of: geo.size) { _, _ in updateCanvas(geo) }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(alignment: .topTrailing) { ZoomPanel(model: model).padding(10) }
+                .overlay(alignment: .topTrailing) {
+                    ZoomPanel(model: model).padding(10)
+                    AnnotationPanel(model: model).padding(10)
+                }
                 .padding(.horizontal, 16)
 
                 RangeSlider(model: model).padding(.horizontal, 16)
                 ZoomLane(model: model).padding(.horizontal, 16)
+                AnnotationLane(model: model).padding(.horizontal, 16)
 
                 HStack(spacing: 12) {
                     Button { model.togglePlay() } label: {

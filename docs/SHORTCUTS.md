@@ -23,6 +23,7 @@ rectangle sans le redimensionner (comme macOS et Shottr), Esc pour annuler.
 | Shift+Gauche / Droite | 10 images |
 | Z | Zoom animé : crée un zoom (début + fin), puis ajoute un point à la position de lecture |
 | Suppr | Supprimer le point de zoom sélectionné |
+| V / A / T / R | Outils : sélection, flèche, texte, rectangle |
 | C | Recadrer l'image (poignées, Entrée pour valider, Esc pour annuler) |
 | Cmd+C | Exporter en MP4 Twitter et copier le fichier |
 | Cmd+S | Exporter en MP4 Twitter et enregistrer à côté de l'original |
