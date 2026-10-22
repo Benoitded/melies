@@ -183,12 +183,12 @@ struct DragHandle: View {
     @State private var hovering = false
 
     var body: some View {
-        HStack(spacing: 2) {
-            grip
-            Image(systemName: "doc.fill").font(.system(size: 14))
-            grip
+        HStack(spacing: 3) {
+            grips
+            Image(systemName: "doc").font(.system(size: 17, weight: .regular))
+            grips
         }
-        .frame(width: 38, height: 30)
+        .frame(width: 50, height: 30)
         .background(Capsule().fill(Color.primary.opacity(hovering ? 0.1 : 0)))
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
@@ -201,11 +201,16 @@ struct DragHandle: View {
         .tip(L("tip.drag"))
     }
 
-    private var grip: some View {
-        VStack(spacing: 2.5) {
-            ForEach(0..<3, id: \.self) { _ in Circle().frame(width: 2, height: 2) }
+    /// Two columns of three dots, like a grab handle.
+    private var grips: some View {
+        HStack(spacing: 2.5) {
+            ForEach(0..<2, id: \.self) { _ in
+                VStack(spacing: 2.5) {
+                    ForEach(0..<3, id: \.self) { _ in Circle().frame(width: 2.2, height: 2.2) }
+                }
+            }
         }
-        .foregroundStyle(.secondary)
+        .foregroundStyle(.tertiary)
     }
 }
 

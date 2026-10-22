@@ -144,3 +144,10 @@ pixelisation changent les pixels de la vidéo : ils sont appliqués sur l'image 
 recadrage et la caméra, donc le motif suit le zoom. L'aperçu lit la dernière image décodée du lecteur
 (`AVPlayerItemVideoOutput`) et utilise le même filtre que l'export. Pixelisation par défaut : un flou
 léger peut parfois se défaire, des gros blocs non.
+
+## Poignée de glisser-déposer (2026-10-22)
+
+La poignée de la barre d'outils (page vide entre deux groupes de points, comme Shottr) fournit le MP4
+optimisé quand l'app de destination le demande : `NSItemProvider` avec une représentation de fichier
+paresseuse (comme une promesse de fichier). L'export ne se fait donc qu'au dépôt, pas à chaque
+modification. Le glisser n'enregistre ni ne ferme rien : c'est un geste de partage, pas une sortie.
