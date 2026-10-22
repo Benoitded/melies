@@ -190,3 +190,12 @@ Piège de test : l'outil d'automatisation envoie les touches à une fenêtre en 
 Le lecteur ne distribue plus d'images quand il est en pause, et l'observateur de temps ne tourne que
 pendant la lecture. L'aperçu du flou demande donc lui-même l'image exacte sous la tête de lecture
 (`AVAssetImageGenerator`) à l'ajout d'une annotation, à chaque déplacement et à la mise en pause.
+
+## Barres de timeline stables et poignée qui ne déplace pas la fenêtre (2026-10-22)
+
+- Les barres d'annotations étaient rangées par heure de début : retarder le début de la barre du haut la
+  faisait passer sous l'autre, et le glissé en cours tombait sur la mauvaise barre. Les lignes suivent
+  maintenant l'ordre de création, et sont gelées pendant un glissé.
+- La poignée de glisser-déposer est dans la zone de la barre de titre, où appuyer sur la souris déplace la
+  fenêtre. Elle est désormais une vue AppKit (`mouseDownCanMoveWindow = false`) qui lance un vrai glisser de
+  fichier « promis » (`NSFilePromiseProvider`) : le MP4 n'est exporté qu'au dépôt.
