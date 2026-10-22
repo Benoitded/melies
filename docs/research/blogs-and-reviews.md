@@ -1,105 +1,105 @@
-# Concurrents : blogs, pages éditeur, comparatifs (2026-10-22)
+# Competitors: blogs, vendor pages, comparisons (2026-10-22)
 
-Rapport d'un sous-agent de recherche, relu et condensé. Sources : pages officielles (fonctions, prix,
-changelogs), comparatifs (The Sweet Bits, Setapp), pages GitHub. Limites annoncées : aucun article
-MacStories, 9to5Mac, Zapier ou TechRadar exploitable ; pas de fils Product Hunt ni Hacker News
-(sauf les avis de Cap) ; le changelog de Screen Studio était vide ; plusieurs pages GitHub sans dates
-de version. Une case « ? » veut dire non vérifié, pas « non ».
+Report from a research subagent, reviewed and condensed. Sources: official pages (features, prices,
+changelogs), comparisons (The Sweet Bits, Setapp), GitHub pages. Stated limits: no usable
+MacStories, 9to5Mac, Zapier or TechRadar article; no Product Hunt or Hacker News threads
+(except the Cap reviews); Screen Studio's changelog was empty; several GitHub pages without release
+dates. A "?" cell means not verified, not "no".
 
-## Le fait marquant
+## The key fact
 
-**CleanShot X 5.0 (1er septembre 2026)** ajoute un mode Studio et un éditeur vidéo : zooms
-intelligents, lissage du curseur, flou de mouvement, fonds personnalisés, taille du curseur après
-coup, touches et caméra, export encodé par le matériel. L'outil de capture de référence entre donc
-dans l'espace de Méliès. Prix : 35 $ une fois (un an de mises à jour). À tester en vrai : on ne sait
-pas la qualité de ses zooms intelligents.
+**CleanShot X 5.0 (September 1, 2026)** adds a Studio mode and a video editor: smart zooms,
+cursor smoothing, motion blur, custom backgrounds, cursor size after the fact, keys and camera,
+hardware-encoded export. The reference capture tool is therefore moving into Méliès's space.
+Price: $35 once (one year of updates). To be tested for real: the quality of its smart zooms is
+unknown.
 
-## Matrice (extrait, produits proches de Méliès)
+## Matrix (excerpt, products close to Méliès)
 
-| Fonction | CleanShot X | Screen Studio | Cap | Recordly | OpenScreen | Screenize |
+| Feature | CleanShot X | Screen Studio | Cap | Recordly | OpenScreen | Screenize |
 |---|---|---|---|---|---|---|
-| Micro | oui | oui | oui | oui | oui | oui |
-| Son du système | oui | oui | ? | oui | oui | oui |
-| Webcam | oui | oui | oui | oui | oui | ? |
-| Curseur (clic, lissage, taille) | oui | le plus complet | ? | oui | oui | oui (ondulation) |
-| Zoom auto | oui (Smart Zooms) | oui | ? | oui (suggestions) | oui | oui (2 modes) |
-| Zoom manuel par points | ? | oui (2 styles) | oui | oui | oui | oui |
-| Fond, marges, coins arrondis | oui | oui | oui | oui | oui | oui |
-| Export GIF | oui | oui (jusqu'à 1080p) | ? | oui | oui | oui |
-| Presets d'export MP4 | oui | oui | 4K / 60 i/s | oui | oui | oui |
-| Rognage de l'image | ? | ? | ? | oui | oui | ? |
-| Touches du clavier | oui | ? | ? | ? | non | oui |
-| Compte à rebours, pause | oui | ? | pause, reprise | ? | ? | ? |
-| Lien cloud | oui | oui (30 min) | oui | non | non | non |
-| Glisser le fichier hors de l'éditeur | oui (aperçu rapide) | ? | ? | ? | ? | ? |
-| Prix | 35 $ une fois | 9 $/mois (annuel) ou 29 $/mois | gratuit, 58 $ une fois | gratuit (AGPL) | gratuit (MIT, archivé) | gratuit (Apache, en pause) |
+| Mic | yes | yes | yes | yes | yes | yes |
+| System sound | yes | yes | ? | yes | yes | yes |
+| Webcam | yes | yes | yes | yes | yes | ? |
+| Cursor (click, smoothing, size) | yes | the most complete | ? | yes | yes | yes (ripple) |
+| Auto zoom | yes (Smart Zooms) | yes | ? | yes (suggestions) | yes | yes (2 modes) |
+| Manual zoom by points | ? | yes (2 styles) | yes | yes | yes | yes |
+| Background, margins, rounded corners | yes | yes | yes | yes | yes | yes |
+| GIF export | yes | yes (up to 1080p) | ? | yes | yes | yes |
+| MP4 export presets | yes | yes | 4K / 60 fps | yes | yes | yes |
+| Frame cropping | ? | ? | ? | yes | yes | ? |
+| Keyboard keys | yes | ? | ? | ? | no | yes |
+| Countdown, pause | yes | ? | pause, resume | ? | ? | ? |
+| Cloud link | yes | yes (30 min) | yes | no | no | no |
+| Drag the file out of the editor | yes (quick preview) | ? | ? | ? | ? | ? |
+| Price | $35 once | $9/month (annual) or $29/month | free, $58 once | free (AGPL) | free (MIT, archived) | free (Apache, paused) |
 
-Autres : Shottr ne fait que les captures d'écran (défilante, OCR, règle, pas d'enregistrement),
-pay-what-you-want autour de 12 $. ScreenFloat (17,99 $ une fois) a les marqueurs de coupe posés
-pendant l'enregistrement. Loom, Tella, Zight, Descript sont du cloud par utilisateur et par mois.
-QuickTime / Cmd+Maj+5 : gratuit, minuteur, clics, vignette qu'on peut glisser, pas de son système.
+Others: Shottr only does screenshots (scrolling, OCR, ruler, no recording),
+pay-what-you-want around $12. ScreenFloat ($17.99 once) has cut markers placed
+during recording. Loom, Tella, Zight, Descript are cloud, per user and per month.
+QuickTime / Cmd+Shift+5: free, timer, clicks, draggable thumbnail, no system sound.
 
-## Socle commun et différenciateurs
+## Common base and differentiators
 
-Socle (presque tous) : capture de zone, fenêtre ou plein écran, micro, trim, export MP4, export GIF,
-fonds / marges / coins arrondis, clics visibles, zoom auto pour la classe « démo soignée ».
+Base (almost all): area, window or full-screen capture, mic, trim, MP4 export, GIF export,
+backgrounds / margins / rounded corners, visible clicks, auto zoom for the "polished demo" class.
 
-Différenciateurs (un ou deux produits) : défilante et OCR (CleanShot, Shottr, Snagit) ; masquage
-automatique des données sensibles (Xnapper, captures seulement) ; marqueurs de coupe pendant
-l'enregistrement (ScreenFloat) ; zoom planifié par activité (Screenize) ; suréchantillonnage et curseur
-en boucle (Screen Studio) ; montage par transcription (Tella, Descript) ; auto-hébergement (Cap) ;
-local seulement, sans compte (Shottr, Xnapper, Recordly, QuickTime).
+Differentiators (one or two products): scrolling and OCR (CleanShot, Shottr, Snagit); automatic
+masking of sensitive data (Xnapper, screenshots only); cut markers during
+recording (ScreenFloat); activity-planned zoom (Screenize); upsampling and looping
+cursor (Screen Studio); transcript-based editing (Tella, Descript); self-hosting (Cap);
+local only, no account (Shottr, Xnapper, Recordly, QuickTime).
 
-**Pas trouvé chez les concurrents lus : combiner deux vidéos.** Non cherché précisément, donc à
-vérifier avant de s'en vanter.
+**Not found among the competitors read: combining two videos.** Not specifically searched, so to be
+verified before boasting about it.
 
-## Prix
+## Pricing
 
-Gratuit open source (Kap, Recordly, OpenScreen, Screenize, OBS, Cap gratuit) ; 12 $ (Shottr) ;
-18 $ (ScreenFloat) ; 35 $ (CleanShot X) ; 58 $ (Cap bureau, usage commercial) ; abonnement
-(Screen Studio 108 $/an, Snagit environ 40 €/an) ; par utilisateur et par mois (Loom, Tella, Zight,
-Descript, 10 à 65 $). Screen Studio a supprimé la licence à vie : il ne reste que CleanShot (35 $)
-et Cap (58 $) comme app « démo soignée » à prix unique. Les concurrents gratuits sont des apps
-Electron multiplateformes : une app **native, signée, à prix unique ou gratuite**, se distingue par
-la vitesse, la taille des fichiers, la fiabilité et la vie privée, pas par le nombre de fonctions.
+Free open source (Kap, Recordly, OpenScreen, Screenize, OBS, Cap free); $12 (Shottr);
+$18 (ScreenFloat); $35 (CleanShot X); $58 (Cap desktop, commercial use); subscription
+(Screen Studio $108/year, Snagit about 40 EUR/year); per user and per month (Loom, Tella, Zight,
+Descript, $10 to $65). Screen Studio removed the lifetime license: only CleanShot ($35)
+and Cap ($58) remain as one-price "polished demo" apps. The free competitors are cross-platform
+Electron apps: a **native, signed, one-time-price or free** app stands out through
+speed, file size, reliability and privacy, not through the number of features.
 
-## Feuille de route proposée par l'étude (priorité, effort)
+## Roadmap proposed by the study (priority, effort)
 
-| # | Fonction | Effort |
+| # | Feature | Effort |
 |---|---|---|
-| 1 | Noyau d'enregistrement fiable : zone / fenêtre / plein écran, micro et son, compte à rebours, pause, raccourci global, reprise après plantage | moyen |
-| 2 | Préréglage d'export « Twitter » avec budget de taille (H.264 / AAC, 1080p ou 720p, débit calculé pour rester sous la limite, estimation de taille en direct) ; limites à confirmer sur l'aide officielle de X | petit |
-| 3 | Zoom auto à partir des clics et de la frappe, modifiable comme des points avec courbes | grand |
-| 4 | Curseur : lissage, taille après coup, ondulation au clic, masquage au repos, flou de mouvement | moyen |
-| 5 | Fonds, marges, coins arrondis, ombre, préréglages | petit |
-| 6 | Glisser le fichier hors de l'éditeur + vignette rapide après l'enregistrement | petit |
-| 7 | Annotations sur la timeline (flèche, texte, spotlight, flou avec durée) | moyen |
-| 8 | Combiner deux vidéos | moyen |
-| 9 | Rognage et vitesse par segment | petit |
-| 10 | Export GIF avec plafond de taille | petit |
-| 11 | Marqueurs de coupe posés pendant l'enregistrement | petit |
-| 12 | Affichage des touches | moyen |
-| 13 | OCR sur une image et masquage automatique (e-mails, clés d'API) | moyen |
+| 1 | Reliable recording core: area / window / full screen, mic and sound, countdown, pause, global shortcut, crash recovery | medium |
+| 2 | "Twitter" export preset with a size budget (H.264 / AAC, 1080p or 720p, bitrate computed to stay under the limit, live size estimate); limits to be confirmed on X's official help | small |
+| 3 | Auto zoom from clicks and typing, editable like points with curves | large |
+| 4 | Cursor: smoothing, size after the fact, ripple on click, hiding when idle, motion blur | medium |
+| 5 | Backgrounds, margins, rounded corners, shadow, presets | small |
+| 6 | Drag the file out of the editor + quick thumbnail after recording | small |
+| 7 | Annotations on the timeline (arrow, text, spotlight, blur with a duration) | medium |
+| 8 | Combine two videos | medium |
+| 9 | Frame cropping and per-segment speed | small |
+| 10 | GIF export with a size cap | small |
+| 11 | Cut markers placed during recording | small |
+| 12 | Key display | medium |
+| 13 | OCR on an image and automatic masking (emails, API keys) | medium |
 
-À ne pas faire (pour l'instant) : hébergement cloud, liens de partage, analyses de visionnage,
-espaces d'équipe ; transcription et suppression des mots parasites par IA ; suite de captures d'écran
-(défilante, annotation d'images) ; Windows et Linux ; direct et scènes (OBS) ; place de marché de
-plugins.
+Not to do (for now): cloud hosting, share links, view analytics,
+team spaces; AI transcription and filler-word removal; screenshot suite
+(scrolling, image annotation); Windows and Linux; live streaming and scenes (OBS); plugin
+marketplace.
 
-## Risques et inconnues
+## Risks and unknowns
 
-- CleanShot X 5.0 est la menace principale : à tester en vrai.
-- Recordly et OpenScreen avancent vite et sont gratuits.
-- Non vérifié : changelog de Screen Studio, dernière version de Kap, licence et version actuelle de
-  Cap, limites actuelles de X (source tierce seulement).
-- Les accusations sur les prix de Loom viennent de sites concurrents : non fiables.
+- CleanShot X 5.0 is the main threat: to be tested for real.
+- Recordly and OpenScreen are moving fast and are free.
+- Not verified: Screen Studio's changelog, Kap's latest release, Cap's current license and
+  version, X's current limits (third-party source only).
+- The accusations about Loom's prices come from competing sites: not reliable.
 
-## Sources principales
+## Main sources
 
 cleanshot.com (pricing, features, changelog), screen.studio, cap.so/pricing,
 github.com/CapSoftware/Cap, github.com/webadderall/Recordly, github.com/siddharthvaddem/openscreen,
 github.com/syi0808/screenize, github.com/wulkano/Kap, getkap.co, shottr.cc, xnapper.com,
 eternalstorms.at/screenfloat, loom.com/pricing, techsmith.com (Snagit), zight.com, tella.com,
-descript.com/pricing, obsproject.com, support.apple.com (capture et enregistrement),
+descript.com/pricing, obsproject.com, support.apple.com (capture and recording),
 thesweetbits.com (CleanShot vs Shottr, Recordly), setapp.com (CleanShot vs Shottr),
-producthunt.com (avis de Cap), postfa.st (tailles vidéo X), newreleases.io (Cap v0.5.9).
+producthunt.com (Cap reviews), postfa.st (X video sizes), newreleases.io (Cap v0.5.9).
