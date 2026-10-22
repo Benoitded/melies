@@ -30,7 +30,7 @@ final class EditorModel: ObservableObject {
     @Published var zoomPoints: [ZoomPoint] = [] { didSet { noteChange() } }
     @Published var selectedPointID: UUID?
     @Published var tool: Tool = .select
-    @Published var annotations: [Annotation] = [] { didSet { noteChange() } }
+    @Published var annotations: [Annotation] = [] { didSet { noteChange(); refreshStillFrame() } }
     @Published var selectedAnnotationID: UUID?
     /// True while a text field has the keyboard, so single-key shortcuts must stay quiet.
     @Published var isEditingText = false
@@ -43,6 +43,18 @@ final class EditorModel: ObservableObject {
     // Preview of blur: the latest decoded frame, upright, taken from the player.
     private var frameOutput: AVPlayerItemVideoOutput?
     private var lastBuffer: CVPixelBuffer?
+    // While paused the player does not hand out new frames, so the blur preview asks for the frame itself.
+    private var stillFrame: CIImage?
+    private var stillFrameTime = -1.0
+    private var stillRequestedTime = -1.0
+    private var stillRequestID = 0
+    private lazy var stillGenerator: AVAssetImageGenerator = {
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = .zero
+        return generator
+    }()
     private var orientation: CGImagePropertyOrientation = .up
     static let previewContext = CIContext()
     var cursor: CursorTrack?
@@ -477,8 +489,26 @@ final class EditorModel: ObservableObject {
         if let buffer = output.copyPixelBuffer(forItemTime: player.currentTime(), itemTimeForDisplay: nil) { lastBuffer = buffer }
     }
 
+    /// Paused: fetch the exact frame under the playhead, once per position.
+    private func refreshStillFrame() {
+        guard !isPlaying, annotations.contains(where: { $0.kind == .blur }), abs(current - stillRequestedTime) > 0.0005 else { return }
+        let time = current
+        stillRequestedTime = time
+        stillRequestID += 1
+        let id = stillRequestID
+        Task { @MainActor in
+            guard let result = try? await stillGenerator.image(at: CMTime(seconds: time, preferredTimescale: 600)), id == stillRequestID else { return }
+            var image = CIImage(cgImage: result.image)
+            image = image.transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
+            stillFrame = image
+            stillFrameTime = time
+            objectWillChange.send() // redraw the overlay with the blur applied
+        }
+    }
+
     /// The last frame as an upright image with its origin at 0,0.
     var currentFrameImage: CIImage? {
+        if !isPlaying, let still = stillFrame, abs(stillFrameTime - current) < 0.01 { return still }
         guard let buffer = lastBuffer else { return nil }
         var image = CIImage(cvPixelBuffer: buffer).oriented(orientation)
         image = image.transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
@@ -488,6 +518,7 @@ final class EditorModel: ObservableObject {
     private func tick(_ seconds: Double) {
         guard seconds.isFinite else { return }
         captureFrame()
+        refreshStillFrame()
         current = seconds
         isPlaying = player.timeControlStatus == .playing
         // Loop inside the trimmed range.
@@ -498,11 +529,13 @@ final class EditorModel: ObservableObject {
         let t = min(max(seconds, 0), duration)
         current = t
         player.seek(to: CMTime(seconds: t, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+        refreshStillFrame()
     }
 
     func togglePlay() {
         if player.timeControlStatus == .playing {
             player.pause()
+            refreshStillFrame()
         } else {
             if current >= end - 0.02 || current < start { seek(to: start) }
             player.play()

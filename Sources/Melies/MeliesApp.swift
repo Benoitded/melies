@@ -198,6 +198,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // Debug: MELIES_BLUR_DEBUG=1 with MELIES_OPEN=file reports whether the paused blur preview gets its frame.
+        if ProcessInfo.processInfo.environment["MELIES_BLUR_DEBUG"] != nil, let input = ProcessInfo.processInfo.environment["MELIES_OPEN"] {
+            Task { @MainActor in
+                EditorWindowController.shared.open(URL(fileURLWithPath: input))
+                try? await Task.sleep(for: .seconds(1.5))
+                guard let m = EditorWindowController.shared.session.model else { print("[blur] no model"); NSApp.terminate(nil); return }
+                let id = m.addAnnotation(.blur, at: CGPoint(x: 0.2, y: 0.2))
+                m.updateAnnotation(id) { $0.p2 = CGPoint(x: 0.6, y: 0.7) }
+                for i in 1...4 {
+                    try? await Task.sleep(for: .seconds(0.5))
+                    print("[blur] t+\(Double(i) * 0.5)s: frame=\(m.currentFrameImage != nil) playing=\(m.isPlaying) current=\(m.current)")
+                }
+                if let frame = m.currentFrameImage, let a = m.annotations.first {
+                    let patch = AnnotationRenderer.blurPatch(of: frame, for: a, source: m.sourceSize)
+                    print("[blur] patch: \(patch != nil), source=\(m.sourceSize), frame extent=\(frame.extent)")
+                }
+                NSApp.terminate(nil)
+            }
+        }
+
         // Debug: MELIES_COMBINE_UI=b.mp4 with MELIES_OPEN=a.mp4 opens the Combine window with both videos loaded.
         if let b = ProcessInfo.processInfo.environment["MELIES_COMBINE_UI"], let a = ProcessInfo.processInfo.environment["MELIES_OPEN"] {
             Task { @MainActor in
