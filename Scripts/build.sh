@@ -51,7 +51,7 @@ done
 codesign "${FLAGS[@]}" "$APP/Contents/Frameworks/Sparkle.framework"
 codesign "${FLAGS[@]}" "$APP"
 codesign --verify --deep --strict "$APP"
-echo "Signed with: ${IDENTITY:-ad hoc}"
+echo "Signed with: ${MELIES_SIGN_NAME:-${IDENTITY:-ad hoc}}"
 
 if [ -n "${MELIES_OUT:-}" ]; then
   rm -rf "$MELIES_OUT/Melies.app"; mkdir -p "$MELIES_OUT"
