@@ -41,6 +41,9 @@ struct MeliesApp: App {
                 Label(L("mm.settings"), systemImage: "gearshape")
             }
             .keyboardShortcut(",")
+            if Updater.shared.isAvailable {
+                Button(L("menu.updates")) { Updater.shared.checkForUpdates() }
+            }
             Button(L("menu.quit")) { NSApp.terminate(nil) }.keyboardShortcut("q")
         }
     }

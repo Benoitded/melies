@@ -1,5 +1,9 @@
 #!/bin/bash
 # Builds Méliès, signs it, and installs the single copy at ~/Applications/Melies.app.
+# Used as is for daily work. Scripts/release.sh drives it with:
+#   MELIES_SIGN_IDENTITY  signing identity (default: the first "Apple Development", else ad hoc)
+#   MELIES_HARDENED=1     hardened runtime + secure timestamp (needed for notarization)
+#   MELIES_OUT=dir        leave Melies.app in dir and do not install or quit the running app
 # The bundle is assembled and signed in a temp dir, away from Spotlight and Finder, which
 # otherwise race with codesign by writing stray attributes into the bundle.
 set -euo pipefail
@@ -25,16 +29,36 @@ xcrun actool Resources/Melies.icon --compile "$APP/Contents/Resources" \
 # Localizations (en, fr, it, es)
 cp -RX Localization/*.lproj "$APP/Contents/Resources/"
 
+# Sparkle (automatic updates): the framework lives next to the executable's Frameworks folder.
+mkdir -p "$APP/Contents/Frameworks"
+cp -RX "$BIN/Sparkle.framework" "$APP/Contents/Frameworks/"
+install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/Melies" 2>/dev/null || true
+
 # SwiftPM resource bundles (KeyboardShortcuts localizations)
 for b in "$BIN"/*.bundle; do [ -e "$b" ] && cp -RX "$b" "$APP/Contents/Resources/"; done
 
 # Sign with a stable identity if one exists, so macOS keeps folder and screen permissions between builds.
-IDENTITY=$(security find-identity -v -p codesigning | grep -m1 "Apple Development" | sed -E 's/.*"(.*)"/\1/' || true)
+IDENTITY="${MELIES_SIGN_IDENTITY:-$(security find-identity -v -p codesigning | grep -m1 "Apple Development" | sed -E 's/.*"(.*)"/\1/' || true)}"
 SIGN_AS="${IDENTITY:--}"
+FLAGS=(--force --sign "$SIGN_AS")
+[ "${MELIES_HARDENED:-0}" = "1" ] && FLAGS+=(--options runtime --timestamp)
 xattr -cr "$APP" 2>/dev/null || true
-codesign --force --deep --sign "$SIGN_AS" "$APP"
+# Inside out: Sparkle's helpers first, then the framework, then the app (--deep would skip their entitlements).
+SPARKLE="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
+for part in "$SPARKLE/XPCServices/Installer.xpc" "$SPARKLE/XPCServices/Downloader.xpc" "$SPARKLE/Autoupdate" "$SPARKLE/Updater.app"; do
+  [ -e "$part" ] && codesign "${FLAGS[@]}" "$part"
+done
+codesign "${FLAGS[@]}" "$APP/Contents/Frameworks/Sparkle.framework"
+codesign "${FLAGS[@]}" "$APP"
 codesign --verify --deep --strict "$APP"
 echo "Signed with: ${IDENTITY:-ad hoc}"
+
+if [ -n "${MELIES_OUT:-}" ]; then
+  rm -rf "$MELIES_OUT/Melies.app"; mkdir -p "$MELIES_OUT"
+  ditto --noextattr --noqtn "$APP" "$MELIES_OUT/Melies.app"
+  echo "Built $MELIES_OUT/Melies.app"
+  exit 0
+fi
 
 # One installed copy only. ditto keeps the signature and drops extended attributes.
 pkill -x Melies 2>/dev/null || true
