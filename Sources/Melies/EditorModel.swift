@@ -698,6 +698,7 @@ final class EditorModel: ObservableObject {
             if !quiet { status = L("status.cancelled") }
             return false
         } catch {
+            try? FileManager.default.removeItem(at: destination) // never leave a half-written file behind
             if !quiet { status = L("status.fail", error.localizedDescription) }
             return false
         }

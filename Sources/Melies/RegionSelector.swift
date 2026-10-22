@@ -10,6 +10,7 @@ private final class SelectorView: NSView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     var onDone: ((CGRect?) -> Void)?
+    private var finished = false
     private var start: CGPoint?
     private var current: CGPoint?
     private var lastPoint: CGPoint?
@@ -77,15 +78,22 @@ private final class SelectorView: NSView {
         current = CGPoint(x: c.x + dx, y: c.y + dy)
     }
 
+    /// Reports the result once, whatever happens first (mouse up, Esc, the window losing focus).
+    func finish(_ rect: CGRect?) {
+        guard !finished else { return }
+        finished = true
+        onDone?(rect)
+    }
+
     override func mouseUp(with event: NSEvent) {
         current = convert(event.locationInWindow, from: nil)
         let rect = selection
-        onDone?((rect?.width ?? 0) >= 40 && (rect?.height ?? 0) >= 40 ? rect : nil)
+        finish((rect?.width ?? 0) >= 40 && (rect?.height ?? 0) >= 40 ? rect : nil)
     }
 
     override func keyDown(with event: NSEvent) {
         switch event.keyCode {
-        case 53: onDone?(nil)      // Esc cancels
+        case 53: finish(nil)       // Esc cancels
         case 49: spaceHeld = true  // Space moves the selection
         default: break
         }
@@ -112,9 +120,16 @@ enum RegionSelector {
             window.isReleasedWhenClosed = false
 
             let view = SelectorView(frame: NSRect(origin: .zero, size: screen.frame.size))
+            // If the selector loses focus (Cmd+Tab, a Space switch) nothing else would end it: cancel, so the app
+            // is never left waiting for a selection that cannot come.
+            var focusLoss: NSObjectProtocol?
             view.onDone = { rect in
+                if let focusLoss { NotificationCenter.default.removeObserver(focusLoss) }
                 window.orderOut(nil)
                 continuation.resume(returning: rect.map { ($0, screen) })
+            }
+            focusLoss = NotificationCenter.default.addObserver(forName: NSWindow.didResignKeyNotification, object: window, queue: .main) { [weak view] _ in
+                view?.finish(nil)
             }
             window.contentView = view
             NSApp.activate(ignoringOtherApps: true)

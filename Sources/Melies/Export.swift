@@ -4,7 +4,9 @@ import AppKit
 
 enum ExportError: LocalizedError {
     case noVideoTrack
-    var errorDescription: String? { L("export.novideo") }
+    /// The video was read or written badly (disk full, unreadable frames, encoder failure).
+    case writeFailed
+    var errorDescription: String? { self == .noVideoTrack ? L("export.novideo") : L("export.failed") }
 }
 
 /// Everything needed to draw one output frame. Value type, so the compositor can use it from any thread.

@@ -244,3 +244,4 @@
 "ai.default_client" = "L'app d'IA";
 "ai.working" = "%@ modifie la vidéo…";
 "ai.done" = "%@ a fini";
+"export.failed" = "L'export n'a pas pu être écrit. Vérifie l'espace libre et réessaie.";

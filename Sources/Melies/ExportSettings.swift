@@ -116,7 +116,7 @@ enum MP4Writer {
         }
 
         guard reader.startReading(), writer.startWriting() else {
-            throw reader.error ?? writer.error ?? ExportError.noVideoTrack
+            throw reader.error ?? writer.error ?? ExportError.writeFailed
         }
         writer.startSession(atSourceTime: range.start)
 
@@ -134,7 +134,12 @@ enum MP4Writer {
                             return
                         }
                         if let sample = output.copyNextSampleBuffer() {
-                            input.append(sample)
+                            // A refused sample means the writer failed (disk full, encoder error): stop, the status says why.
+                            guard input.append(sample) else {
+                                input.markAsFinished()
+                                group.leave()
+                                return
+                            }
                             if label == "video" {
                                 control?.report((CMSampleBufferGetPresentationTimeStamp(sample).seconds - range.start.seconds) / total)
                             }
@@ -157,8 +162,14 @@ enum MP4Writer {
             try? FileManager.default.removeItem(at: url)
             throw CancellationError()
         }
+        // A failed read ends the loop like the end of the video: without this check the file would be truncated silently.
+        if reader.status == .failed {
+            writer.cancelWriting()
+            try? FileManager.default.removeItem(at: url)
+            throw reader.error ?? ExportError.writeFailed
+        }
         await writer.finishWriting()
-        if writer.status != .completed { throw writer.error ?? ExportError.noVideoTrack }
+        if writer.status != .completed { throw writer.error ?? ExportError.writeFailed }
     }
 
     /// Read from the disk each time: `URL.resourceValues` caches, which made every retry see the first size.
@@ -195,7 +206,7 @@ enum GIFWriter {
         )
         output.videoComposition = composition
         reader.add(output)
-        guard reader.startReading() else { throw reader.error ?? ExportError.noVideoTrack }
+        guard reader.startReading() else { throw reader.error ?? ExportError.writeFailed }
 
         let scale = width / canvas.width
         let context = CIContext()
@@ -225,7 +236,7 @@ enum GIFWriter {
         ] as CFDictionary)
         let frameProperties = [kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFDelayTime as String: 1 / fps]] as CFDictionary
         for frame in frames { CGImageDestinationAddImage(destination, frame, frameProperties) }
-        guard CGImageDestinationFinalize(destination) else { throw ExportError.noVideoTrack }
+        guard CGImageDestinationFinalize(destination) else { throw ExportError.writeFailed }
         return MP4Writer.fileSize(url)
     }
 }

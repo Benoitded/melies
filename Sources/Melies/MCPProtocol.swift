@@ -16,6 +16,8 @@ struct MCPProtocol {
     func handle(_ message: [String: Any]) async -> [String: Any]? {
         let id = message["id"]
         guard let method = message["method"] as? String else {
+            // A response to a request we never sent (a client acknowledging something): accepted, no reply.
+            if message["result"] != nil || message["error"] != nil { return nil }
             return id == nil ? nil : error(id, -32600, "Invalid request")
         }
         // Notifications have no id and get no reply.
@@ -54,9 +56,16 @@ struct MCPProtocol {
         guard let object = try? JSONSerialization.jsonObject(with: body) else {
             return encode(error(NSNull(), -32700, "Parse error"))
         }
-        if let batch = object as? [[String: Any]] {
+        if let batch = object as? [Any] {
+            guard !batch.isEmpty else { return encode(error(NSNull(), -32600, "Empty batch")) }
             var replies: [[String: Any]] = []
-            for message in batch { if let reply = await handle(message) { replies.append(reply) } }
+            for element in batch {
+                guard let message = element as? [String: Any] else {
+                    replies.append(error(NSNull(), -32600, "Invalid request")) // one error per bad item, not for the batch
+                    continue
+                }
+                if let reply = await handle(message) { replies.append(reply) }
+            }
             return replies.isEmpty ? nil : encode(replies)
         }
         guard let message = object as? [String: Any] else { return encode(error(NSNull(), -32600, "Invalid request")) }

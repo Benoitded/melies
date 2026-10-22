@@ -244,3 +244,4 @@
 "ai.default_client" = "La app de IA";
 "ai.working" = "%@ está editando…";
 "ai.done" = "%@ ha terminado";
+"export.failed" = "No se pudo escribir la exportación. Comprueba el espacio libre e inténtalo de nuevo.";

@@ -121,10 +121,11 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             finishContinuation = continuation
             Task { try? await stream.stopCapture() }
-            // Safety net so a missing delegate callback can never hang the app.
-            Task {
+            // Safety net so a missing delegate callback can never hang the app. It is cancelled as soon as the
+            // recording finishes, so it cannot cut short the NEXT stop 6 seconds later.
+            safetyTask = Task {
                 try? await Task.sleep(for: .seconds(6))
-                self.resumeFinish()
+                if !Task.isCancelled { self.resumeFinish() }
             }
         }
 
@@ -140,7 +141,11 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         }
     }
 
+    private var safetyTask: Task<Void, Never>?
+
     private func resumeFinish() {
+        safetyTask?.cancel()
+        safetyTask = nil
         finishContinuation?.resume()
         finishContinuation = nil
     }

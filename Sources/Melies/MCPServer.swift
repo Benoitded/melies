@@ -108,6 +108,7 @@ final class MCPServer: ObservableObject {
             parameters.requiredLocalEndpoint = NWEndpoint.hostPort(host: .ipv4(.loopback), port: NWEndpoint.Port(rawValue: Self.port)!)
             let listener = try NWListener(using: parameters)
             listener.newConnectionHandler = { [weak self] connection in
+                guard HTTPConnection.canAccept() else { connection.cancel(); return }
                 HTTPConnection(connection) { request in
                     await self?.respond(to: request) ?? .status(503, "Unavailable")
                 }.start()
@@ -165,8 +166,9 @@ final class MCPServer: ObservableObject {
         let host = request.header("host")?.lowercased().split(separator: ":").first.map(String.init) ?? ""
         guard host == "127.0.0.1" || host == "localhost" else { return .status(403, "Forbidden") }
         if let origin = request.header("origin") {
-            let allowed = origin.hasPrefix("http://127.0.0.1") || origin.hasPrefix("http://localhost")
-            guard allowed else { return .status(403, "Forbidden") }
+            // Exact host: a prefix test would accept http://localhost.evil.com.
+            let originHost = URLComponents(string: origin)?.host?.lowercased()
+            guard originHost == "127.0.0.1" || originHost == "localhost" else { return .status(403, "Forbidden") }
         }
         guard request.path == "/mcp" else { return .status(404, "Not Found") }
         guard authorized(request) else {
@@ -178,6 +180,16 @@ final class MCPServer: ObservableObject {
             // One call at a time: two clients (or two calls) must not interleave their edits and undo steps.
             await acquire()
             defer { release() }
+            // A call that never ends (a tracking or export that hangs) must not block every later request:
+            // after the deadline the long operations are cancelled so the call returns and the lock is released.
+            let watchdog = Task { @MainActor in
+                try? await Task.sleep(for: .seconds(Self.toolDeadline))
+                guard !Task.isCancelled else { return }
+                let model = EditorWindowController.shared.session.model
+                model?.cancelTracking()
+                model?.cancelExport()
+            }
+            defer { watchdog.cancel() }
             guard let reply = await mcp.handle(body: request.body) else { return .status(202, "Accepted") }
             return .json(reply)
         case "DELETE":
@@ -186,6 +198,9 @@ final class MCPServer: ObservableObject {
             return .status(405, "Method Not Allowed")
         }
     }
+
+    /// Seconds a single tool call may run before its long operations are cancelled.
+    private static let toolDeadline = 120.0
 
     private var locked = false
     private var waiters: [CheckedContinuation<Void, Never>] = []
@@ -223,6 +238,9 @@ struct HTTPRequest {
 
     func header(_ name: String) -> String? { headers[name.lowercased()] }
 
+    /// JSON-RPC messages are small (a screenshot comes back, it does not go in): 1 MB is plenty.
+    static let maxBody = 1024 * 1024
+
     /// Parses one request from the bytes received so far. nil means "need more bytes".
     static func parse(_ data: Data) -> HTTPRequest?? {
         guard let split = data.range(of: Data("\r\n\r\n".utf8)) else { return data.count > 64 * 1024 ? .some(nil) : nil }
@@ -233,10 +251,14 @@ struct HTTPRequest {
         var headers: [String: String] = [:]
         for line in lines {
             guard let colon = line.firstIndex(of: ":") else { continue }
-            headers[line[..<colon].lowercased()] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+            let name = line[..<colon].lowercased()
+            // Two Content-Length headers make the body length ambiguous: refuse instead of picking one.
+            if name == "content-length", headers[name] != nil { return .some(nil) }
+            headers[name] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
         }
-        let length = Int(headers["content-length"] ?? "0") ?? 0
-        guard length >= 0, length <= 40 * 1024 * 1024 else { return .some(nil) }
+        // Chunked bodies are not supported; saying so is clearer than reading a length of zero.
+        guard headers["transfer-encoding"] == nil else { return .some(nil) }
+        guard let length = Int(headers["content-length"] ?? "0"), length >= 0, length <= Self.maxBody else { return .some(nil) }
         let bodyStart = split.upperBound
         guard data.count - bodyStart >= length else { return nil }
 
@@ -277,10 +299,23 @@ final class HTTPConnection: @unchecked Sendable {
     private let handler: @Sendable (HTTPRequest) async -> HTTPReply
     private var buffer = Data()
 
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var active = 0
+    private static let maxActive = 8
+
+    /// False when too many connections are already open (a local client opening hundreds must not exhaust memory).
+    static func canAccept() -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return active < maxActive
+    }
+
     init(_ connection: NWConnection, handler: @escaping @Sendable (HTTPRequest) async -> HTTPReply) {
         self.connection = connection
         self.handler = handler
+        Self.lock.lock(); Self.active += 1; Self.lock.unlock()
     }
+
+    deinit { Self.lock.lock(); Self.active -= 1; Self.lock.unlock() }
 
     private var idleTimeout: DispatchWorkItem?
 
