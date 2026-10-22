@@ -14,7 +14,8 @@ cd "$(dirname "$0")/.."
 case "$(xcode-select -p 2>/dev/null)" in
   *.app/Contents/Developer) ;;
   *)
-    XCODE=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort | tail -1)
+    # "|| true": with pipefail, no Xcode makes ls fail and set -e would exit silently, before the help below.
+    XCODE=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort | tail -1 || true)
     if [ -n "$XCODE" ]; then
       export DEVELOPER_DIR="$XCODE/Contents/Developer"
       echo "Using $XCODE (xcode-select points to the Command Line Tools)."
