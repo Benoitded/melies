@@ -396,10 +396,10 @@ final class EditorModel {
         guard let clicks = cursor?.clicks, !clicks.isEmpty else { return }
         cropMode = false
         let result = AutoZoom(strength: .saved, range: start...max(end, start + 0.1), base: baseRect).generate(from: clicks)
-        guard !result.points.isEmpty else { Toast.show(L("zoom.auto.none")); return }
+        guard !result.points.isEmpty else { status = L("zoom.auto.none"); return }
         zoomPoints = result.points
         selectPoint(nil)
-        Toast.show(L("zoom.auto.done", result.zooms, result.clicks))
+        status = L("zoom.auto.done", result.zooms, result.clicks)
     }
 
     /// Z: the first time, creates a zoom with a start and an end. Afterwards, adds a waypoint at the playhead.
@@ -576,9 +576,9 @@ final class EditorModel {
                 }
                 self.trackingLost = result.lost
                 if let lostAt = result.lostAt {
-                    Toast.show(L(result.offscreen ? "trk.toast.lost_offscreen" : "trk.toast.lost", String(format: "%.1f", lostAt)))
+                    status = L(result.offscreen ? "trk.toast.lost_offscreen" : "trk.toast.lost", String(format: "%.1f", lostAt))
                 } else {
-                    Toast.show(L("trk.toast.done"))
+                    status = L("trk.toast.done")
                 }
             }
             self.trackingID = nil

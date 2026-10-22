@@ -60,8 +60,8 @@ struct TopBar: View {
                             model.toggleCrop()
                         }
                         BarButton(symbol: "cursorarrow.click.2", title: L(model.hasClicks ? "tip.clicks" : "tip.clicks.none"), active: model.showClicks && model.hasClicks, dimmed: !model.hasClicks) {
-                            // No recorded clicks: the button is dimmed, and a click says why instead of doing nothing.
-                            guard model.hasClicks else { Toast.show(L("toast.noclicks")); return }
+                            // No recorded clicks: the button is dimmed, the tooltip says why, and a click does nothing.
+                            guard model.hasClicks else { return }
                             model.showClicks.toggle()
                             UserDefaults.standard.set(model.showClicks, forKey: Pref.showClicks)
                         }
