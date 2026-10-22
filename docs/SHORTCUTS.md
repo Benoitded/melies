@@ -17,7 +17,7 @@ rectangle sans le redimensionner (comme macOS et Shottr), Esc pour annuler.
 
 | Raccourci | Action |
 |---|---|
-| Espace | Lecture / pause |
+| Espace | Lecture / pause ; en dessinant une forme (flèche, rectangle, spotlight, flou), maintenu : déplace la forme au lieu de la redimensionner |
 | I / O | Point d'entrée / de sortie du trim |
 | Gauche / Droite | Image précédente / suivante |
 | Shift+Gauche / Droite | 10 images |
@@ -31,7 +31,7 @@ rectangle sans le redimensionner (comme macOS et Shottr), Esc pour annuler.
 | Cmd+Shift+O | Ouvrir un fichier |
 | Cmd+Shift+V | Charger une vidéo depuis le presse-papiers |
 | Cmd+, | Ouvrir les Réglages |
-| Esc | Fermer |
+| Esc | Fermer ; annule l'export en cours |
 
 À venir (v2) : outils flèche (A), texte (T), rectangle (R), spotlight, blur (B),
 zone de zoom (Z), Cmd+Z / Cmd+Shift+Z, Cmd+D pour dupliquer.

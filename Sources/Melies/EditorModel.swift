@@ -39,6 +39,8 @@ final class EditorModel: ObservableObject {
     var wantsTextFocus = false
     /// Set while an annotation drag is in progress, so panning the canvas does not also run.
     var annotationGestureActive = false
+    /// Space held while drawing a shape: the drag moves the whole shape instead of resizing it.
+    var spaceHeld = false
 
     // Preview of blur: the latest decoded frame, upright, taken from the player.
     private var frameOutput: AVPlayerItemVideoOutput?
@@ -623,16 +625,32 @@ final class EditorModel: ObservableObject {
         )
     }
 
+    @Published var exportProgress: Double = 0
+    private var activeExport: ExportControl?
+
+    func cancelExport() { activeExport?.cancel() }
+
     func export(to destination: URL, quiet: Bool = false) async -> Bool {
+        var control: ExportControl?
         if !quiet {
             busy = true
+            exportProgress = 0
             status = L("status.exporting")
             player.pause()
+            let c = ExportControl { [weak self] fraction in
+                Task { @MainActor in self?.exportProgress = fraction }
+            }
+            activeExport = c
+            control = c
         }
-        defer { if !quiet { busy = false } }
+        defer { if !quiet { busy = false; activeExport = nil; exportProgress = 0 } }
         do {
-            try await VideoExport.run(asset: asset, range: range, crop: cropRect, points: zoomPoints, annotations: annotations, clicks: showClicks ? ClickSet.current(for: cursor) : nil, includeAudio: includeAudio, to: destination)
+            try await VideoExport.run(asset: asset, range: range, crop: cropRect, points: zoomPoints, annotations: annotations, clicks: showClicks ? ClickSet.current(for: cursor) : nil, includeAudio: includeAudio, control: control, to: destination)
             return true
+        } catch is CancellationError {
+            try? FileManager.default.removeItem(at: destination)
+            if !quiet { status = L("status.cancelled") }
+            return false
         } catch {
             if !quiet { status = L("status.fail", error.localizedDescription) }
             return false
