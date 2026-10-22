@@ -28,9 +28,9 @@ case "$ARG" in
   patch) VERSION="$MA.$MI.$((PA + 1))" ;;
   minor) VERSION="$MA.$((MI + 1)).0" ;;
   major) VERSION="$((MA + 1)).0.0" ;;
-  [0-9]*.[0-9]*.[0-9]*) VERSION="$ARG" ;;
-  *) echo "Usage: $0 [patch|minor|major|X.Y.Z] [--dry-run]"; exit 1 ;;
+  *) VERSION="$ARG" ;; # an exact version: checked strictly right below
 esac
+[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Usage: $0 [patch|minor|major|X.Y.Z] [--dry-run]"; exit 1; }
 NEXT_BUILD=$((BUILD + 1))
 TAG="v$VERSION"
 echo "==> Méliès $CURRENT ($BUILD) -> $VERSION ($NEXT_BUILD)"
@@ -46,7 +46,7 @@ fi
 LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
 RANGE=${LAST_TAG:+$LAST_TAG..HEAD}
 DIST=dist; rm -rf "$DIST"; mkdir -p "$DIST/updates"
-{ git log ${RANGE:-} --no-merges --pretty='- %s' | grep -v "^- Merge" || true; } > "$DIST/updates/Melies-$VERSION.md"
+{ git log ${RANGE:-} --no-merges --pretty='- %s' | grep -v "^- Merge" | sed 's/</\&lt;/g' || true; } > "$DIST/updates/Melies-$VERSION.md"
 [ -s "$DIST/updates/Melies-$VERSION.md" ] || echo "- Improvements and fixes" > "$DIST/updates/Melies-$VERSION.md"
 
 # Version bump (restored if anything fails before the commit).
@@ -81,6 +81,9 @@ elif [ -n "$DEVID" ] && xcrun notarytool history --keychain-profile melies-notar
   echo "==> Notarizing (a few minutes)"
   xcrun notarytool submit "$DMG" --keychain-profile melies-notary --wait
   xcrun stapler staple "$DMG"
+  # Trust nothing: check the ticket is attached and that Gatekeeper would accept this very file.
+  xcrun stapler validate "$DMG"
+  spctl -a -t open --context context:primary-signature -vv "$DMG"
   NOTARIZED=1
 else
   echo "!! Not notarized (missing certificate or the melies-notary profile)."
@@ -88,6 +91,7 @@ fi
 
 # Sparkle: sign the archive and write the appcast (the private key is in your keychain).
 TOOLS=.build/artifacts/sparkle/Sparkle/bin
+[ -x "$TOOLS/generate_appcast" ] || { echo "Sparkle tools not found: run swift build once (it downloads them)."; exit 1; }
 "$TOOLS/generate_appcast" "$DIST/updates" \
   --download-url-prefix "https://github.com/Benoitded/melies/releases/download/$TAG/" \
   --embed-release-notes -o "$DIST/appcast.xml"
@@ -106,11 +110,24 @@ if [ "$DRY" = 1 ]; then
   exit 0
 fi
 
+# Order matters: if one step fails, nothing public is left half done.
+#   1. commit locally  2. create the release as a draft (nothing visible)  3. push commit and tag  4. publish
 git add "$PLIST"
 git commit -q -m "Version $VERSION"
+if ! gh release create "$TAG" "$DMG" "$DIST/appcast.xml" --draft --target main --title "Méliès $VERSION" --notes-file "$DIST/updates/Melies-$VERSION.md"; then
+  git reset -q --hard HEAD~1 # undo the local version commit
+  echo "!! Could not create the GitHub release: nothing was published."
+  exit 1
+fi
 git tag "$TAG"
-git push -q origin main "$TAG"
-gh release create "$TAG" "$DMG" "$DIST/appcast.xml" --title "Méliès $VERSION" --notes-file "$DIST/updates/Melies-$VERSION.md"
+if ! git push -q origin main "$TAG"; then
+  gh release delete "$TAG" --yes >/dev/null 2>&1 || true
+  git tag -d "$TAG" >/dev/null 2>&1 || true
+  git reset -q --hard HEAD~1
+  echo "!! Could not push: the draft release was removed, nothing was published."
+  exit 1
+fi
+gh release edit "$TAG" --draft=false
 
 # Homebrew cask: rewritten from this template with the new version and checksum.
 TAP="Benoitded/homebrew-melies"
@@ -141,7 +158,7 @@ end
 CASK
   git -C "$TAPDIR" add -A
   git -C "$TAPDIR" commit -q -m "melies $VERSION"
-  git -C "$TAPDIR" push -q && echo "==> Homebrew cask updated: brew install --cask $TAP/melies"
+  if git -C "$TAPDIR" push -q; then echo "==> Homebrew cask updated: brew install --cask $TAP/melies"; else echo "!! Homebrew tap push failed (the release itself is published)."; fi
 else
   echo "!! Homebrew tap $TAP not found: skipped (create it once, see docs/RELEASING.md)."
 fi

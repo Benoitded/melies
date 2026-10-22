@@ -148,7 +148,7 @@ final class ComposeInstruction: NSObject, AVVideoCompositionInstructionProtocol 
 
 /// Draws two videos into one frame. When one video ends before the other, its last frame stays on screen.
 final class ComposeCompositor: NSObject, AVVideoCompositing {
-    private static let context = CIContext(options: [.cacheIntermediates: false])
+    private static let context = RenderContext.shared
     private let pixelFormat = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
     private let lock = NSLock()
     private var lastFrames: [CMPersistentTrackID: CIImage] = [:]
@@ -178,7 +178,7 @@ final class ComposeCompositor: NSObject, AVVideoCompositing {
         let a = frame(for: plan.trackA, in: request)
         let b = frame(for: plan.trackB, in: request)
         let output = plan.render(a: a, b: b)
-        let space = a?.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
+        let space = a?.colorSpace ?? RenderContext.sRGB
         Self.context.render(output, to: target, bounds: CGRect(origin: .zero, size: plan.canvas), colorSpace: space)
         request.finish(withComposedVideoFrame: target)
     }

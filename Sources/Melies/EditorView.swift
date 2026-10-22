@@ -35,6 +35,26 @@ struct EditorView: View {
             .accessibilityHidden(true)
     }
 
+    /// Shown instead of the editor when the file is not a video Méliès can read.
+    private struct UnreadableVideo: View {
+        let message: String
+        @ObservedObject var session: EditorSession
+
+        var body: some View {
+            VStack(spacing: 14) {
+                Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 40)).foregroundStyle(.orange)
+                Text(message).font(.title3.weight(.semibold)).multilineTextAlignment(.center)
+                Text(L("error.unreadable.hint")).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                HStack {
+                    Button(L("empty.open")) { session.chooseFile() }.buttonStyle(.glass).clickCursor()
+                    Button(L("error.close")) { EditorWindowController.shared.close() }.buttonStyle(.glass).clickCursor()
+                }
+            }
+            .padding(40)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
     private struct Empty: View {
         @ObservedObject var session: EditorSession
 
@@ -64,6 +84,9 @@ struct EditorView: View {
 
         var body: some View {
             VStack(spacing: 12) {
+                if let problem = model.loadError {
+                    UnreadableVideo(message: problem, session: session)
+                } else {
                 TopBar(session: session, model: model).zIndex(1)
                 GeometryReader { geo in
                     let video = model.videoRect(in: geo.size)
@@ -135,7 +158,7 @@ struct EditorView: View {
                     }
                     .font(.system(size: 12).monospacedDigit())
                     if let status = model.status {
-                        Text(status).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                        Text(status).font(.callout).foregroundStyle(.secondary).lineLimit(2).textSelection(.enabled)
                     }
                     if model.busy {
                         if model.exportProgress > 0 {
@@ -165,6 +188,7 @@ struct EditorView: View {
                     ExportOptionsButton(model: model)
                 }
                 .padding(.horizontal, 16)
+                }
             }
             .padding(.bottom, 14)
         }

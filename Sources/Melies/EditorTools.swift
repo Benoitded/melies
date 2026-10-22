@@ -334,21 +334,49 @@ final class EditorTools {
         return ok(model, model.trackingLost ? "Tracking stopped: the content left the frame or was covered. The annotation now ends at \(end) s." : "Tracked until \(end) s.")
     }
 
+    /// A path chosen by an AI client is untrusted: it may come from text on the screen or a file name. It must never
+    /// replace an existing file, and must stay in the places a user keeps videos.
+    static func safeExportTarget(_ path: String, ext: String, source: URL) throws -> URL {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        var url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath).standardizedFileURL
+        // The extension is ours, never the client's: a name like "notes.docx" or ".zshrc" cannot be targeted.
+        url = url.deletingPathExtension().appendingPathExtension(ext)
+        // Where the folder really is (symlinks followed), so a link inside Movies cannot point elsewhere.
+        let folder = url.deletingLastPathComponent().resolvingSymlinksInPath().path
+        let allowed = ["Movies", "Desktop", "Documents", "Downloads", "Pictures"].map { home + "/" + $0 }
+            + [LatestRecording.watchedFolder().resolvingSymlinksInPath().path,
+               source.deletingLastPathComponent().resolvingSymlinksInPath().path,
+               FileManager.default.temporaryDirectory.resolvingSymlinksInPath().path]
+        guard allowed.contains(where: { folder == $0 || folder.hasPrefix($0 + "/") }),
+              !folder.contains(".app/"), !folder.hasSuffix(".app"),
+              !folder.split(separator: "/").contains(where: { $0.hasPrefix(".") }) else {
+            throw ToolError("This folder is not allowed for an export. Use a folder under Movies, Desktop, Documents, Downloads or Pictures, or leave path out to export next to the source video.")
+        }
+        // Never overwrite: the same "-2", "-3" numbering as the default name.
+        return freeSibling(of: url, suffix: "", ext: ext)
+    }
+
+    /// `name-optimized.mp4`, or `-2`, `-3`... when that name is taken.
+    static func freeSibling(of file: URL, suffix: String, ext: String) -> URL {
+        let folder = file.deletingLastPathComponent()
+        let base = file.deletingPathExtension().lastPathComponent + suffix
+        var target = folder.appendingPathComponent(base + "." + ext)
+        var n = 2
+        while FileManager.default.fileExists(atPath: target.path) {
+            target = folder.appendingPathComponent("\(base)-\(n).\(ext)")
+            n += 1
+        }
+        return target
+    }
+
     private func export(_ model: EditorModel, _ args: [String: Any]) async throws -> ToolOutput {
         guard !model.busy else { throw ToolError("An export is already running.") }
         let ext = ExportSettings.current.fileExtension
-        var target: URL
+        let target: URL
         if let path = args["path"] as? String, !path.isEmpty {
-            target = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
-            if target.pathExtension.isEmpty { target.appendPathExtension(ext) }
+            target = try Self.safeExportTarget(path, ext: ext, source: model.url)
         } else {
-            let base = model.url.deletingPathExtension().lastPathComponent + "-optimized"
-            target = model.url.deletingLastPathComponent().appendingPathComponent(base + "." + ext)
-            var n = 2
-            while FileManager.default.fileExists(atPath: target.path) {
-                target = model.url.deletingLastPathComponent().appendingPathComponent("\(base)-\(n).\(ext)")
-                n += 1
-            }
+            target = Self.freeSibling(of: model.url, suffix: "-optimized", ext: ext)
         }
         try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
         guard await model.export(to: target) else { throw ToolError(model.status ?? "Export failed.") }

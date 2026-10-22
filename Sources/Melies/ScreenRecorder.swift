@@ -27,6 +27,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
     /// Same shortcut starts and stops.
     func toggle() {
+        if Countdown.isRunning { Countdown.cancel(); return } // the shortcut again cancels a running count-down
         guard !busy else { return }
         if isRecording { Task { await stop() } } else { Task { await begin() } }
     }
@@ -44,14 +45,21 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
         guard CGPreflightScreenCaptureAccess() else {
             CGRequestScreenCaptureAccess()
-            alert(L("rec.perm.title"),
-                  L("rec.perm.text"))
+            alert(L("rec.perm.title"), L("rec.perm.text"), openSettings: true)
             return
         }
         let chosen: (rect: CGRect, screen: NSScreen)?
         if let fixed { chosen = fixed } else { chosen = await RegionSelector.select() }
         guard let selection = chosen else { return }
         overlay = RecordingOverlay(screen: selection.screen, region: selection.rect)
+        // Optional count-down (Settings, off by default): the area stays dimmed and the number shows inside it.
+        let countdown = UserDefaults.standard.integer(forKey: Pref.recordCountdown)
+        if countdown > 0, fixed == nil {
+            guard await Countdown.run(seconds: countdown, region: selection.rect, screen: selection.screen) else {
+                closeOverlay()
+                return
+            }
+        }
         try? await Task.sleep(for: .milliseconds(220)) // let the selector disappear before capturing
 
         do {
@@ -72,9 +80,9 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
             // Audio: the system sound and/or the microphone, both written into the same movie.
             let defaults = UserDefaults.standard
-            config.capturesAudio = defaults.bool(forKey: "recordSystemAudio")
+            config.capturesAudio = defaults.bool(forKey: Pref.recordSystemAudio)
             config.excludesCurrentProcessAudio = true
-            if defaults.bool(forKey: "recordMicrophone") {
+            if defaults.bool(forKey: Pref.recordMicrophone) {
                 if await Self.microphoneAllowed() {
                     config.captureMicrophone = true
                 } else {
@@ -121,10 +129,11 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             finishContinuation = continuation
             Task { try? await stream.stopCapture() }
-            // Safety net so a missing delegate callback can never hang the app.
-            Task {
+            // Safety net so a missing delegate callback can never hang the app. It is cancelled as soon as the
+            // recording finishes, so it cannot cut short the NEXT stop 6 seconds later.
+            safetyTask = Task {
                 try? await Task.sleep(for: .seconds(6))
-                self.resumeFinish()
+                if !Task.isCancelled { self.resumeFinish() }
             }
         }
 
@@ -132,7 +141,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         isRecording = false
         hideStatusItem()
         if let url = outputURL, FileManager.default.fileExists(atPath: url.path) {
-            if UserDefaults.standard.object(forKey: "openEditorAfterRecording") as? Bool ?? true {
+            if UserDefaults.standard.object(forKey: Pref.openEditorAfterRecording) as? Bool ?? true {
                 EditorWindowController.shared.open(url)
             } else {
                 Toast.show(L("toast.recorded"))
@@ -140,7 +149,11 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         }
     }
 
+    private var safetyTask: Task<Void, Never>?
+
     private func resumeFinish() {
+        safetyTask?.cancel()
+        safetyTask = nil
         finishContinuation?.resume()
         finishContinuation = nil
     }
@@ -269,12 +282,18 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         return LatestRecording.watchedFolder().appendingPathComponent("Melies Recording \(formatter.string(from: Date())).mov")
     }
 
-    private func alert(_ title: String, _ text: String) {
+    private func alert(_ title: String, _ text: String, openSettings: Bool = false) {
+#if DEBUG || MELIES_HOOKS
         if ProcessInfo.processInfo.environment["MELIES_RECORD_TEST"] != nil { print("[record] alert: \(title) | \(text)"); return }
+#endif
         let a = NSAlert()
         a.messageText = title
         a.informativeText = text
+        if openSettings { a.addButton(withTitle: L("rec.perm.open")); a.addButton(withTitle: L("error.close")) }
         NSApp.activate(ignoringOtherApps: true)
-        a.runModal()
+        if a.runModal() == .alertFirstButtonReturn, openSettings,
+           let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+            NSWorkspace.shared.open(url) // straight to the switch, not a dead-end message
+        }
     }
 }

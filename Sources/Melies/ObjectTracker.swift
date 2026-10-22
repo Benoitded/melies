@@ -13,6 +13,15 @@ enum ObjectTracker {
         var lost: Bool { lostAt != nil }
     }
 
+    /// MELIES_TRACK_DEBUG=1 prints every match to stderr. Read once: it used to copy the whole environment at every frame.
+    private static let debugTrace: Bool = {
+        #if DEBUG || MELIES_HOOKS
+        return ProcessInfo.processInfo.environment["MELIES_TRACK_DEBUG"] != nil
+        #else
+        return false
+        #endif
+    }()
+
     /// Mean luma difference, relative to the contrast of the region, above which it is considered gone
     /// (about 0 for a perfect match, about 1.1 for unrelated content).
     private static let lostThreshold = 0.5
@@ -64,6 +73,9 @@ enum ObjectTracker {
                 originY = Int((box.minY * Double(frame.height)).rounded())
                 tw = max(min(Int((box.width * Double(frame.width)).rounded()), frame.width - originX), 4)
                 th = max(min(Int((box.height * Double(frame.height)).rounded()), frame.height - originY), 4)
+                // A box ending within 4 px of an edge was widened to 4: pull it back inside so no read goes past the image.
+                originX = max(min(originX, frame.width - tw), 0)
+                originY = max(min(originY, frame.height - th), 0)
                 template = patch(of: frame, x: originX, y: originY, w: tw, h: th)
                 templateBlur = patch(of: soft, x: originX, y: originY, w: tw, h: th)
                 x = originX; y = originY
@@ -75,7 +87,7 @@ enum ObjectTracker {
 
             let (bx, by, score) = bestMatch(of: template, blurTemplate: templateBlur, tw: tw, th: th, in: frame, blurFrame: soft, around: (x + vx, y + vy))
             // Touching a frame edge it was not on at the start means it is leaving the frame.
-            if ProcessInfo.processInfo.environment["MELIES_TRACK_DEBUG"] != nil { FileHandle.standardError.write(Data("t=\(String(format: "%.3f", t)) pos=(\(bx),\(by)) from=(\(x),\(y)) score=\(String(format: "%.2f", score)) frame=\(frame.width)x\(frame.height)\n".utf8)) }
+            if debugTrace { FileHandle.standardError.write(Data("t=\(String(format: "%.3f", t)) pos=(\(bx),\(by)) from=(\(x),\(y)) score=\(String(format: "%.2f", score)) frame=\(frame.width)x\(frame.height)\n".utf8)) }
             let leaving = (bx <= 0 && originX > 0) || (by <= 0 && originY > 0)
                 || (bx >= frame.width - tw && originX < frame.width - tw)
                 || (by >= frame.height - th && originY < frame.height - th)

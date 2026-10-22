@@ -22,7 +22,7 @@ enum LatestRecording {
     }
 
     static func watchedFolder() -> URL {
-        if let path = UserDefaults.standard.string(forKey: "watchedFolder"), !path.isEmpty {
+        if let path = UserDefaults.standard.string(forKey: Pref.watchedFolder), !path.isEmpty {
             return URL(fileURLWithPath: path)
         }
         return FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask)[0]

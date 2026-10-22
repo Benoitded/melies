@@ -113,7 +113,7 @@ struct AnnotationLane: View {
                 }
                 .coordinateSpace(name: space)
             }
-            .frame(height: CGFloat(rowCount) * rowHeight + 4)
+            .frame(height: CGFloat((layout.values.max() ?? -1) + 1) * rowHeight + 4) // from the layout computed above, not recomputed
         }
     }
 

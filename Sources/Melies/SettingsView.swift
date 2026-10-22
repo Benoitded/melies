@@ -7,13 +7,14 @@ import SwiftUI
 
 struct GeneralTab: View {
     @AppStorage(Appearance.key) private var appearance = "system"
-    @AppStorage("watchedFolder") private var watchedFolder = ""
-    @AppStorage("openEditorAfterRecording") private var openAfterRecording = true
-    @AppStorage("closeAfterAction") private var closeAfterAction = true
-    @AppStorage("recordMicrophone") private var recordMicrophone = false
-    @AppStorage("recordSystemAudio") private var recordSystemAudio = false
-    @AppStorage("clickColor") private var clickColor = "yellow"
-    @AppStorage("clickSize") private var clickSize = 36.0
+    @AppStorage(Pref.watchedFolder) private var watchedFolder = ""
+    @AppStorage(Pref.openEditorAfterRecording) private var openAfterRecording = true
+    @AppStorage(Pref.closeAfterAction) private var closeAfterAction = true
+    @AppStorage(Pref.recordMicrophone) private var recordMicrophone = false
+    @AppStorage(Pref.recordSystemAudio) private var recordSystemAudio = false
+    @AppStorage(Pref.recordCountdown) private var recordCountdown = 0
+    @AppStorage(Pref.clickColor) private var clickColor = "yellow"
+    @AppStorage(Pref.clickSize) private var clickSize = 36.0
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
@@ -49,6 +50,20 @@ struct GeneralTab: View {
                     Toggle(L("set.audio.system"), isOn: $recordSystemAudio)
                 }
                 .labeledContent(L("set.audio"))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Picker("", selection: $recordCountdown) {
+                        Text(L("set.countdown.off")).tag(0)
+                        Text(L("set.countdown.seconds", 3)).tag(3)
+                        Text(L("set.countdown.seconds", 5)).tag(5)
+                        Text(L("set.countdown.seconds", 10)).tag(10)
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(width: 250)
+                    Text(L("set.countdown.hint")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                .labeledContent(L("set.countdown"))
 
                 HStack(spacing: 14) {
                     HStack(spacing: 8) {
@@ -86,6 +101,7 @@ struct GeneralTab: View {
         .formStyle(.columns)
         .padding(24)
         .frame(width: 560)
+        .frame(maxHeight: .infinity, alignment: .top) // content starts at the top, not centered in a taller window
     }
 
     private func chooseFolder() {
@@ -211,13 +227,14 @@ struct HotkeysTab: View {
         .formStyle(.columns)
         .padding(24)
         .frame(width: 560)
+        .frame(maxHeight: .infinity, alignment: .top) // content starts at the top, not centered in a taller window
     }
 }
 
 // MARK: Advanced
 
 struct AdvancedTab: View {
-    @AppStorage("alwaysOnTop") private var alwaysOnTop = false
+    @AppStorage(Pref.alwaysOnTop) private var alwaysOnTop = false
     @ObservedObject private var updater = Updater.shared
 
     var body: some View {
@@ -240,6 +257,7 @@ struct AdvancedTab: View {
         .formStyle(.columns)
         .padding(24)
         .frame(width: 560)
+        .frame(maxHeight: .infinity, alignment: .top) // content starts at the top, not centered in a taller window
     }
 }
 

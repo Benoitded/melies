@@ -4,7 +4,15 @@ import AppKit
 
 enum ExportError: LocalizedError {
     case noVideoTrack
-    var errorDescription: String? { L("export.novideo") }
+    /// The video was read or written badly (disk full, unreadable frames, encoder failure).
+    case writeFailed
+    var errorDescription: String? { self == .noVideoTrack ? L("export.novideo") : L("export.failed") }
+}
+
+/// One Core Image context for every export (MP4 compositor, combine, GIF): the GPU resources are created once.
+enum RenderContext {
+    static let shared = CIContext(options: [.cacheIntermediates: false])
+    static let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
 }
 
 /// Everything needed to draw one output frame. Value type, so the compositor can use it from any thread.
@@ -67,7 +75,7 @@ final class FrameInstruction: NSObject, AVVideoCompositionInstructionProtocol {
 /// Custom compositor: crop, zoom camera, scaling and padding in one Core Image pass per frame.
 /// Annotations (arrows, text, ...) will be drawn here too, so the preview and the export agree.
 final class FrameCompositor: NSObject, AVVideoCompositing {
-    private static let context = CIContext(options: [.cacheIntermediates: false])
+    private static let context = RenderContext.shared
     private let pixelFormat = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
 
     var sourcePixelBufferAttributes: [String: any Sendable]? { pixelFormat }
@@ -85,7 +93,7 @@ final class FrameCompositor: NSObject, AVVideoCompositing {
         }
         let input = CIImage(cvPixelBuffer: source)
         let output = instruction.plan.render(input, at: request.compositionTime.seconds)
-        let space = input.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
+        let space = input.colorSpace ?? RenderContext.sRGB
         Self.context.render(output, to: target, bounds: CGRect(origin: .zero, size: instruction.plan.canvas), colorSpace: space)
         request.finish(withComposedVideoFrame: target)
     }
@@ -110,7 +118,8 @@ enum VideoExport {
             width: max((region.width * srcW).rounded(), 2), height: max((region.height * srcH).rounded(), 2)
         )
 
-        let scale = min(1, CGFloat(settings.maxWidth) / base.width)
+        // Width is capped by the settings; height too (a crafted 100 x 1,000,000 video must not allocate gigabytes).
+        let scale = min(1, CGFloat(settings.maxWidth) / base.width, 8192 / base.height)
         var contentW = (base.width * scale).rounded()
         var contentH = (base.height * scale).rounded()
 

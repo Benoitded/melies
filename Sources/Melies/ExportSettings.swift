@@ -22,10 +22,10 @@ struct ExportSettings: Equatable {
 
     static var current: ExportSettings {
         let d = UserDefaults.standard
-        let mb = d.integer(forKey: "exportMaxMB")
-        let width = d.integer(forKey: "exportMaxWidth")
+        let mb = d.integer(forKey: Pref.exportMaxMB)
+        let width = d.integer(forKey: Pref.exportMaxWidth)
         return ExportSettings(
-            format: Format(rawValue: d.string(forKey: "exportFormat") ?? "") ?? .mp4,
+            format: Format(rawValue: d.string(forKey: Pref.exportFormat) ?? "") ?? .mp4,
             maxMegabytes: mb > 0 ? mb : nil,
             maxWidth: widthChoices.contains(width) ? width : 1920
         )
@@ -116,7 +116,7 @@ enum MP4Writer {
         }
 
         guard reader.startReading(), writer.startWriting() else {
-            throw reader.error ?? writer.error ?? ExportError.noVideoTrack
+            throw reader.error ?? writer.error ?? ExportError.writeFailed
         }
         writer.startSession(atSourceTime: range.start)
 
@@ -134,7 +134,12 @@ enum MP4Writer {
                             return
                         }
                         if let sample = output.copyNextSampleBuffer() {
-                            input.append(sample)
+                            // A refused sample means the writer failed (disk full, encoder error): stop, the status says why.
+                            guard input.append(sample) else {
+                                input.markAsFinished()
+                                group.leave()
+                                return
+                            }
                             if label == "video" {
                                 control?.report((CMSampleBufferGetPresentationTimeStamp(sample).seconds - range.start.seconds) / total)
                             }
@@ -157,8 +162,14 @@ enum MP4Writer {
             try? FileManager.default.removeItem(at: url)
             throw CancellationError()
         }
+        // A failed read ends the loop like the end of the video: without this check the file would be truncated silently.
+        if reader.status == .failed {
+            writer.cancelWriting()
+            try? FileManager.default.removeItem(at: url)
+            throw reader.error ?? ExportError.writeFailed
+        }
         await writer.finishWriting()
-        if writer.status != .completed { throw writer.error ?? ExportError.noVideoTrack }
+        if writer.status != .completed { throw writer.error ?? ExportError.writeFailed }
     }
 
     /// Read from the disk each time: `URL.resourceValues` caches, which made every retry see the first size.
@@ -193,39 +204,44 @@ enum GIFWriter {
         let output = AVAssetReaderVideoCompositionOutput(
             videoTracks: [track], videoSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
         )
-        output.videoComposition = composition
+        // The GIF keeps 3 to 15 frames per second: ask the compositor for just those instead of 30 and dropping most.
+        if let gifComposition = composition.mutableCopy() as? AVMutableVideoComposition {
+            gifComposition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(fps))
+            output.videoComposition = gifComposition
+        } else {
+            output.videoComposition = composition
+        }
         reader.add(output)
-        guard reader.startReading() else { throw reader.error ?? ExportError.noVideoTrack }
+        guard reader.startReading() else { throw reader.error ?? ExportError.writeFailed }
 
         let scale = width / canvas.width
-        let context = CIContext()
         let seconds = range.duration.seconds
         let total = min(max(Int(seconds * fps), 1), 600)
-        var frames: [CGImage] = []
-        var next = 0
-        while let sample = output.copyNextSampleBuffer() {
-            if control?.isCancelled == true { reader.cancelReading(); throw CancellationError() }
-            let time = CMSampleBufferGetPresentationTimeStamp(sample).seconds - range.start.seconds
-            guard next < total, time >= Double(next) / fps - 0.0001, let buffer = CMSampleBufferGetImageBuffer(sample) else { continue }
-            let image = CIImage(cvPixelBuffer: buffer).transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-            if let cg = context.createCGImage(image, from: image.extent) {
-                frames.append(cg)
-                next += 1
-                control?.report(Double(next) / Double(total))
-            }
-        }
-        guard let last = frames.last else { throw ExportError.noVideoTrack }
-        while frames.count < total { frames.append(last) } // the source ended a little early
-
-        guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.gif.identifier as CFString, frames.count, nil) else {
-            throw ExportError.noVideoTrack
+        // The destination is open from the start and each frame is written as soon as it is drawn: a long GIF no
+        // longer sits in memory as hundreds of full-size images before being encoded.
+        guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.gif.identifier as CFString, total, nil) else {
+            throw ExportError.writeFailed
         }
         CGImageDestinationSetProperties(destination, [
             kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFLoopCount as String: 0],
         ] as CFDictionary)
         let frameProperties = [kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFDelayTime as String: 1 / fps]] as CFDictionary
-        for frame in frames { CGImageDestinationAddImage(destination, frame, frameProperties) }
-        guard CGImageDestinationFinalize(destination) else { throw ExportError.noVideoTrack }
+
+        var last: CGImage?
+        var written = 0
+        while written < total, let sample = output.copyNextSampleBuffer() {
+            if control?.isCancelled == true { reader.cancelReading(); throw CancellationError() }
+            guard let buffer = CMSampleBufferGetImageBuffer(sample) else { continue }
+            let image = CIImage(cvPixelBuffer: buffer).transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+            guard let cg = RenderContext.shared.createCGImage(image, from: image.extent) else { continue }
+            CGImageDestinationAddImage(destination, cg, frameProperties)
+            last = cg
+            written += 1
+            control?.report(Double(written) / Double(total))
+        }
+        guard let tail = last else { throw ExportError.noVideoTrack }
+        while written < total { CGImageDestinationAddImage(destination, tail, frameProperties); written += 1 } // the source ended a little early
+        guard CGImageDestinationFinalize(destination) else { throw ExportError.writeFailed }
         return MP4Writer.fileSize(url)
     }
 }

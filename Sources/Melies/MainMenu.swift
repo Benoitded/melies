@@ -50,8 +50,10 @@ final class MenuActions: NSObject, NSMenuItemValidation {
             return session.model?.isEditingText == true || (session.model?.canUndo ?? false)
         case #selector(redo):
             return session.model?.isEditingText == true || (session.model?.canRedo ?? false)
-        case #selector(copyVideo), #selector(saveVideo), #selector(zoomIn), #selector(zoomOut),
-             #selector(zoomActual), #selector(zoomFit):
+        case #selector(copyVideo), #selector(saveVideo):
+            // Same rule as the toolbar buttons: not while an export is already running.
+            return session.model != nil && EditorWindowController.shared.isKey && session.model?.busy != true
+        case #selector(zoomIn), #selector(zoomOut), #selector(zoomActual), #selector(zoomFit):
             return session.model != nil && EditorWindowController.shared.isKey
         default:
             return true

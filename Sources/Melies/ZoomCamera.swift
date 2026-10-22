@@ -100,7 +100,11 @@ struct CursorTrack {
     }
 
     static func load(for video: URL) -> CursorTrack? {
-        guard let data = try? Data(contentsOf: sidecarURL(for: video)) else { return nil }
+        // The sidecar travels with the video (a zip, a download): it is not trusted. Bounded size and counts, and
+        // values clamped, so a crafted file cannot exhaust memory or make every frame scan a million clicks.
+        let url = sidecarURL(for: video)
+        let size = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int ?? 0
+        guard size > 0, size <= 5_000_000, let data = try? Data(contentsOf: url) else { return nil }
         let decoder = JSONDecoder()
         var cursor: [[Double]] = []
         var clicks: [[Double]] = []
@@ -112,8 +116,10 @@ struct CursorTrack {
         } else {
             return nil
         }
-        let samples = cursor.compactMap { $0.count == 3 ? Sample(t: $0[0], x: $0[1], y: $0[2]) : nil }
-        let taps = clicks.compactMap { $0.count == 3 ? Click(t: $0[0], x: $0[1], y: $0[2]) : nil }
+        func unit(_ v: Double) -> Double { min(max(v, 0), 1) }
+        func valid(_ row: [Double]) -> Bool { row.count == 3 && row.allSatisfy { $0.isFinite } }
+        let samples = cursor.prefix(200_000).filter(valid).map { Sample(t: $0[0], x: unit($0[1]), y: unit($0[2])) }
+        let taps = clicks.prefix(5_000).filter(valid).map { Click(t: $0[0], x: unit($0[1]), y: unit($0[2])) }
         return samples.isEmpty && taps.isEmpty ? nil : CursorTrack(samples: samples, clicks: taps)
     }
 

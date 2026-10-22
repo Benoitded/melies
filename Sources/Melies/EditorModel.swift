@@ -14,7 +14,21 @@ final class EditorModel: ObservableObject {
     @Published var current: Double = 0
     @Published var isPlaying = false
     @Published var busy = false
-    @Published var status: String?
+    @Published var status: String? {
+        didSet {
+            // "Copied", "Saved", "Export failed"... said once, then gone: a status line left for hours looks like a
+            // current state. A running export keeps its message until it ends.
+            statusClear?.cancel()
+            guard status != nil else { return }
+            statusClear = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(8))
+                if !Task.isCancelled, let self, !self.busy { self.status = nil }
+            }
+        }
+    }
+    private var statusClear: Task<Void, Never>?
+    /// Set when the file could not be opened as a video: the editor then explains it instead of showing an empty player.
+    @Published var loadError: String?
     @Published var sourceSize: CGSize = .zero
     @Published var fps: Double = 0
     /// Crop region, normalized (0...1) in the upright frame, origin top-left. nil means no crop.
@@ -30,7 +44,15 @@ final class EditorModel: ObservableObject {
     @Published var zoomPoints: [ZoomPoint] = [] { didSet { noteChange() } }
     @Published var selectedPointID: UUID?
     @Published var tool: Tool = .select
-    @Published var annotations: [Annotation] = [] { didSet { noteChange(); refreshStillFrame() } }
+    @Published var annotations: [Annotation] = [] {
+        didSet {
+            hasBlur = annotations.contains { $0.kind == .blur }
+            noteChange()
+            refreshStillFrame()
+        }
+    }
+    /// Cached: asked at every playback tick, so it must not scan the annotations each time.
+    private var hasBlur = false
     @Published var selectedAnnotationID: UUID?
     /// True while a text field has the keyboard, so single-key shortcuts must stay quiet.
     @Published var isEditingText = false
@@ -93,6 +115,13 @@ final class EditorModel: ObservableObject {
     }
 
     private func load() async {
+        // A file that is not a readable video (corrupt, unsupported, deleted): say so, do not show an empty player.
+        let playable = (try? await asset.load(.isPlayable)) ?? false
+        let hasVideo = !((try? await asset.loadTracks(withMediaType: .video)) ?? []).isEmpty
+        guard playable, hasVideo else {
+            loadError = L("error.unreadable", url.lastPathComponent)
+            return
+        }
         let d = (try? await asset.load(.duration).seconds) ?? 0
         if let track = try? await asset.loadTracks(withMediaType: .video).first {
             if let rate = try? await track.load(.nominalFrameRate), rate > 0 {
@@ -351,36 +380,16 @@ final class EditorModel: ObservableObject {
         return ZoomCamera.clampedCenter(center, scale: scale)
     }
 
-    /// Builds zoom animations from the recorded clicks: zoom in just before a click, stay while clicks keep
-    /// coming nearby, follow them, and zoom out a moment after the last one. Replaces the existing zoom points.
+    /// Builds zoom animations from the recorded clicks (see `AutoZoom`) and replaces the existing zoom points.
+    /// Undoable like any edit; a toast says what was made.
     func autoZoomFromClicks() {
-        guard let clicks = cursor?.clicks.sorted(by: { $0.t < $1.t }), !clicks.isEmpty else { return }
+        guard let clicks = cursor?.clicks, !clicks.isEmpty else { return }
         cropMode = false
-        let scale = 2.0, lead = 0.45, hold = 1.4, regroup = 2.2
-        let b = baseRect
-        func norm(_ c: CursorTrack.Click) -> CGPoint {
-            ZoomCamera.clampedCenter(CGPoint(x: min(max((c.x - b.minX) / b.width, 0), 1), y: min(max((c.y - b.minY) / b.height, 0), 1)), scale: scale)
-        }
-        // A click that follows the previous one within `regroup` seconds keeps the same zoom.
-        var groups: [[CursorTrack.Click]] = []
-        for c in clicks where c.t >= start && c.t <= end {
-            if let last = groups.last?.last, c.t - last.t < regroup { groups[groups.count - 1].append(c) } else { groups.append([c]) }
-        }
-        var points: [ZoomPoint] = []
-        for group in groups {
-            let arrive = max(group[0].t - lead, start + 0.05)
-            // Clamp to the previous zoom-out so two zooms never overlap.
-            if let previous = points.last, arrive < previous.time + 0.7 { points.removeLast() ; continue }
-            points.append(ZoomPoint(time: arrive, scale: scale, center: norm(group[0]), transition: lead, ease: .smooth))
-            for c in group.dropFirst() {
-                points.append(ZoomPoint(time: c.t - 0.25, scale: scale, center: norm(c), transition: 0.5, ease: .smooth))
-            }
-            let out = min((group.last?.t ?? arrive) + hold, max(end - 0.05, arrive + 0.5))
-            points.append(ZoomPoint(time: out, scale: 1, center: CGPoint(x: 0.5, y: 0.5), transition: 0.7, ease: .smooth))
-        }
-        guard !points.isEmpty else { return }
-        zoomPoints = points.sorted { $0.time < $1.time }
+        let result = AutoZoom(strength: .saved, range: start...max(end, start + 0.1), base: baseRect).generate(from: clicks)
+        guard !result.points.isEmpty else { Toast.show(L("zoom.auto.none")); return }
+        zoomPoints = result.points
         selectPoint(nil)
+        Toast.show(L("zoom.auto.done", result.zooms, result.clicks))
     }
 
     /// Z: the first time, creates a zoom with a start and an end. Afterwards, adds a waypoint at the playhead.
@@ -610,15 +619,16 @@ final class EditorModel: ObservableObject {
 
     /// Keeps the newest frame for blur patches (only when a blur exists).
     private func captureFrame() {
-        guard let output = frameOutput, annotations.contains(where: { $0.kind == .blur }) else { return }
+        guard let output = frameOutput, hasBlur else { return }
         if let buffer = output.copyPixelBuffer(forItemTime: player.currentTime(), itemTimeForDisplay: nil) { lastBuffer = buffer }
     }
 
     /// Paused: fetch the exact frame under the playhead, once per position.
     private func refreshStillFrame() {
-        guard !isPlaying, annotations.contains(where: { $0.kind == .blur }), abs(current - stillRequestedTime) > 0.0005 else { return }
+        guard !isPlaying, hasBlur, abs(current - stillRequestedTime) > 0.0005 else { return }
         let time = current
         stillRequestedTime = time
+        stillGenerator.cancelAllCGImageGeneration() // scrubbing: drop the decodes nobody will look at
         stillRequestID += 1
         let id = stillRequestID
         Task { @MainActor in
@@ -644,8 +654,11 @@ final class EditorModel: ObservableObject {
         guard seconds.isFinite else { return }
         captureFrame()
         refreshStillFrame()
-        current = seconds
-        isPlaying = player.timeControlStatus == .playing
+        // @Published announces every assignment, even of the same value: only assign on a change, so the
+        // views that watch these are not redrawn for nothing.
+        if current != seconds { current = seconds }
+        let playing = player.timeControlStatus == .playing
+        if isPlaying != playing { isPlaying = playing }
         // Loop inside the trimmed range.
         if isPlaying, seconds >= end - 0.02 { seek(to: start) }
     }
@@ -714,6 +727,7 @@ final class EditorModel: ObservableObject {
             if !quiet { status = L("status.cancelled") }
             return false
         } catch {
+            try? FileManager.default.removeItem(at: destination) // never leave a half-written file behind
             if !quiet { status = L("status.fail", error.localizedDescription) }
             return false
         }
@@ -860,7 +874,7 @@ final class EditorModel: ObservableObject {
 
     /// After a successful copy, save or share, close the editor (and with it the Dock icon).
     private func finish(toast: String?) {
-        guard UserDefaults.standard.object(forKey: "closeAfterAction") as? Bool ?? true else { return }
+        guard UserDefaults.standard.object(forKey: Pref.closeAfterAction) as? Bool ?? true else { return }
         if let toast { Toast.show(toast) }
         EditorWindowController.shared.close()
     }
