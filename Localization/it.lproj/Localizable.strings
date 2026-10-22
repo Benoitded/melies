@@ -207,7 +207,6 @@
 "set.adv.updates.auto" = "Verifica automaticamente";
 "set.adv.version" = "Versione %@";
 "zoom.auto" = "Auto dai clic";
-"zoom.auto.tip" = "Zoom su ogni clic fatto durante la registrazione";
 "onb.waiting" = "In attesa dell'interruttore…";
 "onb.restarting" = "Fatto, Méliès si riavvia…";
 "upd.latest.title" = "Sei aggiornato";
@@ -241,3 +240,9 @@
 "set.countdown.hint" = "Conto alla rovescia al centro dell'area prima della registrazione. Esc annulla.";
 "tip.clicks.none" = "Mostra i clic (nessuno registrato in questo video)";
 "toast.noclicks" = "Nessun clic è stato registrato in questo video";
+"zoom.auto.subtle" = "Discreto (1,5×)";
+"zoom.auto.normal" = "Normale (2×)";
+"zoom.auto.strong" = "Forte (2,6×)";
+"zoom.auto.done" = "%d zoom creati da %d clic. Cmd+Z per annullare.";
+"zoom.auto.none" = "Nessun clic qui merita uno zoom.";
+"zoom.auto.tip" = "Crea gli zoom dai clic. La freccia regola l'intensità.";

@@ -19,4 +19,5 @@ enum Pref {
     static let exportMaxWidth = "exportMaxWidth"
     static let mcpEnabled = "mcpEnabled"
     static let mcpPort = "mcpPort"
+    static let autoZoomStrength = "autoZoomStrength"
 }

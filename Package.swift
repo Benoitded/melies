@@ -17,6 +17,11 @@ let package = Package(
             ],
             path: "Sources/Melies"
         ),
+        .testTarget(
+            name: "MeliesTests",
+            dependencies: ["Melies"],
+            path: "Tests/MeliesTests"
+        ),
     ],
     swiftLanguageModes: [.v5]
 )

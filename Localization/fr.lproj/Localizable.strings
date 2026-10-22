@@ -207,7 +207,6 @@
 "set.adv.updates.auto" = "Rechercher automatiquement";
 "set.adv.version" = "Version %@";
 "zoom.auto" = "Auto depuis les clics";
-"zoom.auto.tip" = "Zoome sur chaque clic fait pendant l'enregistrement";
 "onb.waiting" = "J'attends l'interrupteur…";
 "onb.restarting" = "C'est bon, Méliès redémarre…";
 "upd.latest.title" = "Tu as la dernière version";
@@ -241,3 +240,9 @@
 "set.countdown.hint" = "Décompte au milieu de la zone avant le début de l'enregistrement. Échap annule.";
 "tip.clicks.none" = "Afficher les clics (aucun n'a été enregistré dans cette vidéo)";
 "toast.noclicks" = "Aucun clic n'a été enregistré dans cette vidéo";
+"zoom.auto.subtle" = "Discret (1,5×)";
+"zoom.auto.normal" = "Normal (2×)";
+"zoom.auto.strong" = "Fort (2,6×)";
+"zoom.auto.done" = "%d zooms créés à partir de %d clics. ⌘Z pour annuler.";
+"zoom.auto.none" = "Aucun clic ici ne mérite un zoom.";
+"zoom.auto.tip" = "Crée les zooms à partir des clics. La flèche règle l'intensité.";

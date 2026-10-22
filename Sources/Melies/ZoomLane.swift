@@ -36,9 +36,22 @@ struct ZoomLane: View {
                     HStack(spacing: 10) {
                         Text(L("zoom.hint")).font(.system(size: 11)).foregroundStyle(.secondary)
                         if model.hasClicks {
-                            Button { model.autoZoomFromClicks() } label: {
+                            Menu {
+                                ForEach(AutoZoomStrength.allCases, id: \.self) { level in
+                                    Button {
+                                        AutoZoomStrength.saved = level
+                                        model.autoZoomFromClicks()
+                                    } label: {
+                                        Text(L(level.labelKey))
+                                        if AutoZoomStrength.saved == level { Image(systemName: "checkmark") }
+                                    }
+                                }
+                            } label: {
                                 Label(L("zoom.auto"), systemImage: "cursorarrow.click.2").font(.system(size: 11))
+                            } primaryAction: {
+                                model.autoZoomFromClicks()
                             }
+                            .menuStyle(.button)
                             .buttonStyle(.glass)
                             .clickCursor()
                             .buttonBorderShape(.capsule)

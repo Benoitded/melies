@@ -207,7 +207,6 @@
 "set.adv.updates.auto" = "Check automatically";
 "set.adv.version" = "Version %@";
 "zoom.auto" = "Auto from clicks";
-"zoom.auto.tip" = "Zoom in on every click you made in the recording";
 "onb.waiting" = "Waiting for the switch…";
 "onb.restarting" = "All set, restarting Méliès…";
 "upd.latest.title" = "You're up to date";
@@ -241,3 +240,9 @@
 "set.countdown.hint" = "Counts down in the middle of the area before recording starts. Esc cancels.";
 "tip.clicks.none" = "Show clicks (none were recorded in this video)";
 "toast.noclicks" = "No clicks were recorded in this video";
+"zoom.auto.subtle" = "Subtle (1.5×)";
+"zoom.auto.normal" = "Normal (2×)";
+"zoom.auto.strong" = "Strong (2.6×)";
+"zoom.auto.done" = "%d zooms from %d clicks. Cmd+Z undoes it.";
+"zoom.auto.none" = "No click here is worth a zoom.";
+"zoom.auto.tip" = "Makes the zooms for you from the clicks. The arrow changes how close it goes.";
