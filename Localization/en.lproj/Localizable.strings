@@ -233,3 +233,5 @@
 "zoom.auto.tip" = "Zoom in on every click you made in the recording";
 "onb.waiting" = "Waiting for the switch…";
 "onb.restarting" = "All set, restarting Méliès…";
+"upd.latest.title" = "You're up to date";
+"upd.latest.text" = "Méliès %@ is the latest version.";

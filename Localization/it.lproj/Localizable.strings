@@ -233,3 +233,5 @@
 "zoom.auto.tip" = "Zoom su ogni clic fatto durante la registrazione";
 "onb.waiting" = "In attesa dell'interruttore…";
 "onb.restarting" = "Fatto, Méliès si riavvia…";
+"upd.latest.title" = "Sei aggiornato";
+"upd.latest.text" = "Méliès %@ è l'ultima versione.";
