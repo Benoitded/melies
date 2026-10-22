@@ -7,6 +7,15 @@ import SwiftUI
 @main
 struct MeliesApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+
+    /// `Melies --check-screen-access` only answers whether screen recording is allowed (exit code 0 or 1).
+    /// A fresh process sees a switch turned on in System Settings at once, which the running app does not:
+    /// the onboarding uses this to relaunch by itself.
+    init() {
+        if CommandLine.arguments.contains("--check-screen-access") {
+            exit(CGPreflightScreenCaptureAccess() ? 0 : 1)
+        }
+    }
     @ObservedObject private var recorder = ScreenRecorder.shared
     @AppStorage("recordMicrophone") private var recordMicrophone = false
     @AppStorage("recordSystemAudio") private var recordSystemAudio = false

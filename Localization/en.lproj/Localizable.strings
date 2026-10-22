@@ -61,8 +61,6 @@
 "onb.title" = "Méliès needs to record your screen";
 "onb.sub" = "Turn it on in the list, that's all.";
 "onb.open" = "Open Settings";
-"onb.relaunch_hint" = "Already on? macOS sometimes asks for a relaunch.";
-"onb.relaunch" = "Relaunch";
 "onb.ready" = "You're all set";
 "onb.rec_row" = "Record, then stop";
 "onb.editor_row" = "Open the editor";
@@ -233,3 +231,5 @@
 "set.adv.version" = "Version %@";
 "zoom.auto" = "Auto from clicks";
 "zoom.auto.tip" = "Zoom in on every click you made in the recording";
+"onb.waiting" = "Waiting for the switch…";
+"onb.restarting" = "All set, restarting Méliès…";

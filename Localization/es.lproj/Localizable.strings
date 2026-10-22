@@ -61,8 +61,6 @@
 "onb.title" = "Méliès necesita grabar tu pantalla";
 "onb.sub" = "Actívalo en la lista, nada más.";
 "onb.open" = "Abrir Ajustes";
-"onb.relaunch_hint" = "¿Ya activado? A veces macOS pide reiniciar.";
-"onb.relaunch" = "Reiniciar";
 "onb.ready" = "Todo listo";
 "onb.rec_row" = "Grabar y detener";
 "onb.editor_row" = "Abrir el editor";
@@ -233,3 +231,5 @@
 "set.adv.version" = "Versión %@";
 "zoom.auto" = "Auto desde los clics";
 "zoom.auto.tip" = "Hace zoom en cada clic de la grabación";
+"onb.waiting" = "Esperando el interruptor…";
+"onb.restarting" = "Listo, Méliès se reinicia…";

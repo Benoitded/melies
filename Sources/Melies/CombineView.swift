@@ -298,7 +298,7 @@ final class CombineWindowController {
             ))
             host.sizingOptions = [.intrinsicContentSize]
             let glass = NSGlassEffectView()
-            glass.cornerRadius = 26
+            glass.cornerRadius = 0 // the window clips it (see useSharedGlassShape)
             glass.contentView = host
 
             let w = NSWindow(contentRect: .zero, styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
@@ -309,6 +309,7 @@ final class CombineWindowController {
             w.isOpaque = false
             w.backgroundColor = .clear
             w.contentView = glass
+            w.useSharedGlassShape()
             w.setContentSize(host.fittingSize)
             w.center()
             window = w
