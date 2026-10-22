@@ -7,14 +7,14 @@ import SwiftUI
 
 struct GeneralTab: View {
     @AppStorage(Appearance.key) private var appearance = "system"
-    @AppStorage("watchedFolder") private var watchedFolder = ""
-    @AppStorage("openEditorAfterRecording") private var openAfterRecording = true
-    @AppStorage("closeAfterAction") private var closeAfterAction = true
-    @AppStorage("recordMicrophone") private var recordMicrophone = false
-    @AppStorage("recordSystemAudio") private var recordSystemAudio = false
-    @AppStorage("recordCountdown") private var recordCountdown = 0
-    @AppStorage("clickColor") private var clickColor = "yellow"
-    @AppStorage("clickSize") private var clickSize = 36.0
+    @AppStorage(Pref.watchedFolder) private var watchedFolder = ""
+    @AppStorage(Pref.openEditorAfterRecording) private var openAfterRecording = true
+    @AppStorage(Pref.closeAfterAction) private var closeAfterAction = true
+    @AppStorage(Pref.recordMicrophone) private var recordMicrophone = false
+    @AppStorage(Pref.recordSystemAudio) private var recordSystemAudio = false
+    @AppStorage(Pref.recordCountdown) private var recordCountdown = 0
+    @AppStorage(Pref.clickColor) private var clickColor = "yellow"
+    @AppStorage(Pref.clickSize) private var clickSize = 36.0
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
@@ -234,7 +234,7 @@ struct HotkeysTab: View {
 // MARK: Advanced
 
 struct AdvancedTab: View {
-    @AppStorage("alwaysOnTop") private var alwaysOnTop = false
+    @AppStorage(Pref.alwaysOnTop) private var alwaysOnTop = false
     @ObservedObject private var updater = Updater.shared
 
     var body: some View {

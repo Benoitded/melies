@@ -63,7 +63,7 @@ struct TopBar: View {
                             // No recorded clicks: the button is dimmed, and a click says why instead of doing nothing.
                             guard model.hasClicks else { Toast.show(L("toast.noclicks")); return }
                             model.showClicks.toggle()
-                            UserDefaults.standard.set(model.showClicks, forKey: "showClicks")
+                            UserDefaults.standard.set(model.showClicks, forKey: Pref.showClicks)
                         }
                         BarButton(symbol: "plus.magnifyingglass", title: L("tip.zoomanim"), shortcut: "(Z)", active: !model.zoomPoints.isEmpty) {
                             model.addZoom()

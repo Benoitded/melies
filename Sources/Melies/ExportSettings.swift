@@ -22,10 +22,10 @@ struct ExportSettings: Equatable {
 
     static var current: ExportSettings {
         let d = UserDefaults.standard
-        let mb = d.integer(forKey: "exportMaxMB")
-        let width = d.integer(forKey: "exportMaxWidth")
+        let mb = d.integer(forKey: Pref.exportMaxMB)
+        let width = d.integer(forKey: Pref.exportMaxWidth)
         return ExportSettings(
-            format: Format(rawValue: d.string(forKey: "exportFormat") ?? "") ?? .mp4,
+            format: Format(rawValue: d.string(forKey: Pref.exportFormat) ?? "") ?? .mp4,
             maxMegabytes: mb > 0 ? mb : nil,
             maxWidth: widthChoices.contains(width) ? width : 1920
         )

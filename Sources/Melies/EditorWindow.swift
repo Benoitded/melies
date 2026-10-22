@@ -159,7 +159,7 @@ final class EditorWindowController {
             w.center()
             window = w
             session.onPinChange = { [weak w] pinned in w?.level = pinned ? .floating : .normal }
-            session.pinned = UserDefaults.standard.bool(forKey: "alwaysOnTop")
+            session.pinned = UserDefaults.standard.bool(forKey: Pref.alwaysOnTop)
             // Closing with the red button must also remove the Dock icon.
             NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated {

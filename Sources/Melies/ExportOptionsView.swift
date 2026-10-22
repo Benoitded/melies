@@ -3,9 +3,9 @@ import SwiftUI
 /// Format, size limit and resolution of exports. Used by copy, save, share and drag.
 struct ExportOptionsView: View {
     @ObservedObject var model: EditorModel
-    @AppStorage("exportFormat") private var format = "mp4"
-    @AppStorage("exportMaxMB") private var maxMB = 0
-    @AppStorage("exportMaxWidth") private var maxWidth = 1920
+    @AppStorage(Pref.exportFormat) private var format = "mp4"
+    @AppStorage(Pref.exportMaxMB) private var maxMB = 0
+    @AppStorage(Pref.exportMaxWidth) private var maxWidth = 1920
     @State private var custom = false
 
     private static let customTag = -1

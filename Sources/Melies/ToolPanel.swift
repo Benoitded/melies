@@ -51,7 +51,7 @@ extension View {
 // MARK: Floating tool settings panel (top right of the canvas, like Shottr)
 
 struct ToolPanel<Content: View>: View {
-    @AppStorage("toolPanelCollapsed") private var collapsed = false
+    @AppStorage(Pref.toolPanelCollapsed) private var collapsed = false
     @ViewBuilder var content: Content
 
     var body: some View {

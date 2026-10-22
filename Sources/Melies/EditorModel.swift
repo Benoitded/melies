@@ -873,7 +873,7 @@ final class EditorModel: ObservableObject {
 
     /// After a successful copy, save or share, close the editor (and with it the Dock icon).
     private func finish(toast: String?) {
-        guard UserDefaults.standard.object(forKey: "closeAfterAction") as? Bool ?? true else { return }
+        guard UserDefaults.standard.object(forKey: Pref.closeAfterAction) as? Bool ?? true else { return }
         if let toast { Toast.show(toast) }
         EditorWindowController.shared.close()
     }

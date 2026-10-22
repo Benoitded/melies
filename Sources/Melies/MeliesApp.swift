@@ -17,8 +17,8 @@ struct MeliesApp: App {
         }
     }
     @ObservedObject private var recorder = ScreenRecorder.shared
-    @AppStorage("recordMicrophone") private var recordMicrophone = false
-    @AppStorage("recordSystemAudio") private var recordSystemAudio = false
+    @AppStorage(Pref.recordMicrophone) private var recordMicrophone = false
+    @AppStorage(Pref.recordSystemAudio) private var recordSystemAudio = false
 
     var body: some Scene {
         // While recording, this icon is removed: the red timer is then the only item, and one click stops.

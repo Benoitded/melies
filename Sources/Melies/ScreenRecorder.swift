@@ -54,7 +54,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         guard let selection = chosen else { return }
         overlay = RecordingOverlay(screen: selection.screen, region: selection.rect)
         // Optional count-down (Settings, off by default): the area stays dimmed and the number shows inside it.
-        let countdown = UserDefaults.standard.integer(forKey: "recordCountdown")
+        let countdown = UserDefaults.standard.integer(forKey: Pref.recordCountdown)
         if countdown > 0, fixed == nil {
             guard await Countdown.run(seconds: countdown, region: selection.rect, screen: selection.screen) else {
                 closeOverlay()
@@ -81,9 +81,9 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
             // Audio: the system sound and/or the microphone, both written into the same movie.
             let defaults = UserDefaults.standard
-            config.capturesAudio = defaults.bool(forKey: "recordSystemAudio")
+            config.capturesAudio = defaults.bool(forKey: Pref.recordSystemAudio)
             config.excludesCurrentProcessAudio = true
-            if defaults.bool(forKey: "recordMicrophone") {
+            if defaults.bool(forKey: Pref.recordMicrophone) {
                 if await Self.microphoneAllowed() {
                     config.captureMicrophone = true
                 } else {
@@ -142,7 +142,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         isRecording = false
         hideStatusItem()
         if let url = outputURL, FileManager.default.fileExists(atPath: url.path) {
-            if UserDefaults.standard.object(forKey: "openEditorAfterRecording") as? Bool ?? true {
+            if UserDefaults.standard.object(forKey: Pref.openEditorAfterRecording) as? Bool ?? true {
                 EditorWindowController.shared.open(url)
             } else {
                 Toast.show(L("toast.recorded"))

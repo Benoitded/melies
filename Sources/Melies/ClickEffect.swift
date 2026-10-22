@@ -26,17 +26,17 @@ enum ClickStyleStore {
     ]
 
     static var color: RGBA {
-        let name = UserDefaults.standard.string(forKey: "clickColor") ?? "yellow"
+        let name = UserDefaults.standard.string(forKey: Pref.clickColor) ?? "yellow"
         return presets.first { $0.name == name }?.color ?? .yellow
     }
 
     static var size: Double {
-        let v = UserDefaults.standard.double(forKey: "clickSize")
+        let v = UserDefaults.standard.double(forKey: Pref.clickSize)
         return v > 0 ? v : 36
     }
 
     /// Show clicks in the editor and in exports (when the video has any).
-    static var enabled: Bool { UserDefaults.standard.object(forKey: "showClicks") as? Bool ?? true }
+    static var enabled: Bool { UserDefaults.standard.object(forKey: Pref.showClicks) as? Bool ?? true }
 }
 
 extension AnnotationRenderer {

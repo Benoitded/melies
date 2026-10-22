@@ -55,12 +55,12 @@ final class MCPServer: ObservableObject {
     }()
 
     static var enabled: Bool {
-        get { UserDefaults.standard.bool(forKey: "mcpEnabled") }
-        set { UserDefaults.standard.set(newValue, forKey: "mcpEnabled") }
+        get { UserDefaults.standard.bool(forKey: Pref.mcpEnabled) }
+        set { UserDefaults.standard.set(newValue, forKey: Pref.mcpEnabled) }
     }
 
     static var port: UInt16 {
-        let saved = UserDefaults.standard.integer(forKey: "mcpPort")
+        let saved = UserDefaults.standard.integer(forKey: Pref.mcpPort)
         return saved > 1023 && saved < 65536 ? UInt16(saved) : defaultPort
     }
 
