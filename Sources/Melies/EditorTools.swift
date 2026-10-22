@@ -517,12 +517,12 @@ final class EditorTools {
         return n.doubleValue
     }
 
-    private static func number(_ args: [String: Any], _ key: String, in range: ClosedRange<Double>) throws -> Double {
+    static func number(_ args: [String: Any], _ key: String, in range: ClosedRange<Double>) throws -> Double { // internal for tests
         guard let v = try optional(args, key, in: range) else { throw ToolError("\(key) is required.") }
         return v
     }
 
-    private static func optional(_ args: [String: Any], _ key: String, in range: ClosedRange<Double>) throws -> Double? {
+    static func optional(_ args: [String: Any], _ key: String, in range: ClosedRange<Double>) throws -> Double? { // internal for tests
         guard let v = try value(args, key) else { return nil }
         guard range.contains(v) else { throw ToolError("\(key) must be between \(round(range.lowerBound)) and \(round(range.upperBound)), got \(round(v)).") }
         return v
