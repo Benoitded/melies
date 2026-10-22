@@ -264,3 +264,19 @@
 "mcprec.audio.system" = "audio di sistema";
 "mcprec.audio.both" = "microfono e audio di sistema";
 "mcprec.autostop" = "Registrazione interrotta automaticamente dopo %d s";
+
+"frame.title" = "Sfondo";
+"frame.margin" = "Margini";
+"frame.radius" = "Angoli arrotondati";
+"frame.shadow" = "Ombra";
+"frame.preset.aurora" = "Aurora";
+"frame.preset.sunset" = "Tramonto";
+"frame.preset.ocean" = "Oceano";
+"frame.preset.mint" = "Menta";
+"frame.preset.lavender" = "Lavanda";
+"frame.preset.night" = "Notte";
+"frame.preset.graphite" = "Grafite";
+"frame.preset.snow" = "Neve";
+"frame.preset.white" = "Bianco";
+"frame.preset.gray" = "Grigio";
+"frame.preset.black" = "Nero";

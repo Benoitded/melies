@@ -41,6 +41,8 @@ final class EditorModel {
     var showClicks = ClickStyleStore.enabled
     var hasClicks: Bool { !(cursor?.clicks.isEmpty ?? true) }
     var includeAudio = true { didSet { editRevision += 1 } }
+    /// Background, margins, rounded corners, shadow (shared with the export through UserDefaults).
+    var frame = FrameStyle.load() { didSet { frame.save(); editRevision += 1 } }
     var thumbnails: [NSImage] = []
     var zoomPoints: [ZoomPoint] = [] { didSet { noteChange() } }
     var selectedPointID: UUID?
@@ -280,7 +282,11 @@ final class EditorModel {
     func fitRect(in size: CGSize) -> CGRect {
         let area = CGRect(origin: .zero, size: size)
         guard displaySize.width > 0, size.width > 0, size.height > 0 else { return area }
-        return AVMakeRect(aspectRatio: displaySize, insideRect: area)
+        guard frame.enabled else { return AVMakeRect(aspectRatio: displaySize, insideRect: area) }
+        // Framed: the picture plus its margins (a fraction of the picture width) fit inside the area.
+        let aspect = displaySize.width / displaySize.height, p = CGFloat(frame.padding)
+        let w = min(size.width / (1 + 2 * p), size.height / (1 / aspect + 2 * p))
+        return CGRect(x: area.midX - w / 2, y: area.midY - w / aspect / 2, width: w, height: w / aspect)
     }
 
     /// Where the video is drawn inside the canvas, including zoom and pan.

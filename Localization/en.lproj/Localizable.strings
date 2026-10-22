@@ -264,3 +264,19 @@
 "mcprec.audio.system" = "system sound";
 "mcprec.audio.both" = "microphone and system sound";
 "mcprec.autostop" = "Recording stopped automatically after %d s";
+
+"frame.title" = "Background";
+"frame.margin" = "Margin";
+"frame.radius" = "Rounded corners";
+"frame.shadow" = "Shadow";
+"frame.preset.aurora" = "Aurora";
+"frame.preset.sunset" = "Sunset";
+"frame.preset.ocean" = "Ocean";
+"frame.preset.mint" = "Mint";
+"frame.preset.lavender" = "Lavender";
+"frame.preset.night" = "Night";
+"frame.preset.graphite" = "Graphite";
+"frame.preset.snow" = "Snow";
+"frame.preset.white" = "White";
+"frame.preset.gray" = "Gray";
+"frame.preset.black" = "Black";
