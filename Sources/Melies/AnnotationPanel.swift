@@ -25,6 +25,8 @@ struct AnnotationPanel: View {
                 case .blur: blurStyles(a)
                 }
 
+                trackButton(a)
+
                 Button { model.deleteSelected() } label: {
                     Image(systemName: "trash").font(.system(size: 13)).foregroundStyle(.secondary)
                         .frame(width: 26, height: 26).contentShape(Rectangle())
@@ -37,6 +39,35 @@ struct AnnotationPanel: View {
             .onAppear { takeFocusIfRequested() }
             .onDisappear { model.isEditingText = false }
         }
+    }
+
+    /// Follow the object under the annotation: idle, analyzing (click cancels), or tracked (click clears).
+    @ViewBuilder
+    private func trackButton(_ a: Annotation) -> some View {
+        let analyzing = model.trackingID == a.id
+        Button {
+            if analyzing { model.cancelTracking() }
+            else if a.isTracked { model.clearTrack(a.id) }
+            else { model.startTracking(a.id) }
+        } label: {
+            ZStack {
+                if analyzing {
+                    Circle().stroke(.quaternary, lineWidth: 2)
+                    Circle().trim(from: 0, to: max(model.trackingProgress, 0.04))
+                        .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).foregroundStyle(.secondary)
+                } else {
+                    Image(systemName: a.isTracked ? "scope" : "viewfinder")
+                        .font(.system(size: 13))
+                        .foregroundStyle(a.isTracked ? Color.accentColor : .secondary)
+                }
+            }
+            .frame(width: analyzing ? 16 : 26, height: analyzing ? 16 : 26)
+            .frame(width: 26, height: 26).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .tip(analyzing ? L("tip.track.cancel") : a.isTracked ? (model.trackingLost ? L("trk.lost") : L("tip.track.clear")) : L("tip.track"), trailing: true)
     }
 
     private func range(for kind: AnnotationKind) -> ClosedRange<Double> {

@@ -206,3 +206,11 @@
 "exp.estimate.limit" = "The file stays under %d MB: the quality adapts.";
 "exp.estimate.gif" = "A GIF is large. Set a maximum size to keep it light.";
 "exp.estimate.gif_limit" = "The GIF stays under %d MB: width and frame rate shrink if needed.";
+"tip.track" = "Follow the object";
+"tip.track.clear" = "Stop following";
+"tip.track.cancel" = "Stop analysis";
+"trk.lost" = "Object left the frame: annotation ends there";
+"exp.other" = "Other...";
+"exp.hevc.note" = "HEVC (H.265) makes files about 40% smaller. Twitter/X and some apps may not accept it.";
+"exp.estimating" = "Estimating the size...";
+"exp.estimate.range" = "Between %@ and %@ MB, depending on the content. Set a maximum size for an exact result.";

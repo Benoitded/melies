@@ -216,3 +216,31 @@ chaque essai, elle redonnait la taille du premier. La taille se lit maintenant a
 
 Le son est un seul flux AAC (les pistes système et micro sont mélangées) ; sans son, le fichier n'a pas
 de piste audio du tout.
+
+## Suivi d'objet (2026-10-22)
+
+Premier essai avec `VNTrackObjectRequest` (Vision) : correct pour un objet qui bouge, mais il se perd sur du
+texte qui défile (zone peu texturée, motifs répétés) et ne dit pas quand l'objet disparaît. Remplacé par une
+comparaison de pixels : la zone de départ (en niveaux de gris, image réduite à ~640 px) est cherchée à chaque
+image autour de sa dernière position, d'abord grossièrement puis finement ; le modèle s'adapte lentement aux
+changements d'apparence. Si l'écart moyen dépasse 10 % pendant plus de 0,12 s (défilé hors cadre, fenêtre
+passée devant), le suivi s'arrête et l'annotation se termine à cet instant. Le suivi va vers l'avant depuis
+la tête de lecture ; les décalages sont stockés par annotation (`Annotation.track`) et appliqués au rendu,
+à la sélection et à l'export.
+
+Réglage : l'écart est jugé par rapport au contraste de la zone (une zone unie ne « colle » pas par hasard), et une
+zone qui touche un bord du cadre qu'elle ne touchait pas au départ est considérée comme sortante. Mesuré sur des
+vidéos générées : défilement 100 px/s, zone perdue à 2,5 s (attendu 2,5 s) ; zone masquée à 1,5 s, perdue à 1,5 s.
+
+## Glisser-déposer : un vrai fichier (2026-10-22)
+
+Les « promesses de fichier » (`NSFilePromiseProvider`) ne sont pas acceptées par Chrome ni par beaucoup d'apps de
+chat ou de pages d'envoi. Quand le pointeur arrive sur la poignée, le résultat est maintenant exporté à l'avance
+dans un fichier temporaire (invalidé à chaque modification ou changement de réglage d'export) et le glisser
+transporte ce fichier. La promesse reste le repli si l'export n'est pas encore prêt.
+
+## Options d'export : plus petit, plus compact (2026-10-22)
+
+Tailles 1, 2, 3, 5 Mo en plus des anciennes, saisie libre via « Autre... », résolutions 360p et 480p, et un format
+HEVC (H.265) : environ 40 % plus petit à qualité égale (3,4 Mo en H.264 contre 2,1 Mo sur 10 s de test), mais
+Twitter/X et certaines apps peuvent le refuser, d'où la note dans le panneau.

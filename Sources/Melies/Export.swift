@@ -169,12 +169,12 @@ enum VideoExport {
         case .gif:
             try await GIFWriter.write(asset: asset, range: range, track: track, composition: composition,
                                       canvas: plan.canvas, maxMegabytes: settings.maxMegabytes, to: url)
-        case .mp4:
+        case .mp4, .hevc:
             var bitrate = settings.videoBitrate(seconds: range.duration.seconds, canvas: plan.canvas, hasAudio: !audioTracks.isEmpty)
             // Encoders overshoot a size target now and then: retry a little lower, up to three times.
             for attempt in 1...3 {
                 try await MP4Writer.write(asset: asset, range: range, track: track, composition: composition, canvas: plan.canvas,
-                                          bitrate: bitrate, audioTracks: audioTracks, audioMix: audioMix, to: url)
+                                          bitrate: bitrate, hevc: settings.format == .hevc, audioTracks: audioTracks, audioMix: audioMix, to: url)
                 guard let mb = settings.maxMegabytes else { break }
                 let size = MP4Writer.fileSize(url)
                 if size <= mb * 1_000_000 || attempt == 3 { break }

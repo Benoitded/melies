@@ -131,8 +131,11 @@ struct EditorView: View {
                         Text(timecode(model.end - model.start)).foregroundStyle(.secondary)
                     }
                     .font(.system(size: 12).monospacedDigit())
+                    if let status = model.status {
+                        Text(status).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                    if model.busy { ProgressView().controlSize(.small) }
                     Spacer()
-                    ExportOptionsButton(model: model)
                     if model.hasAudio {
                         Button { model.includeAudio.toggle() } label: {
                             Image(systemName: model.includeAudio ? "speaker.wave.2.fill" : "speaker.slash.fill")
@@ -143,10 +146,7 @@ struct EditorView: View {
                         .buttonBorderShape(.circle)
                         .tip(model.includeAudio ? L("tip.audio.on") : L("tip.audio.off"), trailing: true)
                     }
-                    if let status = model.status {
-                        Text(status).font(.callout).foregroundStyle(.secondary).lineLimit(1)
-                    }
-                    if model.busy { ProgressView().controlSize(.small) }
+                    ExportOptionsButton(model: model)
                 }
                 .padding(.horizontal, 16)
             }

@@ -25,7 +25,7 @@ final class EditorModel: ObservableObject {
     /// Draw a ring at every recorded click (preview and export).
     @Published var showClicks = ClickStyleStore.enabled
     var hasClicks: Bool { !(cursor?.clicks.isEmpty ?? true) }
-    @Published var includeAudio = true
+    @Published var includeAudio = true { didSet { editRevision += 1 } }
     @Published var thumbnails: [NSImage] = []
     @Published var zoomPoints: [ZoomPoint] = [] { didSet { noteChange() } }
     @Published var selectedPointID: UUID?
@@ -170,6 +170,7 @@ final class EditorModel: ObservableObject {
     /// Called whenever edited state changes. Changes less than 0.6 s apart (a drag, a slider, typing)
     /// form one burst, which is one undo step.
     private func noteChange() {
+        editRevision += 1
         guard !restoring else { return }
         if !inBurst {
             undoStack.append(committed)
@@ -445,6 +446,66 @@ final class EditorModel: ObservableObject {
         }
     }
 
+    // MARK: Tracking
+
+    @Published var trackingID: UUID?
+    @Published var trackingProgress: Double = 0
+    @Published var trackingLost = false
+    private var trackingTask: Task<Void, Never>?
+
+    /// The region to follow, normalized in the upright frame (origin top left).
+    private func trackBox(for a: Annotation) -> CGRect {
+        let aspect = sourceSize.height > 0 ? sourceSize.width / sourceSize.height : 1
+        func clamp(_ r: CGRect) -> CGRect { r.intersection(CGRect(x: 0, y: 0, width: 1, height: 1)) }
+        switch a.kind {
+        case .rect, .spotlight, .blur:
+            return clamp(CGRect(x: min(a.p1.x, a.p2.x), y: min(a.p1.y, a.p2.y), width: abs(a.p2.x - a.p1.x), height: abs(a.p2.y - a.p1.y)))
+        case .arrow:
+            let w = 0.08
+            return clamp(CGRect(x: a.p2.x - w / 2, y: a.p2.y - w * aspect / 2, width: w, height: w * aspect))
+        case .text:
+            return clamp(CGRect(x: a.p1.x - 0.06, y: a.p1.y - 0.03, width: 0.12, height: 0.06))
+        }
+    }
+
+    /// Follows the content under the annotation from the playhead to the end of the annotation.
+    func startTracking(_ id: UUID) {
+        guard trackingID == nil, let a = annotations.first(where: { $0.id == id }) else { return }
+        let from = min(max(current, a.start), a.end)
+        let box = trackBox(for: a)
+        guard box.width > 0.005, box.height > 0.005, a.end - from > 0.1 else { return }
+        trackingID = id
+        trackingProgress = 0
+        trackingLost = false
+        let asset = self.asset
+        trackingTask = Task { [weak self] in
+            let result = try? await ObjectTracker.track(asset: asset, box: box, from: from, to: a.end) { p in
+                Task { @MainActor [weak self] in self?.trackingProgress = p }
+            }
+            guard let self else { return }
+            if let result, !Task.isCancelled, !result.samples.isEmpty {
+                self.updateAnnotation(id) {
+                    $0.track = result.samples
+                    $0.trackStart = from
+                    // Gone from the frame (scrolled out, covered): the annotation disappears with it.
+                    if let lostAt = result.lostAt { $0.end = max(lostAt, from + 0.2) }
+                }
+                self.trackingLost = result.lost
+            }
+            self.trackingID = nil
+        }
+    }
+
+    func cancelTracking() {
+        trackingTask?.cancel()
+        trackingID = nil
+    }
+
+    func clearTrack(_ id: UUID) {
+        updateAnnotation(id) { $0.track = []; $0.trackStart = 0 }
+        trackingLost = false
+    }
+
     func updateSelectedAnnotation(_ change: (inout Annotation) -> Void) {
         guard let id = selectedAnnotationID else { return }
         updateAnnotation(id, remember: true, change)
@@ -562,18 +623,84 @@ final class EditorModel: ObservableObject {
         )
     }
 
-    func export(to destination: URL) async -> Bool {
-        busy = true
-        status = L("status.exporting")
-        player.pause()
-        defer { busy = false }
+    func export(to destination: URL, quiet: Bool = false) async -> Bool {
+        if !quiet {
+            busy = true
+            status = L("status.exporting")
+            player.pause()
+        }
+        defer { if !quiet { busy = false } }
         do {
             try await VideoExport.run(asset: asset, range: range, crop: cropRect, points: zoomPoints, annotations: annotations, clicks: showClicks ? ClickSet.current(for: cursor) : nil, includeAudio: includeAudio, to: destination)
             return true
         } catch {
-            status = L("status.fail", error.localizedDescription)
+            if !quiet { status = L("status.fail", error.localizedDescription) }
             return false
         }
+    }
+
+    // MARK: Size estimate
+
+    @Published var measuredMB: Double?
+
+    /// Encodes three one-second samples of the result with the current settings and extrapolates the file size.
+    /// A formula is wrong for screen recordings, which compress far below the average bitrate asked for.
+    func measureEstimate() async {
+        measuredMB = nil
+        let settings = ExportSettings.current
+        let total = max(end - start, 0.1)
+        guard settings.format.isVideo, settings.maxMegabytes == nil, duration > 0 else { return }
+        let length = min(total, 3.0)
+        let centers = total <= 9 ? [start + total / 2] : [1.0 / 6, 0.5, 5.0 / 6].map { start + total * $0 }
+        let windows = total <= 9 ? [CMTimeRange(start: CMTime(seconds: start, preferredTimescale: 600), duration: CMTime(seconds: total, preferredTimescale: 600))]
+            : centers.map { CMTimeRange(start: CMTime(seconds: $0 - length / 2, preferredTimescale: 600), duration: CMTime(seconds: length, preferredTimescale: 600)) }
+        var bytes = 0, seconds = 0.0
+        for window in windows {
+            if Task.isCancelled { return }
+            let file = FileManager.default.temporaryDirectory.appendingPathComponent("melies-estimate-\(UUID().uuidString).mp4")
+            defer { try? FileManager.default.removeItem(at: file) }
+            guard (try? await VideoExport.run(asset: asset, range: window, crop: cropRect, points: zoomPoints, annotations: annotations, clicks: showClicks ? ClickSet.current(for: cursor) : nil, includeAudio: false, settings: settings, to: file)) != nil else { return }
+            bytes += MP4Writer.fileSize(file)
+            seconds += window.duration.seconds
+        }
+        guard seconds > 0, !Task.isCancelled else { return }
+        measuredMB = Double(bytes) / seconds * total / 1_000_000 + (hasAudio && includeAudio ? 0.016 * total : 0)
+    }
+
+    // MARK: Drag file
+
+    /// Bumped on every edit, so a file exported ahead of time can be told from a stale one.
+    private(set) var editRevision = 0
+    private var dragFile: (key: String, url: URL)?
+    private var preparingKey: String?
+
+    private var dragKey: String {
+        "\(editRevision)|\(ExportSettings.current)|\(showClicks)|\(includeAudio)"
+    }
+
+    /// Exports the current result to a temporary file ahead of time (when the pointer reaches the drag handle),
+    /// so the drag can carry a real file: browsers and chat apps do not accept file promises.
+    func prepareDragFile() {
+        let key = dragKey
+        guard dragFile?.key != key, preparingKey != key else { return }
+        preparingKey = key
+        Task { @MainActor in
+            let folder = FileManager.default.temporaryDirectory.appendingPathComponent("melies-drag-\(UUID().uuidString)")
+            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            let name = url.deletingPathExtension().lastPathComponent
+            let file = folder.appendingPathComponent(name + "." + ExportSettings.current.fileExtension)
+            if await export(to: file, quiet: true) {
+                if let old = dragFile { try? FileManager.default.removeItem(at: old.url.deletingLastPathComponent()) }
+                dragFile = (key, file)
+            }
+            if preparingKey == key { preparingKey = nil }
+        }
+    }
+
+    /// The pre-exported file, when it still matches the current edits and export settings.
+    func readyDragFile() -> URL? {
+        guard let dragFile, dragFile.key == dragKey else { return nil }
+        return dragFile.url
     }
 
     private func sizeLabel(_ url: URL) -> String {

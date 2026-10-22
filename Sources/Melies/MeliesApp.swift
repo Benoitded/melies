@@ -88,6 +88,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in OnboardingWindowController.shared.show() }
         }
 
+        // Debug: MELIES_ESTIMATE_TEST=video prints the measured size estimate and the real export size.
+        if let path = ProcessInfo.processInfo.environment["MELIES_ESTIMATE_TEST"] {
+            Task { @MainActor in
+                let model = EditorModel(url: URL(fileURLWithPath: path))
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                await model.measureEstimate()
+                let file = FileManager.default.temporaryDirectory.appendingPathComponent("melies-est-check.mp4")
+                _ = await model.export(to: file, quiet: true)
+                print("ESTIMATE measured=\(model.measuredMB.map { String(format: "%.2f", $0) } ?? "nil") MB real=\(String(format: "%.2f", Double(MP4Writer.fileSize(file)) / 1e6)) MB")
+                exit(0)
+            }
+        }
+        // Debug: track the box at (100,120) size 120 in a 640x360 video, print the final offset, quit.
+        if let path = ProcessInfo.processInfo.environment["MELIES_TRACK_TEST"] {
+            Task {
+                let v = (ProcessInfo.processInfo.environment["MELIES_TRACK_BOX"] ?? "100,120,120,120").split(separator: ",").compactMap { Double($0) }
+                let box = CGRect(x: v[0] / 640, y: v[1] / 360, width: v[2] / 640, height: v[3] / 360)
+                let to = Double(ProcessInfo.processInfo.environment["MELIES_TRACK_TO"] ?? "2") ?? 2
+                let r = try? await ObjectTracker.track(asset: AVURLAsset(url: URL(fileURLWithPath: path)), box: box, from: 0, to: to) { _ in }
+                let last = r?.samples.last
+                print("TRACK samples=\(r?.samples.count ?? -1) lostAt=\(String(describing: r?.lostAt)) last=\(String(describing: last))")
+                exit(0)
+            }
+        }
         if let out = ProcessInfo.processInfo.environment["MELIES_ONBOARDING_SNAPSHOT"] {
             Task { @MainActor in
                 OnboardingWindowController.shared.show()
@@ -123,7 +147,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     try await VideoExport.run(asset: asset, range: CMTimeRange(start: .zero, duration: duration), points: points, annotations: notes, clicks: ClickSet.current(for: CursorTrack.load(for: URL(fileURLWithPath: input))), includeAudio: ProcessInfo.processInfo.environment["MELIES_EXPORT_MUTE"] == nil, settings: {
                         var st = ExportSettings()
                         let env = ProcessInfo.processInfo.environment
-                        if env["MELIES_EXPORT_FORMAT"] == "gif" { st.format = .gif }
+                        if let f = env["MELIES_EXPORT_FORMAT"].flatMap(ExportSettings.Format.init(rawValue:)) { st.format = f }
                         st.maxMegabytes = env["MELIES_EXPORT_MAXMB"].flatMap(Int.init)
                         return st
                     }(), to: URL(fileURLWithPath: out))

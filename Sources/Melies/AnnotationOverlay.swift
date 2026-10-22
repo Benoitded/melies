@@ -34,8 +34,9 @@ struct AnnotationOverlay: View {
         return CGRect(x: a.x, y: a.y, width: b.x - a.x, height: b.y - a.y)
     }
 
+    /// Annotations visible now, at the position tracking gives them.
     private var visible: [Annotation] {
-        model.annotations.filter { AnnotationRenderer.isVisible($0, at: model.current) }
+        model.annotations.filter { AnnotationRenderer.isVisible($0, at: model.current) }.map { $0.moved(at: model.current) }
     }
 
     // MARK: View
@@ -61,7 +62,7 @@ struct AnnotationOverlay: View {
             .allowsHitTesting(false)
 
             if let a = model.selectedAnnotation, AnnotationRenderer.isVisible(a, at: model.current) {
-                selection(for: a).allowsHitTesting(false)
+                selection(for: a.moved(at: model.current)).allowsHitTesting(false)
             }
 
             Color.clear
@@ -147,7 +148,12 @@ struct AnnotationOverlay: View {
 
     private func update(_ value: DragGesture.Value) {
         guard let mode else { return }
-        let here = toNorm(value.location)
+        // Handles are placed on the tracked position: subtract the tracking offset to get the stored geometry.
+        var here = toNorm(value.location)
+        if case .edit(let id, _, _) = mode, let current = model.annotations.first(where: { $0.id == id }) {
+            let o = current.offset(at: model.current)
+            here = CGPoint(x: here.x - o.width, y: here.y - o.height)
+        }
         switch mode {
         case .create(let id, _):
             model.updateAnnotation(id) { $0.p2 = here }
@@ -202,7 +208,8 @@ struct AnnotationOverlay: View {
     /// Finds what is under `point` (view coordinates): a handle of the selection first, then the top-most annotation.
     private func hit(at point: CGPoint) -> (UUID, Part)? {
         let reach: CGFloat = 12
-        if let a = model.selectedAnnotation, AnnotationRenderer.isVisible(a, at: model.current) {
+        if let selected = model.selectedAnnotation, AnnotationRenderer.isVisible(selected, at: model.current) {
+            let a = selected.moved(at: model.current)
             switch a.kind {
             case .arrow:
                 if hypot(point.x - toView(a.p1).x, point.y - toView(a.p1).y) < reach { return (a.id, .tail) }

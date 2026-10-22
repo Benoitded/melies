@@ -58,6 +58,45 @@ struct Annotation: Identifiable, Equatable {
     var box: TextBox
     /// Spotlight and blur: the shape and the effect. `width` is the darkness (%) or the strength.
     var blur: BlurStyle = .pixelate
+    /// Motion found by tracking: offsets (normalized, source frame) relative to where the annotation was drawn
+    /// at `trackStart`. Empty when the annotation is not tracked. Before `trackStart` it stays where it was drawn.
+    var track: [TrackSample] = []
+    var trackStart: Double = 0
+}
+
+struct TrackSample: Equatable {
+    var t: Double
+    var dx: Double
+    var dy: Double
+}
+
+extension Annotation {
+    /// How far tracking has moved the annotation at time `t` (held at the last sample after the end).
+    func offset(at t: Double) -> CGSize {
+        guard let first = track.first, let last = track.last, t > trackStart else { return .zero }
+        if t >= last.t { return CGSize(width: last.dx, height: last.dy) }
+        if t <= first.t { return CGSize(width: first.dx, height: first.dy) }
+        var low = 0, high = track.count - 1
+        while high - low > 1 {
+            let mid = (low + high) / 2
+            if track[mid].t <= t { low = mid } else { high = mid }
+        }
+        let a = track[low], b = track[high]
+        let f = b.t > a.t ? (t - a.t) / (b.t - a.t) : 0
+        return CGSize(width: a.dx + (b.dx - a.dx) * f, height: a.dy + (b.dy - a.dy) * f)
+    }
+
+    /// The annotation as it is drawn at `t`: moved by its track, if any.
+    func moved(at t: Double) -> Annotation {
+        let o = offset(at: t)
+        guard o != .zero else { return self }
+        var copy = self
+        copy.p1 = CGPoint(x: p1.x + o.width, y: p1.y + o.height)
+        copy.p2 = CGPoint(x: p2.x + o.width, y: p2.y + o.height)
+        return copy
+    }
+
+    var isTracked: Bool { !track.isEmpty }
 }
 
 /// The look used for the next annotation of each kind: it remembers the last choices.
