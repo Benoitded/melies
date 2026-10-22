@@ -154,6 +154,10 @@
 "cmb.b" = "Vidéo 2";
 "cmb.choose" = "Choisir…";
 "cmb.swap" = "Échanger les deux vidéos";
+"cmb.record" = "Enregistrer maintenant";
+"cmb.recordAgain" = "Enregistrer à nouveau";
+"cmb.record.tip" = "Enregistrer la vidéo 2 tout de suite";
+"cmb.record.busy" = "Enregistrement déjà en cours : arrêtez-le d'abord";
 "cmb.layout.sideBySide" = "Côte à côte";
 "cmb.layout.stacked" = "Empilées";
 "cmb.layout.pip" = "Incrustation";

@@ -29,6 +29,7 @@
 ## v3
 - [x] Drag handle: the optimized MP4 can be dropped into any app
 - [x] Two videos side by side, stacked, or picture in picture ("Combine" window, result reopened in the editor)
+- [x] "Record now" in the Combine window: video 2 recorded on the spot instead of picked from disk
 - [x] Audio: system sound and microphone while recording, sound kept or muted on export
 - [x] Automatic zoom from recorded clicks (button in the zoom lane): clicks grouped by time and area, three strengths (Subtle, Normal, Strong), the camera glides between zooms that follow each other closely
 - [x] Cursor smoothing (Off / Light / Smooth, default Light): the recorded cursor path is smoothed before the zoom camera is centered on it; the captured cursor itself is not redrawn

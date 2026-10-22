@@ -29,6 +29,34 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
     private var cursorTimer: Timer?
     private var captureRegion: CGRect = .zero
     private var captureScreen: NSScreen?
+    /// "Record now" of the Combine dialog: the recording it starts goes back to the dialog, not to the editor.
+    private var combine = CombineCapture() { didSet { combineActive = combine.isActive } }
+    private var combineCompletion: ((URL?) -> Void)?
+    @Published private(set) var combineActive = false
+
+    /// True when "Record now" can start: nothing is recording, counting down or already requested.
+    var canRecordForCombine: Bool { !isRecording && !busy && !Countdown.isRunning && !combine.isActive }
+
+    /// Records a video for the Combine dialog: same selector, count-down and menu bar button as a normal recording,
+    /// but the file is handed to `completion` instead of opening the editor. `completion(nil)` means cancelled,
+    /// refused or no file. Returns false (and never calls `completion`) when a request or recording is in progress.
+    @discardableResult
+    func recordForCombine(completion: @escaping (URL?) -> Void) -> Bool {
+        guard combine.request(recorderBusy: isRecording || busy || Countdown.isRunning) else { return false }
+        combineCompletion = completion
+        Task {
+            await begin(forCombine: true)
+            // Still waiting: the selection was cancelled or the start failed, nothing is recording.
+            if combine.cancelBeforeRecording() { finishCombine(nil) }
+        }
+        return true
+    }
+
+    private func finishCombine(_ url: URL?) {
+        let done = combineCompletion
+        combineCompletion = nil
+        done?(url)
+    }
 
     /// Same shortcut starts and stops.
     func toggle() {
@@ -44,7 +72,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
     func stopNow() async { await stop() }
 
-    private func begin(fixed: (rect: CGRect, screen: NSScreen)? = nil) async {
+    private func begin(fixed: (rect: CGRect, screen: NSScreen)? = nil, forCombine: Bool = false) async {
         busy = true
         defer { busy = false }
 
@@ -69,6 +97,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
         do {
             try await startCapture(selection: selection, audio: nil)
+            if forCombine, let id = currentRecordingID { combine.recordingStarted(id: id, fromRequest: true) }
         } catch {
             closeOverlay()
             if let failure = error as? RecorderError, case .noDisplay = failure { alert(L("rec.nodisplay"), "") } else { alert(L("rec.failed"), error.localizedDescription) }
@@ -220,12 +249,16 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
             var seconds = Date().timeIntervalSince(startedAt)
             if let real = try? await AVURLAsset(url: url).load(.duration).seconds, real.isFinite, real > 0 { seconds = real }
             outcome = RecordingOutcome(path: url.path, duration: seconds, hasClicks: !clickSamples.isEmpty, recordingID: recordingID)
-            if UserDefaults.standard.object(forKey: Pref.openEditorAfterRecording) as? Bool ?? true {
+            // Decided before the editor: a recording asked by the Combine dialog goes back to it.
+            if case .delivered = combine.recordingFinished(id: recordingID, url: url) {
+                finishCombine(url)
+            } else if UserDefaults.standard.object(forKey: Pref.openEditorAfterRecording) as? Bool ?? true {
                 EditorWindowController.shared.open(url)
             } else {
                 Toast.show(L("toast.recorded"))
             }
         }
+        if outcome == nil, case .failed = combine.recordingFinished(id: recordingID, url: nil) { finishCombine(nil) }
         // Always replaced, even without a file, so a stale outcome is never read as this recording's.
         lastOutcome = outcome
         return outcome

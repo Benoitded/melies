@@ -62,7 +62,7 @@ The full list is in [`docs/SHORTCUTS.md`](docs/SHORTCUTS.md).
 - **Automatic captions**: generated on your Mac from the audio (Apple's on-device speech recognition, nothing is sent
   anywhere), editable line by line, shown in the preview and burned into the export, or saved as an `.srt` file. Only
   languages already installed for Dictation are offered.
-- **Combine two videos**: side by side, stacked, or picture in picture.
+- **Combine two videos**: side by side, stacked, or picture in picture. The second video can be recorded on the spot ("Record now").
 - **Export to a target size**: MP4 (H.264), the more compact HEVC (some apps reject it), or GIF; sizes from 1 to 100 MB
   or a custom value; 360p, 480p, 720p or 1080p. The panel shows a size estimate measured on a short test encode (a
   range when the content is simple). Esc cancels a running export.

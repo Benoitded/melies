@@ -154,6 +154,10 @@
 "cmb.b" = "Video 2";
 "cmb.choose" = "Choose…";
 "cmb.swap" = "Swap the two videos";
+"cmb.record" = "Record now";
+"cmb.recordAgain" = "Record again";
+"cmb.record.tip" = "Record video 2 right now";
+"cmb.record.busy" = "Already recording: stop the current recording first";
 "cmb.layout.sideBySide" = "Side by side";
 "cmb.layout.stacked" = "Stacked";
 "cmb.layout.pip" = "Picture in picture";

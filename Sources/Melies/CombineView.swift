@@ -80,13 +80,16 @@ struct CombineView: View {
     @ObservedObject var model: CombineModel
     let close: () -> Void
     let finished: (URL) -> Void
+    let recordB: () -> Void
+    /// Observed so "Record now" greys out while any recording or request is running.
+    @ObservedObject private var recorder = ScreenRecorder.shared
 
     var body: some View {
         VStack(spacing: 18) {
             Text(L("cmb.title")).font(.system(size: 18, weight: .semibold))
 
             HStack(spacing: 12) {
-                slot(title: L("cmb.a"), url: model.urlA, thumb: model.thumbA) { model.setA($0) }
+                slot(title: L("cmb.a"), url: model.urlA, thumb: model.thumbA, record: nil) { model.setA($0) }
                 Button { model.swap() } label: {
                     Image(systemName: "arrow.left.arrow.right").font(.system(size: 13, weight: .semibold))
                 }
@@ -94,7 +97,7 @@ struct CombineView: View {
                 .clickCursor()
                 .buttonBorderShape(.circle)
                 .tip(L("cmb.swap"))
-                slot(title: L("cmb.b"), url: model.urlB, thumb: model.thumbB) { model.setB($0) }
+                slot(title: L("cmb.b"), url: model.urlB, thumb: model.thumbB, record: recordB) { model.setB($0) }
             }
 
             IconSegments(
@@ -127,14 +130,14 @@ struct CombineView: View {
             }
         }
         .padding(.horizontal, 28)
-        .padding(.top, 36)
+        .padding(.top, 6) // the transparent title bar safe area (about 28 pt) already sits above this
         .padding(.bottom, 24)
         .frame(width: 560)
     }
 
     // MARK: Slots
 
-    private func slot(title: String, url: URL?, thumb: NSImage?, choose: @escaping (URL?) -> Void) -> some View {
+    private func slot(title: String, url: URL?, thumb: NSImage?, record: (() -> Void)?, choose: @escaping (URL?) -> Void) -> some View {
         VStack(spacing: 6) {
             Text(title).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
             Button { pick(choose) } label: {
@@ -164,6 +167,18 @@ struct CombineView: View {
                 return true
             }
             Text(url?.lastPathComponent ?? " ").font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle).frame(width: 200)
+            if let record {
+                let free = recorder.canRecordForCombine
+                Button(action: record) {
+                    Label(url == nil ? L("cmb.record") : L("cmb.recordAgain"), systemImage: "record.circle")
+                        .font(.system(size: 12))
+                }
+                .buttonStyle(.glass)
+                .controlSize(.small)
+                .clickCursor(free)
+                .disabled(!free)
+                .tip(free ? L("cmb.record.tip") : L("cmb.record.busy"))
+            }
         }
     }
 
@@ -297,7 +312,8 @@ final class CombineWindowController {
                     self?.window?.orderOut(nil)
                     EditorWindowController.shared.open(url)
                     Toast.show(L("cmb.done"))
-                }
+                },
+                recordB: { [weak self] in self?.recordVideo2() }
             ))
             host.sizingOptions = [.intrinsicContentSize]
             let glass = NSGlassEffectView()
@@ -321,5 +337,18 @@ final class CombineWindowController {
         if let preloadB { model?.setB(preloadB) }
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
+    }
+
+    /// "Record now": hides the dialog (its model keeps video 1, layout, corner and size), runs the normal recording
+    /// flow, then puts the new file in the Video 2 slot and brings the dialog back. Cancelled or failed: back unchanged.
+    private func recordVideo2() {
+        let hidden = window
+        let started = ScreenRecorder.shared.recordForCombine { [weak self] url in
+            if let url { self?.model?.setB(url) }
+            guard let self, let window = self.window ?? hidden else { return }
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+        }
+        if started { hidden?.orderOut(nil) }
     }
 }
