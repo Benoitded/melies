@@ -218,6 +218,7 @@ struct HotkeysTab: View {
 
 struct AdvancedTab: View {
     @AppStorage("alwaysOnTop") private var alwaysOnTop = false
+    @ObservedObject private var updater = Updater.shared
 
     var body: some View {
         Form {
@@ -225,6 +226,15 @@ struct AdvancedTab: View {
                 .labeledContent(L("set.adv.ontop"))
             Button(L("set.adv.welcome.button")) { OnboardingWindowController.shared.show() }
                 .labeledContent(L("set.adv.welcome"))
+            if updater.isAvailable {
+                Toggle(L("set.adv.updates.auto"), isOn: Binding(get: { updater.automaticallyChecks }, set: { updater.automaticallyChecks = $0 }))
+                    .labeledContent(L("set.adv.updates"))
+                HStack {
+                    Button(L("menu.updates")) { updater.checkForUpdates() }
+                    Text(L("set.adv.version", updater.versionLabel)).foregroundStyle(.secondary)
+                }
+                .labeledContent(" ")
+            }
         }
         .formStyle(.columns)
         .padding(24)

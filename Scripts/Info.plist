@@ -14,6 +14,10 @@
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>0.1.0</string>
     <key>CFBundleVersion</key><string>1</string>
+    <key>SUFeedURL</key><string>https://github.com/Benoitded/melies/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key><string>LV2d5o4jTSEx/h3Trm2TJpdm2GM0FPQcYbcfkUTQpJA=</string>
+    <key>SUEnableAutomaticChecks</key><true/>
+    <key>SUScheduledCheckInterval</key><integer>86400</integer>
     <key>LSMinimumSystemVersion</key><string>26.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>

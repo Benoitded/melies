@@ -216,3 +216,7 @@
 "exp.estimate.range" = "Tra %@ e %@ MB a seconda del contenuto. Imposta una dimensione massima per un risultato esatto.";
 "status.cancelled" = "Esportazione annullata";
 "tip.cancel_export" = "Annulla l'esportazione (Esc)";
+"menu.updates" = "Verifica aggiornamenti…";
+"set.adv.updates" = "Aggiornamenti";
+"set.adv.updates.auto" = "Verifica automaticamente";
+"set.adv.version" = "Versione %@";

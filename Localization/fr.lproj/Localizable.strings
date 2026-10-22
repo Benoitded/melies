@@ -216,3 +216,7 @@
 "exp.estimate.range" = "Entre %@ et %@ Mo selon le contenu. Fixe une taille maximale pour un résultat exact.";
 "status.cancelled" = "Export annulé";
 "tip.cancel_export" = "Annuler l'export (Échap)";
+"menu.updates" = "Rechercher des mises à jour…";
+"set.adv.updates" = "Mises à jour";
+"set.adv.updates.auto" = "Rechercher automatiquement";
+"set.adv.version" = "Version %@";
