@@ -157,3 +157,4 @@
 "font.hand" = "Manuscrita";
 "sc.tools" = "Selección, flecha, texto, rectángulo";
 "sc.delete" = "Eliminar la selección";
+"sc.undo" = "Deshacer / rehacer";

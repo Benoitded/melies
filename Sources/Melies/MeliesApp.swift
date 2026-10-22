@@ -117,6 +117,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in SettingsWindowController.shared.show(tab: Int(tab) ?? 0) }
         }
 
+        // Debug: MELIES_UNDO_TEST=1 with MELIES_OPEN=file exercises undo / redo and prints the results.
+        if ProcessInfo.processInfo.environment["MELIES_UNDO_TEST"] != nil,
+           let input = ProcessInfo.processInfo.environment["MELIES_OPEN"] {
+            Task { @MainActor in
+                EditorWindowController.shared.open(URL(fileURLWithPath: input))
+                try? await Task.sleep(for: .seconds(1.5))
+                guard let m = EditorWindowController.shared.session.model else { print("[undo] no model"); NSApp.terminate(nil); return }
+                let id = m.addAnnotation(.arrow, at: CGPoint(x: 0.2, y: 0.2))
+                m.updateAnnotation(id) { $0.p2 = CGPoint(x: 0.5, y: 0.5) }
+                try? await Task.sleep(for: .seconds(0.9))               // step 1: draw
+                m.updateAnnotation(id) { $0.width = 12 }
+                try? await Task.sleep(for: .seconds(0.9))               // step 2: thickness
+                m.cropRect = CGRect(x: 0.1, y: 0.1, width: 0.5, height: 0.5)
+                try? await Task.sleep(for: .seconds(0.9))               // step 3: crop
+                @MainActor func line(_ tag: String) { print("[undo] \(tag): notes=\(m.annotations.count) width=\(m.annotations.first?.width ?? -1) crop=\(m.cropRect != nil) canUndo=\(m.canUndo) canRedo=\(m.canRedo)") }
+                line("start")
+                m.undo(); line("undo 1 (crop removed)")
+                m.undo(); line("undo 2 (thickness back)")
+                m.undo(); line("undo 3 (arrow removed)")
+                m.undo(); line("undo 4 (nothing left)")
+                m.redo(); line("redo 1")
+                m.redo(); line("redo 2")
+                m.redo(); line("redo 3")
+                m.redo(); line("redo 4 (nothing left)")
+                NSApp.terminate(nil)
+            }
+        }
+
         // Debug: MELIES_MENU_DUMP=1 prints the main menu after launch settles.
         if ProcessInfo.processInfo.environment["MELIES_MENU_DUMP"] != nil {
             Task { @MainActor in

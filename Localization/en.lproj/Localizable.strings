@@ -157,3 +157,4 @@
 "font.hand" = "Handwritten";
 "sc.tools" = "Select, arrow, text, rectangle";
 "sc.delete" = "Delete the selection";
+"sc.undo" = "Undo / redo";

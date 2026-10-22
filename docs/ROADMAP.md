@@ -16,7 +16,7 @@
 - [x] Flèches, texte, rectangle (panneau de réglages, durée sur la timeline)
 - [ ] Spotlight, blur
 - [x] Zooms animés : points de caméra (niveau, vitesse, style), centrage auto sur le curseur enregistré, aperçu et export identiques
-- [ ] Cmd+Z / Cmd+Shift+Z (annuler / rétablir les annotations)
+- [x] Cmd+Z / Cmd+Shift+Z (annuler / rétablir : annotations, zooms, recadrage, trim)
 
 ## v3
 - [ ] Deux vidéos côte à côte (hstack / vstack)

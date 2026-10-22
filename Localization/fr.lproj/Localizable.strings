@@ -157,3 +157,4 @@
 "font.hand" = "Manuscrite";
 "sc.tools" = "Sélection, flèche, texte, rectangle";
 "sc.delete" = "Supprimer la sélection";
+"sc.undo" = "Annuler / rétablir";

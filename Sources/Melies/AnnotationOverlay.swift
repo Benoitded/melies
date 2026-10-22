@@ -49,7 +49,7 @@ struct AnnotationOverlay: View {
                     cg.translateBy(x: video.minX, y: video.minY)
                     cg.scaleBy(x: scale, y: scale)
                     cg.translateBy(x: -region.minX * source.width, y: -region.minY * source.height)
-                    AnnotationRenderer.draw(model.annotations, at: model.current, in: cg, source: source)
+                    AnnotationRenderer.draw(model.annotations, at: model.current, in: cg, source: source, animated: model.isPlaying)
                     cg.restoreGState()
                 }
             }

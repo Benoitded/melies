@@ -8,8 +8,8 @@ final class EditorModel: ObservableObject {
     let player: AVPlayer
 
     @Published var duration: Double = 0
-    @Published var start: Double = 0
-    @Published var end: Double = 0
+    @Published var start: Double = 0 { didSet { noteChange() } }
+    @Published var end: Double = 0 { didSet { noteChange() } }
     @Published var current: Double = 0
     @Published var isPlaying = false
     @Published var busy = false
@@ -17,17 +17,19 @@ final class EditorModel: ObservableObject {
     @Published var sourceSize: CGSize = .zero
     @Published var fps: Double = 0
     /// Crop region, normalized (0...1) in the upright frame, origin top-left. nil means no crop.
-    @Published var cropRect: CGRect?
+    @Published var cropRect: CGRect? { didSet { noteChange() } }
     @Published var cropMode = false
     @Published var thumbnails: [NSImage] = []
-    @Published var zoomPoints: [ZoomPoint] = []
+    @Published var zoomPoints: [ZoomPoint] = [] { didSet { noteChange() } }
     @Published var selectedPointID: UUID?
     @Published var tool: Tool = .select
-    @Published var annotations: [Annotation] = []
+    @Published var annotations: [Annotation] = [] { didSet { noteChange() } }
     @Published var selectedAnnotationID: UUID?
     /// True while a text field has the keyboard, so single-key shortcuts must stay quiet.
     @Published var isEditingText = false
     @Published var textFocusTick = 0
+    /// A new text annotation asks for the keyboard; the panel takes it as soon as it appears.
+    var wantsTextFocus = false
     /// Set while an annotation drag is in progress, so panning the canvas does not also run.
     var annotationGestureActive = false
     var cursor: CursorTrack?
@@ -76,6 +78,7 @@ final class EditorModel: ObservableObject {
         duration = d.isFinite ? d : 0
         end = duration
         cursor = CursorTrack.load(for: url)
+        resetHistory()
         seek(to: 0)
         await generateThumbnails()
     }
@@ -107,6 +110,90 @@ final class EditorModel: ObservableObject {
             if let frame { last = frame }
             return last
         }
+    }
+
+    // MARK: Undo / redo
+
+    /// Everything the user edits. Navigation (playhead, selection, canvas zoom) is not part of it.
+    struct Snapshot {
+        var annotations: [Annotation] = []
+        var zoomPoints: [ZoomPoint] = []
+        var cropRect: CGRect?
+        var start: Double = 0
+        var end: Double = 0
+    }
+
+    private var undoStack: [Snapshot] = []
+    private var redoStack: [Snapshot] = []
+    private var committed = Snapshot()
+    private var inBurst = false
+    private var burstWork: DispatchWorkItem?
+    private var restoring = false
+
+    var canUndo: Bool { !undoStack.isEmpty || inBurst }
+    var canRedo: Bool { !redoStack.isEmpty }
+
+    private func snapshot() -> Snapshot {
+        Snapshot(annotations: annotations, zoomPoints: zoomPoints, cropRect: cropRect, start: start, end: end)
+    }
+
+    /// Called whenever edited state changes. Changes less than 0.6 s apart (a drag, a slider, typing)
+    /// form one burst, which is one undo step.
+    private func noteChange() {
+        guard !restoring else { return }
+        if !inBurst {
+            undoStack.append(committed)
+            if undoStack.count > 100 { undoStack.removeFirst() }
+            redoStack.removeAll()
+            inBurst = true
+        }
+        burstWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.endBurst() }
+        burstWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: work)
+    }
+
+    private func endBurst() {
+        burstWork?.cancel()
+        guard inBurst else { return }
+        inBurst = false
+        committed = snapshot()
+    }
+
+    func resetHistory() {
+        burstWork?.cancel()
+        inBurst = false
+        undoStack.removeAll()
+        redoStack.removeAll()
+        committed = snapshot()
+    }
+
+    func undo() {
+        endBurst()
+        guard let previous = undoStack.popLast() else { return }
+        redoStack.append(snapshot())
+        restore(previous)
+    }
+
+    func redo() {
+        endBurst()
+        guard let next = redoStack.popLast() else { return }
+        undoStack.append(snapshot())
+        restore(next)
+    }
+
+    private func restore(_ s: Snapshot) {
+        restoring = true
+        annotations = s.annotations
+        zoomPoints = s.zoomPoints
+        cropRect = s.cropRect
+        start = s.start
+        end = s.end
+        restoring = false
+        committed = s
+        if !annotations.contains(where: { $0.id == selectedAnnotationID }) { selectedAnnotationID = nil }
+        if !zoomPoints.contains(where: { $0.id == selectedPointID }) { selectedPointID = nil }
+        if cropRect == nil { cropMode = false }
     }
 
     // MARK: Zoom (canvas only, the exported video is not affected)
@@ -333,7 +420,10 @@ final class EditorModel: ObservableObject {
         updateAnnotation(id, remember: true, change)
     }
 
-    func requestTextFocus() { textFocusTick += 1 }
+    func requestTextFocus() {
+        wantsTextFocus = true
+        textFocusTick += 1
+    }
 
     // MARK: Crop
 

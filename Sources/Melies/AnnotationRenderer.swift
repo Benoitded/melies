@@ -79,10 +79,12 @@ enum AnnotationRenderer {
 
     // MARK: Drawing
 
-    static func draw(_ list: [Annotation], at t: Double, in ctx: CGContext, source: CGSize) {
+    /// `animated: false` skips the fade, so a paused editor shows annotations fully (a new annotation
+    /// starts exactly at the playhead, where the fade would make it invisible).
+    static func draw(_ list: [Annotation], at t: Double, in ctx: CGContext, source: CGSize, animated: Bool = true) {
         for a in list where isVisible(a, at: t) {
             ctx.saveGState()
-            ctx.setAlpha(CGFloat(opacity(a, at: t)))
+            ctx.setAlpha(animated ? CGFloat(opacity(a, at: t)) : 1)
             switch a.kind {
             case .arrow: drawArrow(a, ctx, source)
             case .rect: drawRect(a, ctx, source)

@@ -22,6 +22,7 @@ enum EditorShortcuts {
         ("⌫", "sc.delete"),
         ("C", "sc.crop"),
         ("↩", "sc.crop_confirm"),
+        ("⌘Z  ⇧⌘Z", "sc.undo"),
         ("⌘C", "sc.copy"),
         ("⌘S", "sc.save"),
         ("⌘O", "sc.openfile"),
