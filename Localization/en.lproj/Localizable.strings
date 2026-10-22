@@ -185,3 +185,10 @@
 "tip.strength" = "Strength";
 "blur.pixelate" = "Pixelate";
 "blur.gaussian" = "Blur";
+"set.audio" = "Audio";
+"set.audio.mic" = "Microphone";
+"set.audio.system" = "System sound";
+"tip.audio.on" = "Sound is kept in the export";
+"tip.audio.off" = "Sound is muted in the export";
+"rec.mic.denied" = "Microphone access is off";
+"rec.mic.denied.text" = "Recording goes on without your voice. Turn it on in System Settings > Privacy & Security > Microphone.";

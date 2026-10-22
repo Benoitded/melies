@@ -99,7 +99,7 @@ enum VideoExport {
     static let fps: Int32 = 30
 
     /// `crop` is normalized (0...1) in the upright frame, origin top-left.
-    static func run(asset: AVAsset, range: CMTimeRange, crop: CGRect? = nil, points: [ZoomPoint] = [], annotations: [Annotation] = [], to url: URL) async throws {
+    static func run(asset: AVAsset, range: CMTimeRange, crop: CGRect? = nil, points: [ZoomPoint] = [], annotations: [Annotation] = [], includeAudio: Bool = true, to url: URL) async throws {
         guard let track = try await asset.loadTracks(withMediaType: .video).first else {
             throw ExportError.noVideoTrack
         }
@@ -154,6 +154,18 @@ enum VideoExport {
         }
         session.timeRange = range
         session.videoComposition = composition
+        // A recording can hold the system sound and the microphone as separate tracks: the mix puts
+        // them together in one track (or silences them when the sound is turned off).
+        let audioTracks = try await asset.loadTracks(withMediaType: .audio)
+        if !audioTracks.isEmpty {
+            let mix = AVMutableAudioMix()
+            mix.inputParameters = audioTracks.map { track in
+                let parameters = AVMutableAudioMixInputParameters(track: track)
+                parameters.setVolume(includeAudio ? 1 : 0, at: .zero)
+                return parameters
+            }
+            session.audioMix = mix
+        }
         session.shouldOptimizeForNetworkUse = true
         try? FileManager.default.removeItem(at: url)
         try await session.export(to: url, as: .mp4)

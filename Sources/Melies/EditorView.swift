@@ -162,6 +162,16 @@ struct EditorView: View {
                     }
                     .font(.system(size: 12).monospacedDigit())
                     Spacer()
+                    if model.hasAudio {
+                        Button { model.includeAudio.toggle() } label: {
+                            Image(systemName: model.includeAudio ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                                .font(.system(size: 12))
+                                .frame(width: 20, height: 20)
+                        }
+                        .buttonStyle(.glass)
+                        .buttonBorderShape(.circle)
+                        .tip(model.includeAudio ? L("tip.audio.on") : L("tip.audio.off"), trailing: true)
+                    }
                     if let status = model.status {
                         Text(status).font(.callout).foregroundStyle(.secondary).lineLimit(1)
                     }

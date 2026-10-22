@@ -17,6 +17,7 @@
     <key>LSMinimumSystemVersion</key><string>26.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
+    <key>NSMicrophoneUsageDescription</key><string>Méliès records your voice when the microphone option is on.</string>
     <key>NSDesktopFolderUsageDescription</key><string>Méliès reads your screen recordings from the Desktop.</string>
     <key>CFBundleDocumentTypes</key>
     <array>

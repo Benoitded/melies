@@ -144,3 +144,16 @@ pixelisation changent les pixels de la vidéo : ils sont appliqués sur l'image 
 recadrage et la caméra, donc le motif suit le zoom. L'aperçu lit la dernière image décodée du lecteur
 (`AVPlayerItemVideoOutput`) et utilise le même filtre que l'export. Pixelisation par défaut : un flou
 léger peut parfois se défaire, des gros blocs non.
+
+## Audio (2026-10-22)
+
+Le son du système (`capturesAudio`) et le micro (`captureMicrophone`, macOS 15) passent par
+ScreenCaptureKit et sont écrits dans le même fichier par `SCRecordingOutput`. Les deux options sont
+désactivées par défaut (respect de la vie privée), réglables dans les Réglages et dans le menu de
+la barre de menu. Le micro demande l'autorisation la première fois ; refusé, l'enregistrement continue
+sans la voix et une bulle le dit.
+
+Un enregistrement peut avoir plusieurs pistes audio : l'export les mélange en une seule piste
+(`AVMutableAudioMix`), ou les met à zéro si le bouton son de l'éditeur est coupé. Piège de test :
+lancée directement depuis un terminal, l'app n'hérite pas de l'autorisation d'enregistrement d'écran
+(macOS l'attribue au programme parent) ; il faut la démarrer par `open -a` pour tester la capture.

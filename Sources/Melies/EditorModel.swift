@@ -19,6 +19,9 @@ final class EditorModel: ObservableObject {
     /// Crop region, normalized (0...1) in the upright frame, origin top-left. nil means no crop.
     @Published var cropRect: CGRect? { didSet { noteChange() } }
     @Published var cropMode = false
+    /// The video has an audio track; `includeAudio` decides whether the export keeps it.
+    @Published var hasAudio = false
+    @Published var includeAudio = true
     @Published var thumbnails: [NSImage] = []
     @Published var zoomPoints: [ZoomPoint] = [] { didSet { noteChange() } }
     @Published var selectedPointID: UUID?
@@ -86,6 +89,7 @@ final class EditorModel: ObservableObject {
         }
         duration = d.isFinite ? d : 0
         end = duration
+        hasAudio = !((try? await asset.loadTracks(withMediaType: .audio)) ?? []).isEmpty
         cursor = CursorTrack.load(for: url)
         if let info = try? await ComposeExport.uprightSize(of: asset) { orientation = info.orientation }
         resetHistory()
@@ -527,7 +531,7 @@ final class EditorModel: ObservableObject {
         player.pause()
         defer { busy = false }
         do {
-            try await VideoExport.run(asset: asset, range: range, crop: cropRect, points: zoomPoints, annotations: annotations, to: destination)
+            try await VideoExport.run(asset: asset, range: range, crop: cropRect, points: zoomPoints, annotations: annotations, includeAudio: includeAudio, to: destination)
             return true
         } catch {
             status = L("status.fail", error.localizedDescription)

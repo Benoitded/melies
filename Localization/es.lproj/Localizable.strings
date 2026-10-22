@@ -185,3 +185,10 @@
 "tip.strength" = "Intensidad";
 "blur.pixelate" = "Pixelar";
 "blur.gaussian" = "Desenfoque";
+"set.audio" = "Audio";
+"set.audio.mic" = "Micrófono";
+"set.audio.system" = "Sonido del sistema";
+"tip.audio.on" = "El sonido se conserva al exportar";
+"tip.audio.off" = "El sonido se silencia al exportar";
+"rec.mic.denied" = "El acceso al micrófono está desactivado";
+"rec.mic.denied.text" = "La grabación continúa sin tu voz. Actívalo en Ajustes del Sistema > Privacidad y seguridad > Micrófono.";
