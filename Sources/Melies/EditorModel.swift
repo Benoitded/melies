@@ -351,6 +351,38 @@ final class EditorModel: ObservableObject {
         return ZoomCamera.clampedCenter(center, scale: scale)
     }
 
+    /// Builds zoom animations from the recorded clicks: zoom in just before a click, stay while clicks keep
+    /// coming nearby, follow them, and zoom out a moment after the last one. Replaces the existing zoom points.
+    func autoZoomFromClicks() {
+        guard let clicks = cursor?.clicks.sorted(by: { $0.t < $1.t }), !clicks.isEmpty else { return }
+        cropMode = false
+        let scale = 2.0, lead = 0.45, hold = 1.4, regroup = 2.2
+        let b = baseRect
+        func norm(_ c: CursorTrack.Click) -> CGPoint {
+            ZoomCamera.clampedCenter(CGPoint(x: min(max((c.x - b.minX) / b.width, 0), 1), y: min(max((c.y - b.minY) / b.height, 0), 1)), scale: scale)
+        }
+        // A click that follows the previous one within `regroup` seconds keeps the same zoom.
+        var groups: [[CursorTrack.Click]] = []
+        for c in clicks where c.t >= start && c.t <= end {
+            if let last = groups.last?.last, c.t - last.t < regroup { groups[groups.count - 1].append(c) } else { groups.append([c]) }
+        }
+        var points: [ZoomPoint] = []
+        for group in groups {
+            let arrive = max(group[0].t - lead, start + 0.05)
+            // Clamp to the previous zoom-out so two zooms never overlap.
+            if let previous = points.last, arrive < previous.time + 0.7 { points.removeLast() ; continue }
+            points.append(ZoomPoint(time: arrive, scale: scale, center: norm(group[0]), transition: lead, ease: .smooth))
+            for c in group.dropFirst() {
+                points.append(ZoomPoint(time: c.t - 0.25, scale: scale, center: norm(c), transition: 0.5, ease: .smooth))
+            }
+            let out = min((group.last?.t ?? arrive) + hold, max(end - 0.05, arrive + 0.5))
+            points.append(ZoomPoint(time: out, scale: 1, center: CGPoint(x: 0.5, y: 0.5), transition: 0.7, ease: .smooth))
+        }
+        guard !points.isEmpty else { return }
+        zoomPoints = points.sorted { $0.time < $1.time }
+        selectPoint(nil)
+    }
+
     /// Z: the first time, creates a zoom with a start and an end. Afterwards, adds a waypoint at the playhead.
     func addZoom() {
         cropMode = false

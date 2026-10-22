@@ -231,3 +231,5 @@
 "set.adv.updates" = "Updates";
 "set.adv.updates.auto" = "Check automatically";
 "set.adv.version" = "Version %@";
+"zoom.auto" = "Auto from clicks";
+"zoom.auto.tip" = "Zoom in on every click you made in the recording";

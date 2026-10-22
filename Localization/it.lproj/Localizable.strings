@@ -231,3 +231,5 @@
 "set.adv.updates" = "Aggiornamenti";
 "set.adv.updates.auto" = "Verifica automaticamente";
 "set.adv.version" = "Versione %@";
+"zoom.auto" = "Auto dai clic";
+"zoom.auto.tip" = "Zoom su ogni clic fatto durante la registrazione";
