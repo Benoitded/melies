@@ -241,7 +241,8 @@ private struct DragSourceView: NSViewRepresentable {
 private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromiseProviderDelegate {
     var model: EditorModel?
     var onHover: ((Bool) -> Void)?
-    private var pressEvent: NSEvent?
+    private var stuckWatch: Timer?
+    private var frameBeforeDrag: NSRect?
 
     /// The title bar moves the window on a mouse press; this view must not.
     override var mouseDownCanMoveWindow: Bool { false }
@@ -255,14 +256,23 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
 
     override func mouseEntered(with event: NSEvent) { onHover?(true); model?.prepareDragFile() }
     override func mouseExited(with event: NSEvent) { onHover?(false) }
-    override func mouseDown(with event: NSEvent) { pressEvent = event; model?.prepareDragFile() }
+    /// The handle keeps the mouse for itself, in its own loop, from the press to the release (or to the start of the
+    /// drag). Handled the usual way (mouseDown, then mouseDragged), a press in the title bar area also looks like a
+    /// window drag to macOS, which takes over after a couple of moves: the window then follows the pointer and the
+    /// file drag never ends properly.
+    override func mouseDown(with event: NSEvent) {
+        guard let window else { return }
+        model?.prepareDragFile()
+        let press = event.locationInWindow
+        while let next = window.nextEvent(matching: [.leftMouseDragged, .leftMouseUp], until: .distantFuture, inMode: .eventTracking, dequeue: true) {
+            if next.type == .leftMouseUp { return } // a plain click: nothing to drag
+            let moved = hypot(next.locationInWindow.x - press.x, next.locationInWindow.y - press.y)
+            if moved > 3 { startDrag(event: next); return }
+        }
+    }
 
-    override func mouseDragged(with event: NSEvent) {
-        guard let press = pressEvent, model != nil,
-              hypot(event.locationInWindow.x - press.locationInWindow.x, event.locationInWindow.y - press.locationInWindow.y) > 3
-        else { return }
-        pressEvent = nil
-
+    private func startDrag(event: NSEvent) {
+        guard model != nil else { return }
         // A real file when it is ready (works everywhere); otherwise a promise, exported when the drop asks for it.
         let writer: NSPasteboardWriting
         if let file = model?.readyDragFile() {
@@ -275,7 +285,7 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
         let origin = convert(event.locationInWindow, from: nil)
         item.setDraggingFrame(NSRect(x: origin.x - size.width / 2, y: origin.y - size.height / 2, width: size.width, height: size.height),
                               contents: previewImage(size))
-        beginDraggingSession(with: [item], event: press, source: self)
+        beginDraggingSession(with: [item], event: event, source: self)
     }
 
     /// The first frame of the video, with rounded corners.
@@ -302,21 +312,40 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
     /// going (the app behind it, the desktop, a chat window). It comes back when the drag ends, wherever it ends.
     func draggingSession(_ session: NSDraggingSession, willBeginAt screenPoint: NSPoint) {
         guard let window else { return }
+        frameBeforeDrag = window.frame
         window.ignoresMouseEvents = true // transparent to the pointer too, or it would still catch the drop
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.12
             window.animator().alphaValue = 0
         }
+        // Safety net: if the drag never reports its end (the app receiving it misbehaves, the session is cancelled
+        // in an odd way), the editor must not stay invisible. With the button up for 1.5 s, bring it back.
+        var buttonUpTicks = 0
+        stuckWatch?.invalidate()
+        stuckWatch = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
+            buttonUpTicks = NSEvent.pressedMouseButtons & 1 == 0 ? buttonUpTicks + 1 : 0
+            if buttonUpTicks >= 3 { timer.invalidate(); self?.bringEditorBack(dropped: false) }
+        }
     }
 
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
+        bringEditorBack(dropped: operation != [])
+    }
+
+    private func bringEditorBack(dropped: Bool) {
+        stuckWatch?.invalidate()
+        stuckWatch = nil
         guard let window else { return }
+        // macOS may have carried the window along with the pointer during the drag (the handle sits in the title bar
+        // area). It was invisible meanwhile, so put it back where it was before showing it again.
+        if let frame = frameBeforeDrag, window.frame != frame { window.setFrame(frame, display: false) }
+        frameBeforeDrag = nil
         window.ignoresMouseEvents = false
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.18
             window.animator().alphaValue = 1
         }
-        if operation != [] { model?.status = L("status.dragged") }
+        if dropped { model?.status = L("status.dragged") }
     }
 
     // MARK: NSFilePromiseProviderDelegate (the export runs only when the destination asks for the file)
