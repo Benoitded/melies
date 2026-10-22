@@ -55,18 +55,19 @@ struct AnnotationPanel: View {
                 }
                 .buttonStyle(.plain)
             }
-            // Any color: a rainbow dot with the system color picker laid invisibly on top.
-            ZStack {
+            // Any color: a rainbow dot that opens the system color panel.
+            Button {
+                ColorPanelBridge.shared.open(initial: a.color) { color in
+                    model.updateSelectedAnnotation { $0.color = color }
+                }
+            } label: {
                 Circle().fill(AngularGradient(colors: [.red, .yellow, .green, .cyan, .blue, .purple, .red], center: .center))
                     .overlay(Circle().stroke(Color.primary.opacity(0.25), lineWidth: 0.8))
                     .frame(width: 16, height: 16)
-                ColorPicker("", selection: Binding(get: { a.color.color }, set: { v in model.updateSelectedAnnotation { $0.color = RGBA(v) } }), supportsOpacity: false)
-                    .labelsHidden()
-                    .opacity(0.02)
                     .frame(width: 22, height: 22)
-                    .clipped()
+                    .contentShape(Circle())
             }
-            .frame(width: 22, height: 22)
+            .buttonStyle(.plain)
             .tip(L("tip.color"), trailing: true)
         }
     }
@@ -183,5 +184,30 @@ struct BoxGlyph: View {
                 case .badge: RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Color.primary)
                 }
             }
+    }
+}
+
+/// Opens the shared system color panel and reports each color the user picks while it is open.
+@MainActor
+final class ColorPanelBridge: NSObject {
+    static let shared = ColorPanelBridge()
+    private var onChange: ((RGBA) -> Void)?
+
+    func open(initial: RGBA, onChange: @escaping (RGBA) -> Void) {
+        self.onChange = onChange
+        let panel = NSColorPanel.shared
+        panel.showsAlpha = false
+        panel.isContinuous = true
+        panel.level = .floating // stays above a pinned editor
+        panel.color = NSColor(srgbRed: initial.r, green: initial.g, blue: initial.b, alpha: 1)
+        panel.setTarget(self)
+        panel.setAction(#selector(colorChanged(_:)))
+        NSApp.activate(ignoringOtherApps: true)
+        panel.orderFront(nil)
+    }
+
+    @objc func colorChanged(_ sender: NSColorPanel) {
+        let c = sender.color.usingColorSpace(.sRGB) ?? sender.color
+        onChange?(RGBA(r: Double(c.redComponent), g: Double(c.greenComponent), b: Double(c.blueComponent), a: 1))
     }
 }
