@@ -20,7 +20,7 @@ hdiutil create -quiet -volname "$VOL" -srcfolder "$TMP/content" -fs HFS+ -format
 hdiutil attach -quiet -readwrite -noverify -noautoopen "$TMP/rw.dmg" -mountpoint "/Volumes/$VOL"
 MNT="/Volumes/$VOL"
 
-# A window of 660x400 points (428 with the title bar), app on the left, Applications on the right.
+# A window of 660x400 points of content (480 with the title bar and the strip under it), app on the left, Applications on the right.
 osascript <<OSA || echo "!! Finder layout skipped (automation not allowed): the DMG will use the default layout."
 tell application "Finder"
   tell disk "$VOL"
@@ -29,7 +29,7 @@ tell application "Finder"
   set current view of w to icon view
   set toolbar visible of w to false
   set statusbar visible of w to false
-  set bounds of w to {200, 120, 860, 548}
+  set bounds of w to {200, 120, 860, 600}
   set o to icon view options of w
   set arrangement of o to not arranged
   set icon size of o to 128
