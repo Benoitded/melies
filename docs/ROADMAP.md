@@ -22,6 +22,7 @@
 - [x] Edge handles in the middle of the sides of blur, rectangle and spotlight
 - [ ] Priorities from the competitor study: see `docs/COMPETITORS.md`
 - [x] Animated zooms: camera points (level, speed, style), automatic centering on the recorded cursor, identical preview and export
+- [x] Motion blur during zoom and pan transitions (Off / Light / Strong, default Light), export only; the editor preview stays sharp
 - [x] Cmd+Z / Cmd+Shift+Z (undo / redo: annotations, zooms, crop, trim)
 - [x] Background, margins, rounded corners and shadow around the picture (gradient or solid presets), identical preview and export
 

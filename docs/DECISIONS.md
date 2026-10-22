@@ -323,3 +323,13 @@ The local MCP server lets an AI app drive the editor, so its inputs are treated 
   Scripts/build.sh`. A release build has none, so no environment variable can change what the published app does.
 - Also changed in the same pass: the microphone entitlement is declared (needed once the hardened runtime is on),
   temporary files are cleaned up, and the release script checks notarization and publishes as a draft first.
+
+## Motion blur on camera moves (2026-10-22)
+
+- The blur comes from the camera velocity (central difference of `ZoomCamera.state`, +-1/120 s): CIZoomBlur for log-scale
+  speed, CIMotionBlur (angle of the center displacement) for pans. Strength is the travel during a virtual shutter
+  (1/60 s Light, 1/30 s Strong), capped at 12 / 24 px at 1920 px wide and scaled with the output width.
+- Applied to the picture only, before the frame mask, annotations and click rings, so overlays stay sharp. Exactly no
+  filter (pixel identical output) when the camera is still or the smear is under 0.75 px.
+- Export only: the editor preview plays through AVPlayer layers, not Core Image, so it cannot show the blur. The
+  tooltip says "applied on export". Default Light, stored in `Pref.motionBlur`.

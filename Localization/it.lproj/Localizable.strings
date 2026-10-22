@@ -198,6 +198,11 @@
 "tip.track.cancel" = "Annulla analisi";
 "exp.other" = "Altro...";
 "exp.hevc.note" = "HEVC (H.265) riduce i file di circa il 40%. Twitter/X e alcune app potrebbero rifiutarlo.";
+"exp.motionblur" = "Sfocatura di movimento";
+"exp.motionblur.off" = "Disattivata";
+"exp.motionblur.light" = "Leggera";
+"exp.motionblur.strong" = "Forte";
+"exp.motionblur.help" = "Sfoca l'immagine durante zoom e spostamenti della camera, come un otturatore. Applicata all'esportazione (l'anteprima dell'editor resta nitida).";
 "exp.estimating" = "Stima della dimensione...";
 "exp.estimate.range" = "Tra %@ e %@ MB a seconda del contenuto. Imposta una dimensione massima per un risultato esatto.";
 "status.cancelled" = "Esportazione annullata";

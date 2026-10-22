@@ -27,6 +27,8 @@ struct RenderPlan {
     var clicks: ClickSet?
     /// Set when the picture is framed on a background (margins, rounded corners, shadow).
     var frameLayers: FrameLayers?
+    /// Smears the picture while the zoom camera moves (never touches overlays).
+    var motionBlur: MotionBlurLevel = .off
 
     /// Draws the frame for `time` (asset time, seconds) from the raw source image.
     func render(_ source: CIImage, at time: Double) -> CIImage {
@@ -42,11 +44,15 @@ struct RenderPlan {
         // Core Image has a bottom-left origin.
         let region = CGRect(x: x, y: uprightSize.height - (y + h), width: w, height: h)
 
-        let placed = image
+        var placed = image
             .cropped(to: region)
             .transformed(by: CGAffineTransform(translationX: -region.minX, y: -region.minY))
             .transformed(by: CGAffineTransform(scaleX: content.width / w, y: content.height / h))
             .transformed(by: CGAffineTransform(translationX: content.minX, y: canvas.height - content.maxY))
+        if motionBlur != .off, let blur = MotionBlur.params(velocity: MotionBlur.velocity(at: time, points: points), scale: state.scale,
+                                                            content: content.size, canvas: canvas, level: motionBlur) {
+            placed = MotionBlur.apply(blur, to: placed, center: CGPoint(x: content.midX, y: canvas.height - content.midY))
+        }
 
         var frame: CIImage
         if let layers = frameLayers {
@@ -157,7 +163,8 @@ enum VideoExport {
             content: CGRect(x: (outW - contentW) / 2, y: (outH - contentH) / 2, width: contentW, height: contentH),
             points: points.sorted { $0.time < $1.time },
             annotations: annotations,
-            clicks: clicks
+            clicks: clicks,
+            motionBlur: settings.motionBlur
         )
         if frame.enabled { plan.frameLayers = FrameLayers(style: frame, canvas: plan.canvas, content: plan.content) }
         return plan

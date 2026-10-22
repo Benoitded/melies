@@ -6,6 +6,7 @@ struct ExportOptionsView: View {
     @AppStorage(Pref.exportFormat) private var format = "mp4"
     @AppStorage(Pref.exportMaxMB) private var maxMB = 0
     @AppStorage(Pref.exportMaxWidth) private var maxWidth = 1920
+    @AppStorage(Pref.motionBlur) private var motionBlur = MotionBlurLevel.default.rawValue
     @State private var custom = false
 
     private static let customTag = -1
@@ -77,12 +78,21 @@ struct ExportOptionsView: View {
                 .frame(width: 130)
             }
 
+            LabeledContent(L("exp.motionblur")) {
+                Picker("", selection: $motionBlur) {
+                    ForEach(MotionBlurLevel.allCases, id: \.rawValue) { Text(L($0.labelKey)).tag($0.rawValue) }
+                }
+                .labelsHidden()
+                .frame(width: 130)
+            }
+            .help(L("exp.motionblur.help"))
+
             Divider()
             Text(estimate).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
         .padding(16)
         .frame(width: 290)
-        .task(id: "\(format)|\(maxMB)|\(maxWidth)|\(model.editRevision)|\(model.includeAudio)") {
+        .task(id: "\(format)|\(maxMB)|\(maxWidth)|\(motionBlur)|\(model.editRevision)|\(model.includeAudio)") {
             try? await Task.sleep(nanoseconds: 300_000_000) // let a burst of edits settle
             await model.measureEstimate()
         }

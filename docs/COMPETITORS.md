@@ -32,6 +32,7 @@ smart zooms, cursor smoothing, backgrounds). Try it for real before deciding.
 |---|---|
 | Area, trim, crop, undo | done |
 | Animated zoom (points, speed, styles), centering on the cursor | done |
+| Motion blur on zoom and pan transitions (Screen Studio look) | done on export (Off / Light / Strong); not in the editor preview |
 | Annotations with a duration: arrow, text, rectangle, spotlight, blur | done |
 | Visible clicks | done |
 | Mic and system sound, sound muted or kept on export | done (mic to be tested) |
