@@ -290,3 +290,30 @@
 "frame.preset.white" = "White";
 "frame.preset.gray" = "Gray";
 "frame.preset.black" = "Black";
+
+// Captions
+"cap.title" = "Captions";
+"cap.show" = "Show in export";
+"cap.language" = "Language";
+"cap.generate" = "Generate captions";
+"cap.regenerate" = "Generate again";
+"cap.cancel" = "Cancel";
+"cap.cancelled" = "Generation cancelled.";
+"cap.local" = "On this Mac only";
+"cap.position" = "Position";
+"cap.position.bottom" = "Bottom";
+"cap.position.top" = "Top";
+"cap.size" = "Size";
+"cap.background" = "Background pill";
+"cap.delete" = "Delete this line";
+"cap.clear" = "Delete all";
+"cap.srt" = "Export .srt";
+"cap.srt.empty" = "No caption in the kept range.";
+"cap.srt.saved" = "Saved %@";
+"cap.err.noaudio" = "This video has no audio track, so there is nothing to caption.";
+"cap.err.permission" = "Speech recognition is not allowed. Turn it on for Méliès in System Settings > Privacy & Security > Speech Recognition.";
+"cap.err.unsupported" = "On-device speech recognition is not available on this Mac.";
+"cap.err.language" = "The on-device model for this language is not installed. Méliès never uses the network: add the language in System Settings > Keyboard > Dictation, then try again.";
+"cap.err.nospeech" = "No speech was found in the audio.";
+"cap.err.failed" = "Captions could not be generated.";
+"cap.err.nolocale" = "No on-device language is installed. Méliès never sends audio to a server: add a language in System Settings > Keyboard > Dictation.";

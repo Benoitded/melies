@@ -35,6 +35,7 @@ smart zooms, cursor smoothing, backgrounds). Try it for real before deciding.
 | Motion blur on zoom and pan transitions (Screen Studio look) | done on export (Off / Light / Strong); not in the editor preview |
 | Annotations with a duration: arrow, text, rectangle, spotlight, blur | done |
 | Visible clicks | done |
+| Automatic captions, burned into the export, local only | done (on-device Speech framework, no network; not covered by the three studies, so how competitors do it was not compared) |
 | Mic and system sound, sound muted or kept on export | done (mic to be tested) |
 | Combine two videos | done (rare among the competitors read, not specifically searched) |
 | File drag-and-drop handle | done (the drop still needs trying) |

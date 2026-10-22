@@ -1,2 +1,3 @@
 "NSDesktopFolderUsageDescription" = "Méliès reads your screen recordings from the Desktop.";
 "NSMicrophoneUsageDescription" = "Méliès records your voice when the microphone option is on.";
+"NSSpeechRecognitionUsageDescription" = "Méliès recognizes speech on your Mac, offline, to create captions.";

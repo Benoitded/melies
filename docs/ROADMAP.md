@@ -36,6 +36,8 @@
 - [x] Drag handle: the editor steps aside while the file is dragged (like Shottr)
 - [x] Settings tabs aligned at the top, window follows the size of the content
 - [x] Cancellable export with progress (Esc)
+- [x] Automatic captions: generated on the Mac from the audio (Speech framework, installed languages only, never the network), editable lines, shown in the preview and burned into the export (position, size, background pill), `.srt` export
+- [ ] Captions: keep them with the video between sessions, word-by-word highlight, MCP tool
 
 ## AI (see `docs/AI.md`)
 - [x] Editing tool layer (JSON facade over `EditorModel`)
