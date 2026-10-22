@@ -266,7 +266,12 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
         guard let window else { return }
         model?.prepareDragFile()
         let press = event.locationInWindow
-        while let next = window.nextEvent(matching: [.leftMouseDragged, .leftMouseUp], until: .distantFuture, inMode: .eventTracking, dequeue: true) {
+        // A finite timeout and a check of the real button state: if the app deactivates with the button held, the
+        // release may never reach this loop and the main thread would hang.
+        while true {
+            guard NSEvent.pressedMouseButtons & 1 != 0,
+                  let next = window.nextEvent(matching: [.leftMouseDragged, .leftMouseUp], until: Date(timeIntervalSinceNow: 0.25), inMode: .eventTracking, dequeue: true)
+            else { if NSEvent.pressedMouseButtons & 1 == 0 { return }; continue }
             if next.type == .leftMouseUp { return } // a plain click: nothing to drag
             let moved = hypot(next.locationInWindow.x - press.x, next.locationInWindow.y - press.y)
             if moved > 3 { startDrag(event: next); return }
@@ -324,10 +329,12 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
         // in an odd way), the editor must not stay invisible. With the button up for 1.5 s, bring it back.
         var buttonUpTicks = 0
         stuckWatch?.invalidate()
-        stuckWatch = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
+        let watch = Timer(timeInterval: 0.5, repeats: true) { [weak self] timer in
             buttonUpTicks = NSEvent.pressedMouseButtons & 1 == 0 ? buttonUpTicks + 1 : 0
             if buttonUpTicks >= 3 { timer.invalidate(); self?.bringEditorBack(dropped: false) }
         }
+        RunLoop.main.add(watch, forMode: .common) // a drag session runs the loop in a tracking mode
+        stuckWatch = watch
     }
 
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
@@ -340,7 +347,12 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
         guard let window else { return }
         // macOS may have carried the window along with the pointer during the drag (the handle sits in the title bar
         // area). It was invisible meanwhile, so put it back where it was before showing it again.
-        if let frame = frameBeforeDrag, window.frame != frame { window.setFrame(frame, display: false) }
+        // Only a pure move is undone (same size), and only onto a screen that still exists: a display unplugged or a
+        // Space change during the drag is a legitimate change, left alone.
+        if let saved = frameBeforeDrag, window.frame.size == saved.size, window.frame.origin != saved.origin,
+           let target = Self.restoredFrame(saved, screens: NSScreen.screens.map(\.visibleFrame)) {
+            window.setFrame(target, display: false)
+        }
         frameBeforeDrag = nil
         window.ignoresMouseEvents = false
         NSAnimationContext.runAnimationGroup { context in
@@ -348,6 +360,16 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
             window.animator().alphaValue = 1
         }
         if dropped { model?.status = L("status.dragged") }
+    }
+
+    /// `saved` clamped onto the visible screen it overlaps the most; nil when it overlaps none.
+    static func restoredFrame(_ saved: NSRect, screens: [NSRect]) -> NSRect? {
+        guard let best = screens.max(by: { $0.intersection(saved).area < $1.intersection(saved).area }),
+              best.intersection(saved).area > 0 else { return nil }
+        var frame = saved
+        frame.origin.x = min(max(frame.origin.x, best.minX), max(best.minX, best.maxX - frame.width))
+        frame.origin.y = min(max(frame.origin.y, best.minY), max(best.minY, best.maxY - frame.height))
+        return frame
     }
 
     // MARK: NSFilePromiseProviderDelegate (the export runs only when the destination asks for the file)
@@ -367,4 +389,8 @@ private final class DragSourceNSView: NSView, NSDraggingSource, NSFilePromisePro
     }
 
     func operationQueue(for provider: NSFilePromiseProvider) -> OperationQueue { .main }
+}
+
+private extension NSRect {
+    var area: CGFloat { isNull || isEmpty ? 0 : width * height }
 }

@@ -11,6 +11,9 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
     @Published private(set) var elapsed: TimeInterval = 0
 
     private var stream: SCStream?
+    private var recordingOutput: SCRecordingOutput?
+    /// Tags the pending stop so a late callback or safety timer of an older stop cannot resume a newer one.
+    private var finishToken = 0
     private var outputURL: URL?
     private var statusItem: NSStatusItem?
     private var timer: Timer?
@@ -114,11 +117,15 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         let own = content.windows.filter { $0.owningApplication?.processID == ownPID }
         let stream = SCStream(filter: SCContentFilter(display: display, excludingWindows: own), configuration: config, delegate: self)
         try stream.addRecordingOutput(output)
+        // The clock starts right before the capture does: taking it after the await would shift the cursor and
+        // click times early by the start latency.
+        let clockStart = Date()
         try await stream.startCapture()
 
         self.stream = stream
+        self.recordingOutput = output
         self.outputURL = url
-        startedAt = Date()
+        startedAt = clockStart
         elapsed = 0
         isRecording = true
         showStatusItem()
@@ -183,6 +190,8 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         busy = true
         defer { busy = false }
 
+        finishToken += 1
+        let token = finishToken
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             finishContinuation = continuation
             Task { try? await stream.stopCapture() }
@@ -190,11 +199,12 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
             // recording finishes, so it cannot cut short the NEXT stop 6 seconds later.
             safetyTask = Task {
                 try? await Task.sleep(for: .seconds(6))
-                if !Task.isCancelled { self.resumeFinish() }
+                if !Task.isCancelled { self.resumeFinish(token: token) }
             }
         }
 
         self.stream = nil
+        self.recordingOutput = nil
         isRecording = false
         hideStatusItem()
         var outcome: RecordingOutcome?
@@ -214,7 +224,8 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
 
     private var safetyTask: Task<Void, Never>?
 
-    private func resumeFinish() {
+    private func resumeFinish(token: Int? = nil) {
+        if let token, token != finishToken { return }
         safetyTask?.cancel()
         safetyTask = nil
         finishContinuation?.resume()
@@ -224,15 +235,24 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
     // MARK: Delegates
 
     nonisolated func recordingOutputDidFinishRecording(_ recordingOutput: SCRecordingOutput) {
-        Task { @MainActor in self.resumeFinish() }
+        Task { @MainActor in if self.recordingOutput === recordingOutput { self.resumeFinish() } }
     }
 
     nonisolated func recordingOutput(_ recordingOutput: SCRecordingOutput, didFailWithError error: Error) {
-        Task { @MainActor in self.resumeFinish() }
+        Task { @MainActor in if self.recordingOutput === recordingOutput { self.resumeFinish() } }
     }
 
     nonisolated func stream(_ stream: SCStream, didStopWithError error: Error) {
-        Task { @MainActor in self.resumeFinish() }
+        Task { @MainActor in
+            guard self.stream === stream else { return }
+            if self.finishContinuation != nil {
+                self.resumeFinish()
+            } else if self.isRecording {
+                // The stream died by itself (display sleep or unplugged): run the normal stop path so the file is
+                // kept, the timers stop and the state resets.
+                await self.stop()
+            }
+        }
     }
 
     // MARK: Status item (the red stop button in the menu bar)
