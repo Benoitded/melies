@@ -7,7 +7,8 @@ struct AnnotationOverlay: View {
     let video: CGRect
     let region: CGRect   // normalized source coordinates
 
-    private enum Part: Equatable { case body, tail, head, corner(Int) }
+    /// `edge`: 0 top, 1 bottom, 2 left, 3 right (the dot in the middle of a side, to resize one dimension only).
+    private enum Part: Equatable { case body, tail, head, corner(Int), edge(Int) }
     private enum Mode {
         case create(UUID, AnnotationKind)
         case edit(UUID, Part, Annotation)
@@ -124,6 +125,7 @@ struct AnnotationOverlay: View {
             handleDot(toView(a.p2), hot: activePart == .head)
         case .rect, .spotlight, .blur:
             ForEach(Array(cornerPoints(a).enumerated()), id: \.offset) { i, p in handleDot(p, hot: activePart == .corner(i)) }
+            ForEach(Array(edgePoints(a).enumerated()), id: \.offset) { i, p in handleDot(p, hot: activePart == .edge(i), small: true) }
             if a.kind != .rect {
                 let r = viewRect(fromSource: AnnotationRenderer.normalizedRect(a, source))
                 Rectangle().stroke(Color.accentColor, style: StrokeStyle(lineWidth: 1.2, dash: [5, 3]))
@@ -144,13 +146,20 @@ struct AnnotationOverlay: View {
         return model.tool == .select ? hoverPart : nil
     }
 
-    private func handleDot(_ p: CGPoint, hot: Bool = false) -> some View {
+    private func handleDot(_ p: CGPoint, hot: Bool = false, small: Bool = false) -> some View {
         Circle().fill(hot ? Color.accentColor : Color.white)
             .overlay(Circle().stroke(hot ? Color.white : Color.accentColor, lineWidth: 2))
-            .frame(width: hot ? 15 : 11, height: hot ? 15 : 11)
+            .frame(width: hot ? (small ? 12 : 15) : (small ? 8 : 11), height: hot ? (small ? 12 : 15) : (small ? 8 : 11))
             .animation(.easeOut(duration: 0.12), value: hot)
             .shadow(color: .black.opacity(0.3), radius: 1.5, y: 1)
             .position(p)
+    }
+
+    /// Middle of each side in view coordinates: top, bottom, left, right.
+    private func edgePoints(_ a: Annotation) -> [CGPoint] {
+        let c = cornerPoints(a) // top-left, top-right, bottom-left, bottom-right
+        func mid(_ p: CGPoint, _ q: CGPoint) -> CGPoint { CGPoint(x: (p.x + q.x) / 2, y: (p.y + q.y) / 2) }
+        return [mid(c[0], c[1]), mid(c[2], c[3]), mid(c[0], c[2]), mid(c[1], c[3])]
     }
 
     /// Rectangle corners in view coordinates: top-left, top-right, bottom-left, bottom-right.
@@ -172,6 +181,7 @@ struct AnnotationOverlay: View {
             if case .edit(_, let active, _)? = mode { part = active; dragging = true }
             switch part {
             case .corner(let i)?: return .corner(i)
+            case .edge(let i)?: return [PointerStyle.frameResize(position: .top), .frameResize(position: .bottom), .frameResize(position: .leading), .frameResize(position: .trailing)][i]
             case .body?, .head?, .tail?: return dragging ? .grabActive : .grabIdle
             case nil: return model.zoom > 1.0001 && !model.cropMode ? .grabIdle : nil
             }
@@ -251,6 +261,17 @@ struct AnnotationOverlay: View {
                     a.p2 = CGPoint(x: original.p2.x + dx, y: original.p2.y + dy)
                 case .tail: a.p1 = here
                 case .head: a.p2 = here
+                case .edge(let i):
+                    var lo = CGPoint(x: min(original.p1.x, original.p2.x), y: min(original.p1.y, original.p2.y))
+                    var hi = CGPoint(x: max(original.p1.x, original.p2.x), y: max(original.p1.y, original.p2.y))
+                    switch i {
+                    case 0: lo.y = here.y
+                    case 1: hi.y = here.y
+                    case 2: lo.x = here.x
+                    default: hi.x = here.x
+                    }
+                    a.p1 = lo
+                    a.p2 = hi
                 case .corner(let i):
                     var lo = CGPoint(x: min(original.p1.x, original.p2.x), y: min(original.p1.y, original.p2.y))
                     var hi = CGPoint(x: max(original.p1.x, original.p2.x), y: max(original.p1.y, original.p2.y))
@@ -300,6 +321,8 @@ struct AnnotationOverlay: View {
                 if hypot(point.x - toView(a.p2).x, point.y - toView(a.p2).y) < reach { return (a.id, .head) }
             case .rect, .spotlight, .blur:
                 for (i, c) in cornerPoints(a).enumerated() where hypot(point.x - c.x, point.y - c.y) < reach { return (a.id, .corner(i)) }
+                // The middle of a side: resizes one dimension. Checked after the corners, which win on a small shape.
+                for (i, c) in edgePoints(a).enumerated() where hypot(point.x - c.x, point.y - c.y) < reach { return (a.id, .edge(i)) }
             case .text:
                 break
             }
