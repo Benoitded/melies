@@ -41,7 +41,7 @@
 "tip.text" = "Text";
 "tip.measure" = "Measure";
 "tip.rect" = "Rectangle";
-"tip.spotlight" = "Spotlight and zoom";
+"tip.spotlight" = "Spotlight";
 "tip.pencil" = "Pencil";
 "tip.more" = "More";
 "tip.soon" = "(soon)";
@@ -155,7 +155,7 @@
 "font.serif" = "Serif";
 "font.mono" = "Mono";
 "font.hand" = "Handwritten";
-"sc.tools" = "Select, arrow, text, rectangle";
+"sc.tools" = "Select, arrow, text, rectangle, spotlight, blur";
 "sc.delete" = "Delete the selection";
 "sc.undo" = "Undo / redo";
 "tip.combine" = "Combine with another video…";
@@ -180,3 +180,8 @@
 "cmb.working" = "Combining…";
 "cmb.done" = "Combined";
 "cmb.failed" = "Could not combine: %@";
+"tip.blur" = "Blur or pixelate";
+"tip.dim" = "Darkness";
+"tip.strength" = "Strength";
+"blur.pixelate" = "Pixelate";
+"blur.gaussian" = "Blur";

@@ -10,17 +10,19 @@ struct AnnotationPanel: View {
     var body: some View {
         if let a = model.selectedAnnotation {
             ToolPanel {
-                colors(a)
+                if a.kind != .spotlight && a.kind != .blur { colors(a) }
                 WedgeSlider(
                     value: Binding(get: { a.width }, set: { v in model.updateSelectedAnnotation { $0.width = v } }),
-                    range: a.kind == .text ? 14...90 : (a.kind == .arrow ? 2...18 : 1...14)
+                    range: range(for: a.kind)
                 )
-                .tip(a.kind == .text ? L("tip.size") : L("tip.width"), trailing: true)
+                .tip(sliderTip(for: a.kind), trailing: true)
 
                 switch a.kind {
                 case .arrow: arrowStyles(a)
                 case .rect: rectStyles(a)
                 case .text: textControls(a)
+                case .spotlight: shapeStyles(a)
+                case .blur: blurStyles(a)
                 }
 
                 Button { model.deleteSelected() } label: {
@@ -35,6 +37,41 @@ struct AnnotationPanel: View {
             .onAppear { takeFocusIfRequested() }
             .onDisappear { model.isEditingText = false }
         }
+    }
+
+    private func range(for kind: AnnotationKind) -> ClosedRange<Double> {
+        switch kind {
+        case .text: return 14...90
+        case .arrow: return 2...18
+        case .rect: return 1...14
+        case .spotlight: return 20...90
+        case .blur: return 2...40
+        }
+    }
+
+    private func sliderTip(for kind: AnnotationKind) -> String {
+        switch kind {
+        case .text: return L("tip.size")
+        case .spotlight: return L("tip.dim")
+        case .blur: return L("tip.strength")
+        default: return L("tip.width")
+        }
+    }
+
+    private func shapeStyles(_ a: Annotation) -> some View {
+        IconSegments(
+            items: [RectStyle.rounded, RectStyle.square].map { s in .init(value: s, tip: L("rect.\(s.rawValue)"), icon: AnyView(RectGlyph(style: s))) },
+            selection: a.rect,
+            onSelect: { v in model.updateSelectedAnnotation { $0.rect = v } }
+        )
+    }
+
+    private func blurStyles(_ a: Annotation) -> some View {
+        IconSegments(
+            items: BlurStyle.allCases.map { s in .init(value: s, tip: L("blur.\(s.rawValue)"), icon: AnyView(Image(systemName: s == .pixelate ? "squareshape.split.3x3" : "circle.dotted").font(.system(size: 13)))) },
+            selection: a.blur,
+            onSelect: { v in model.updateSelectedAnnotation { $0.blur = v } }
+        )
     }
 
     /// Focus the text field after the panel (and the field inside it) exist.

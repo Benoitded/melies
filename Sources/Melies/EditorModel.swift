@@ -32,6 +32,12 @@ final class EditorModel: ObservableObject {
     var wantsTextFocus = false
     /// Set while an annotation drag is in progress, so panning the canvas does not also run.
     var annotationGestureActive = false
+
+    // Preview of blur: the latest decoded frame, upright, taken from the player.
+    private var frameOutput: AVPlayerItemVideoOutput?
+    private var lastBuffer: CVPixelBuffer?
+    private var orientation: CGImagePropertyOrientation = .up
+    static let previewContext = CIContext()
     var cursor: CursorTrack?
     /// Canvas zoom: 1 means "fit in the window". `pan` moves the video from its fitted center.
     @Published var zoom: Double = 1
@@ -49,6 +55,9 @@ final class EditorModel: ObservableObject {
         self.asset = AVURLAsset(url: url)
         self.player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
         player.actionAtItemEnd = .pause
+        let output = AVPlayerItemVideoOutput(pixelBufferAttributes: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA])
+        player.currentItem?.add(output)
+        frameOutput = output
 
         timeObserver = player.addPeriodicTimeObserver(
             forInterval: CMTime(value: 1, timescale: 60), queue: .main
@@ -78,6 +87,7 @@ final class EditorModel: ObservableObject {
         duration = d.isFinite ? d : 0
         end = duration
         cursor = CursorTrack.load(for: url)
+        if let info = try? await ComposeExport.uprightSize(of: asset) { orientation = info.orientation }
         resetHistory()
         seek(to: 0)
         await generateThumbnails()
@@ -398,7 +408,7 @@ final class EditorModel: ObservableObject {
         let annotation = Annotation(
             kind: kind, start: start, end: end, p1: point, p2: point, color: style.color, width: style.width,
             arrow: style.arrow, rect: style.rect, text: kind == .text ? L("ann.default_text") : "",
-            font: style.font, bold: style.bold, box: style.box
+            font: style.font, bold: style.bold, box: style.box, blur: style.blur
         )
         annotations.append(annotation)
         return annotation.id
@@ -411,7 +421,7 @@ final class EditorModel: ObservableObject {
         annotations[i].end = min(max(annotations[i].end, annotations[i].start + 0.2), max(duration, annotations[i].start + 0.2))
         if remember {
             let a = annotations[i]
-            AnnotationStyleStore.save(AnnotationStyle(color: a.color, width: a.width, arrow: a.arrow, rect: a.rect, font: a.font, bold: a.bold, box: a.box), for: a.kind)
+            AnnotationStyleStore.save(AnnotationStyle(color: a.color, width: a.width, arrow: a.arrow, rect: a.rect, font: a.font, bold: a.bold, box: a.box, blur: a.blur), for: a.kind)
         }
     }
 
@@ -453,8 +463,23 @@ final class EditorModel: ObservableObject {
         return CGSize(width: (sourceSize.width * r.width).rounded(), height: (sourceSize.height * r.height).rounded())
     }
 
+    /// Keeps the newest frame for blur patches (only when a blur exists).
+    private func captureFrame() {
+        guard let output = frameOutput, annotations.contains(where: { $0.kind == .blur }) else { return }
+        if let buffer = output.copyPixelBuffer(forItemTime: player.currentTime(), itemTimeForDisplay: nil) { lastBuffer = buffer }
+    }
+
+    /// The last frame as an upright image with its origin at 0,0.
+    var currentFrameImage: CIImage? {
+        guard let buffer = lastBuffer else { return nil }
+        var image = CIImage(cvPixelBuffer: buffer).oriented(orientation)
+        image = image.transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
+        return image
+    }
+
     private func tick(_ seconds: Double) {
         guard seconds.isFinite else { return }
+        captureFrame()
         current = seconds
         isPlaying = player.timeControlStatus == .playing
         // Loop inside the trimmed range.

@@ -55,6 +55,18 @@ func demoAnnotations() -> [Annotation] {
     ]
 }
 
+/// Debug: spotlight + pixelated area, used by MELIES_ANNOTATION_DEMO=fx.
+func demoEffects() -> [Annotation] {
+    func make(_ kind: AnnotationKind, _ p1: CGPoint, _ p2: CGPoint, width: Double, blur: BlurStyle = .pixelate) -> Annotation {
+        Annotation(kind: kind, start: 0, end: 3.5, p1: p1, p2: p2, color: .black, width: width,
+                   arrow: .block, rect: .rounded, text: "", font: .sans, bold: true, box: .plain, blur: blur)
+    }
+    return [
+        make(.spotlight, CGPoint(x: 0.40, y: 0.15), CGPoint(x: 0.78, y: 0.70), width: 70),
+        make(.blur, CGPoint(x: 0.05, y: 0.55), CGPoint(x: 0.30, y: 0.90), width: 14),
+    ]
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -102,7 +114,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 ]
                 do {
                     let duration = try await asset.load(.duration)
-                    let notes = ProcessInfo.processInfo.environment["MELIES_ANNOTATION_DEMO"] != nil ? demoAnnotations() : []
+                    let demoKind = ProcessInfo.processInfo.environment["MELIES_ANNOTATION_DEMO"]
+                    let notes = demoKind == "fx" ? demoEffects() : (demoKind != nil ? demoAnnotations() : [])
                     try await VideoExport.run(asset: asset, range: CMTimeRange(start: .zero, duration: duration), points: points, annotations: notes, to: URL(fileURLWithPath: out))
                     print("[export] done")
                 } catch { print("[export] failed: \(error)") }

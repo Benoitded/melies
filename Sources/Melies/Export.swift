@@ -21,6 +21,7 @@ struct RenderPlan {
     func render(_ source: CIImage, at time: Double) -> CIImage {
         var image = source.oriented(orientation)
         image = image.transformed(by: CGAffineTransform(translationX: -image.extent.minX, y: -image.extent.minY))
+        image = AnnotationRenderer.applyBlurs(to: image, list: annotations, at: time, source: uprightSize)
 
         let state = ZoomCamera.state(at: time, points: points)
         let w = base.width / state.scale

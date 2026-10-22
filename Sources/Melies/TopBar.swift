@@ -47,6 +47,12 @@ struct TopBar: View {
                         BarButton(symbol: "rectangle", title: L("tip.rect"), shortcut: "(R)", active: model.tool == .rect) {
                             model.setTool(.rect)
                         }
+                        BarButton(symbol: "circle.lefthalf.filled.inverse", title: L("tip.spotlight"), shortcut: "(S)", active: model.tool == .spotlight) {
+                            model.setTool(.spotlight)
+                        }
+                        BarButton(symbol: "squareshape.split.3x3", title: L("tip.blur"), shortcut: "(B)", active: model.tool == .blur) {
+                            model.setTool(.blur)
+                        }
                         BarButton(symbol: "scissors", title: L("tip.trim"), shortcut: "(I / O)") {}
                         BarButton(symbol: "crop", title: L("tip.crop"), shortcut: "(C)", active: model.cropMode || model.cropRect != nil) {
                             model.toggleCrop()

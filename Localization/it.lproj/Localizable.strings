@@ -41,7 +41,7 @@
 "tip.text" = "Testo";
 "tip.measure" = "Misura";
 "tip.rect" = "Rettangolo";
-"tip.spotlight" = "Spotlight e zoom";
+"tip.spotlight" = "Spotlight";
 "tip.pencil" = "Matita";
 "tip.more" = "Altro";
 "tip.soon" = "(presto)";
@@ -155,7 +155,7 @@
 "font.serif" = "Serif";
 "font.mono" = "Mono";
 "font.hand" = "Scrittura a mano";
-"sc.tools" = "Selezione, freccia, testo, rettangolo";
+"sc.tools" = "Selezione, freccia, testo, rettangolo, spotlight, sfocatura";
 "sc.delete" = "Elimina la selezione";
 "sc.undo" = "Annulla / ripeti";
 "tip.combine" = "Combina con un altro video…";
@@ -180,3 +180,8 @@
 "cmb.working" = "Combinazione…";
 "cmb.done" = "Combinato";
 "cmb.failed" = "Impossibile combinare: %@";
+"tip.blur" = "Sfoca o pixelizza";
+"tip.dim" = "Oscurità";
+"tip.strength" = "Intensità";
+"blur.pixelate" = "Pixelizza";
+"blur.gaussian" = "Sfocatura";
