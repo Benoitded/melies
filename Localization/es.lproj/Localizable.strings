@@ -252,3 +252,15 @@
 "toast.norecording" = "No se encontró ninguna grabación en %@";
 "toast.toosmall" = "Demasiado pequeño: dibuja al menos 40 × 40";
 "rec.perm.open" = "Abrir Ajustes del Sistema";
+"mcprec.title" = "%@ quiere grabar tu pantalla";
+"mcprec.text" = "Zona: %@\nAudio: %@\nDuración máxima: %d s\n\nLa app de IA verá esta grabación y todo lo visible en esta zona mientras graba. No se graba nada si no pulsas Permitir.";
+"mcprec.region" = "%@, %d × %d puntos en (%d, %d)";
+"mcprec.allow" = "Permitir";
+"mcprec.deny" = "Denegar";
+"mcprec.target.window" = "Ventana de %@ (%@)";
+"mcprec.target.display" = "Zona de la pantalla (%@)";
+"mcprec.audio.none" = "ninguno";
+"mcprec.audio.microphone" = "micrófono";
+"mcprec.audio.system" = "sonido del sistema";
+"mcprec.audio.both" = "micrófono y sonido del sistema";
+"mcprec.autostop" = "Grabación detenida automáticamente tras %d s";

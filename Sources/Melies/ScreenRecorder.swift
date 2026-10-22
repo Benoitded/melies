@@ -63,64 +63,121 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         try? await Task.sleep(for: .milliseconds(220)) // let the selector disappear before capturing
 
         do {
-            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-            let key = NSDeviceDescriptionKey("NSScreenNumber")
-            let id = selection.screen.deviceDescription[key] as? CGDirectDisplayID
-            guard let display = content.displays.first(where: { $0.displayID == id }) ?? content.displays.first else {
-                closeOverlay(); alert(L("rec.nodisplay"), ""); return
-            }
-
-            let scale = selection.screen.backingScaleFactor
-            let config = SCStreamConfiguration()
-            config.sourceRect = selection.rect
-            config.width = even(selection.rect.width * scale)
-            config.height = even(selection.rect.height * scale)
-            config.minimumFrameInterval = CMTime(value: 1, timescale: 60)
-            config.showsCursor = true
-
-            // Audio: the system sound and/or the microphone, both written into the same movie.
-            let defaults = UserDefaults.standard
-            config.capturesAudio = defaults.bool(forKey: Pref.recordSystemAudio)
-            config.excludesCurrentProcessAudio = true
-            if defaults.bool(forKey: Pref.recordMicrophone) {
-                if await Self.microphoneAllowed() {
-                    config.captureMicrophone = true
-                } else {
-                    Toast.show(L("rec.mic.denied")) // recording goes on without the voice
-                }
-            }
-
-            let url = Self.newOutputURL()
-            let recordingConfig = SCRecordingOutputConfiguration()
-            recordingConfig.outputURL = url
-            recordingConfig.videoCodecType = .h264
-            recordingConfig.outputFileType = .mov
-            let output = SCRecordingOutput(configuration: recordingConfig, delegate: self)
-
-            // Keep every Méliès window (dimming overlay, editor, menu bar button) out of the video.
-            let ownPID = ProcessInfo.processInfo.processIdentifier
-            let own = content.windows.filter { $0.owningApplication?.processID == ownPID }
-            let stream = SCStream(filter: SCContentFilter(display: display, excludingWindows: own), configuration: config, delegate: self)
-            try stream.addRecordingOutput(output)
-            try await stream.startCapture()
-
-            self.stream = stream
-            self.outputURL = url
-            startedAt = Date()
-            elapsed = 0
-            isRecording = true
-            showStatusItem()
-            startCursorSampling(region: selection.rect, screen: selection.screen)
+            try await startCapture(selection: selection, audio: nil)
         } catch {
             closeOverlay()
-            alert(L("rec.failed"), error.localizedDescription)
+            if let failure = error as? RecorderError, case .noDisplay = failure { alert(L("rec.nodisplay"), "") } else { alert(L("rec.failed"), error.localizedDescription) }
         }
     }
 
+    /// Starts the capture of `selection` (rect relative to its screen, top-left origin). `audio` nil follows the
+    /// Settings; a value (AI request) overrides them for this recording only.
+    private func startCapture(selection: (rect: CGRect, screen: NSScreen), audio: RecordingAudio?) async throws {
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        let key = NSDeviceDescriptionKey("NSScreenNumber")
+        let id = selection.screen.deviceDescription[key] as? CGDirectDisplayID
+        guard let display = content.displays.first(where: { $0.displayID == id }) ?? content.displays.first else { throw RecorderError.noDisplay }
+
+        let scale = selection.screen.backingScaleFactor
+        let config = SCStreamConfiguration()
+        config.sourceRect = selection.rect
+        config.width = even(selection.rect.width * scale)
+        config.height = even(selection.rect.height * scale)
+        config.minimumFrameInterval = CMTime(value: 1, timescale: 60)
+        config.showsCursor = true
+
+        // Audio: the system sound and/or the microphone, both written into the same movie.
+        let defaults = UserDefaults.standard
+        let wantsSystem = audio.map { $0 == .system || $0 == .both } ?? defaults.bool(forKey: Pref.recordSystemAudio)
+        let wantsMic = audio.map { $0 == .microphone || $0 == .both } ?? defaults.bool(forKey: Pref.recordMicrophone)
+        config.capturesAudio = wantsSystem
+        config.excludesCurrentProcessAudio = true
+        if wantsMic {
+            if await Self.microphoneAllowed() {
+                config.captureMicrophone = true
+            } else if audio != nil {
+                throw RecorderError.microphone
+            } else {
+                Toast.show(L("rec.mic.denied")) // recording goes on without the voice
+            }
+        }
+
+        let url = Self.newOutputURL()
+        let recordingConfig = SCRecordingOutputConfiguration()
+        recordingConfig.outputURL = url
+        recordingConfig.videoCodecType = .h264
+        recordingConfig.outputFileType = .mov
+        let output = SCRecordingOutput(configuration: recordingConfig, delegate: self)
+
+        // Keep every Méliès window (dimming overlay, editor, menu bar button) out of the video.
+        let ownPID = ProcessInfo.processInfo.processIdentifier
+        let own = content.windows.filter { $0.owningApplication?.processID == ownPID }
+        let stream = SCStream(filter: SCContentFilter(display: display, excludingWindows: own), configuration: config, delegate: self)
+        try stream.addRecordingOutput(output)
+        try await stream.startCapture()
+
+        self.stream = stream
+        self.outputURL = url
+        startedAt = Date()
+        elapsed = 0
+        isRecording = true
+        showStatusItem()
+        startCursorSampling(region: selection.rect, screen: selection.screen)
+    }
+
+    enum RecorderError: LocalizedError {
+        case permission, noDisplay, microphone, busy, countdownCancelled
+        var errorDescription: String? {
+            switch self {
+            case .permission: return "Screen recording is not allowed for Méliès. The user must enable it in System Settings > Privacy & Security > Screen Recording."
+            case .noDisplay: return "The display is not available."
+            case .microphone: return "Microphone access was refused by the user."
+            case .busy: return "Méliès is busy with another recording."
+            case .countdownCancelled: return "The count-down was cancelled."
+            }
+        }
+    }
+
+    /// Starts a recording asked by an AI client (already validated and approved by the user): no selector.
+    func startForAI(displayID: Int, rect: CGRect, audio: RecordingAudio, countdown: Int) async throws {
+        guard !busy, !isRecording, !Countdown.isRunning else { throw RecorderError.busy }
+        busy = true
+        defer { busy = false }
+        guard CGPreflightScreenCaptureAccess() else {
+            CGRequestScreenCaptureAccess()
+            throw RecorderError.permission
+        }
+        let key = NSDeviceDescriptionKey("NSScreenNumber")
+        guard let screen = NSScreen.screens.first(where: { ($0.deviceDescription[key] as? CGDirectDisplayID).map(Int.init) == displayID }) else { throw RecorderError.noDisplay }
+        overlay = RecordingOverlay(screen: screen, region: rect)
+        if countdown > 0 {
+            guard await Countdown.run(seconds: countdown, region: rect, screen: screen) else {
+                closeOverlay()
+                throw RecorderError.countdownCancelled
+            }
+        }
+        try? await Task.sleep(for: .milliseconds(220))
+        do { try await startCapture(selection: (rect, screen), audio: audio) } catch {
+            closeOverlay()
+            throw error
+        }
+    }
+
+    /// Stops and reports the file. The editor opens on it like after any recording.
+    func stopForAI() async throws -> RecordingOutcome {
+        guard isRecording else { throw RecorderError.busy }
+        guard let outcome = await stop() else { throw ToolError("The recording produced no file.") }
+        return outcome
+    }
+
+    /// The last recording that ended (any way), for an AI client that asks afterwards.
+    private(set) var lastOutcome: RecordingOutcome?
+
     // MARK: Stop
 
-    private func stop() async {
-        guard let stream, isRecording else { return }
+    @discardableResult
+    private func stop() async -> RecordingOutcome? {
+        guard let stream, isRecording else { return nil }
         stopCursorSampling()
         closeOverlay()
         busy = true
@@ -140,13 +197,19 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         self.stream = nil
         isRecording = false
         hideStatusItem()
+        var outcome: RecordingOutcome?
         if let url = outputURL, FileManager.default.fileExists(atPath: url.path) {
+            var seconds = Date().timeIntervalSince(startedAt)
+            if let real = try? await AVURLAsset(url: url).load(.duration).seconds, real.isFinite, real > 0 { seconds = real }
+            outcome = RecordingOutcome(path: url.path, duration: seconds, hasClicks: !clickSamples.isEmpty)
+            lastOutcome = outcome
             if UserDefaults.standard.object(forKey: Pref.openEditorAfterRecording) as? Bool ?? true {
                 EditorWindowController.shared.open(url)
             } else {
                 Toast.show(L("toast.recorded"))
             }
         }
+        return outcome
     }
 
     private var safetyTask: Task<Void, Never>?
