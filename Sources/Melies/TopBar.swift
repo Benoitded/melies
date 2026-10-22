@@ -179,11 +179,13 @@ struct Tooltip: View {
             if let shortcut { Text(shortcut).foregroundStyle(.secondary) }
         }
         .font(.system(size: 13))
-        .lineLimit(1)
-        .fixedSize()
+        .multilineTextAlignment(.leading)
+        // A short label stays on one line; a sentence wraps in a narrow box instead of one very long strip.
+        .frame(maxWidth: title.count > 36 ? 250 : nil, alignment: .leading)
+        .fixedSize(horizontal: title.count <= 36, vertical: true)
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .glassEffect(.regular, in: .capsule)
+        .glassEffect(.regular, in: title.count > 36 ? AnyShape(RoundedRectangle(cornerRadius: 16, style: .continuous)) : AnyShape(Capsule()))
     }
 }
 

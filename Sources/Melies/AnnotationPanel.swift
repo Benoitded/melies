@@ -61,7 +61,7 @@ struct AnnotationPanel: View {
                 }
                 .buttonStyle(.plain).clickCursor().tip(L("tip.track.cancel"), trailing: true)
             } else if a.isTracked {
-                let from = a.trackStart
+                let from = a.track.first?.t ?? a.trackStart
                 let to = a.track.last?.t ?? from
                 if let loss = a.trackLoss {
                     Label(L("trk.state.lost", String(format: "%.1f", loss.at)), systemImage: "exclamationmark.triangle.fill")

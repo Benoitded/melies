@@ -224,7 +224,7 @@
 "ai.done" = "%@ ha finito";
 "export.failed" = "Impossibile scrivere l'esportazione. Controlla lo spazio libero e riprova.";
 "trk.button" = "Segui l'oggetto";
-"tip.track" = "Incolla questa annotazione a ciò che c'è sotto, dalla testina in poi. Metti la testina dove l'oggetto è ben visibile, poi premi.";
+"tip.track" = "Incolla l'annotazione a ciò che c'è sotto, prima e dopo la testina. Metti la testina dove l'oggetto è ben visibile, poi premi.";
 "trk.state.done" = "Seguito per %@ s";
 "trk.state.done.tip" = "Seguito da %@ s a %@ s";
 "trk.state.lost" = "Perso a %@ s";

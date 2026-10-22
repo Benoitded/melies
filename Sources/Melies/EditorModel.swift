@@ -532,14 +532,15 @@ final class EditorModel: ObservableObject {
         guard trackingID == nil, let a = annotations.first(where: { $0.id == id }) else { return }
         let from = min(max(current, a.start), a.end)
         let box = trackBox(for: a)
-        guard box.width > 0.005, box.height > 0.005, a.end - from > 0.1 else { return }
+        // Started in the middle of the annotation: it is followed on both sides of the playhead.
+        guard box.width > 0.005, box.height > 0.005, a.end - from > 0.1 || from - a.start > 0.1 else { return }
         trackingID = id
         trackingProgress = 0
         trackingLost = false
         trackingTrail = []
         let asset = self.asset
         trackingTask = Task { [weak self] in
-            let result = try? await ObjectTracker.track(asset: asset, box: box, from: from, to: a.end, progress: { p in
+            let result = try? await ObjectTracker.track(asset: asset, box: box, from: from, to: a.end, lowerBound: a.start, progress: { p in
                 Task { @MainActor [weak self] in self?.trackingProgress = p }
             }, onSample: { sample in
                 Task { @MainActor [weak self] in self?.trackingTrail.append(sample) }
@@ -556,6 +557,8 @@ final class EditorModel: ObservableObject {
                     } else {
                         $0.trackLoss = nil
                     }
+                    // Backward: the object was not there before this moment, so the annotation starts here.
+                    if let startAt = result.startAt { $0.start = min(startAt, from - 0.2) }
                 }
                 self.trackingLost = result.lost
                 if let lostAt = result.lostAt {
