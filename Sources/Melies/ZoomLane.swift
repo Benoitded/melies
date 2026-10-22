@@ -33,10 +33,19 @@ struct ZoomLane: View {
                 .allowsHitTesting(false)
 
                 if model.zoomPoints.isEmpty {
-                    Text(L("zoom.hint"))
-                        .font(.system(size: 11)).foregroundStyle(.secondary)
-                        .offset(x: handleWidth + 4, y: bottom - 20)
-                        .allowsHitTesting(false)
+                    HStack(spacing: 10) {
+                        Text(L("zoom.hint")).font(.system(size: 11)).foregroundStyle(.secondary)
+                        if model.hasClicks {
+                            Button { model.autoZoomFromClicks() } label: {
+                                Label(L("zoom.auto"), systemImage: "cursorarrow.click.2").font(.system(size: 11))
+                            }
+                            .buttonStyle(.glass)
+                            .buttonBorderShape(.capsule)
+                            .controlSize(.small)
+                            .tip(L("zoom.auto.tip"), trailing: true)
+                        }
+                    }
+                    .offset(x: handleWidth + 4, y: bottom - 26)
                 } else {
                     let samples = 160
                     let curve = Path { p in

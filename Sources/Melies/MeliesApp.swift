@@ -94,6 +94,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in OnboardingWindowController.shared.show() }
         }
 
+        // Debug: MELIES_AUTOZOOM_TEST=video fakes clicks at 1.0, 1.8 (close), 6.0 and 6.2 s and prints the zoom points.
+        if let path = ProcessInfo.processInfo.environment["MELIES_AUTOZOOM_TEST"] {
+            Task { @MainActor in
+                let model = EditorModel(url: URL(fileURLWithPath: path))
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                model.cursor = CursorTrack(samples: [], clicks: [
+                    .init(t: 1.0, x: 0.2, y: 0.3), .init(t: 1.8, x: 0.7, y: 0.4), .init(t: 6.0, x: 0.5, y: 0.8), .init(t: 6.2, x: 0.55, y: 0.8),
+                ])
+                model.autoZoomFromClicks()
+                for z in model.zoomPoints { print("ZOOM t=\(String(format: "%.2f", z.time)) scale=\(z.scale) center=(\(String(format: "%.2f", z.center.x)),\(String(format: "%.2f", z.center.y))) transition=\(z.transition)") }
+                exit(0)
+            }
+        }
         // Debug: MELIES_ESTIMATE_TEST=video prints the measured size estimate and the real export size.
         if let path = ProcessInfo.processInfo.environment["MELIES_ESTIMATE_TEST"] {
             Task { @MainActor in

@@ -27,7 +27,7 @@
 - [x] Poignée de glisser-déposer : le MP4 optimisé se dépose dans n'importe quelle app
 - [x] Deux vidéos côte à côte, empilées, ou en incrustation (fenêtre « Combiner », résultat rouvert dans l'éditeur)
 - [x] Audio : son du système et micro pendant l'enregistrement, son gardé ou coupé à l'export
-- [ ] Zoom auto sur le curseur pendant l'enregistrement
+- [x] Zoom auto depuis les clics enregistrés (bouton dans la piste de zoom)
 
 ## IA (voir `docs/AI.md`)
 - [x] Couche d'outils d'édition (façade JSON sur `EditorModel`)

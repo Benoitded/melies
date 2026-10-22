@@ -231,3 +231,5 @@
 "set.adv.updates" = "Mises à jour";
 "set.adv.updates.auto" = "Rechercher automatiquement";
 "set.adv.version" = "Version %@";
+"zoom.auto" = "Auto depuis les clics";
+"zoom.auto.tip" = "Zoome sur chaque clic fait pendant l'enregistrement";
