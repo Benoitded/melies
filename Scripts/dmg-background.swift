@@ -1,8 +1,11 @@
 // Draws the DMG window background: a soft violet gradient, a thin arrow from the app to Applications, a title and an optional small hint.
-// Usage: swift Scripts/dmg-background.swift out.png ["small hint line"]      (660x400 pt window, written at 2x)
+// Usage: swift Scripts/dmg-background.swift out.png ["small hint line"]      (written at 2x)
 import AppKit
 
-let width = 660, height = 400
+// The artwork is much bigger than the window (660 wide, about 390 to 430 tall depending on the macOS version's title bar):
+// the color keeps going past the edges, so no white strip shows on any Mac. Texts sit in the area visible everywhere.
+let windowWidth: CGFloat = 660
+let width = 1200, height = 900
 guard CommandLine.arguments.count > 1 else { print("usage: dmg-background.swift out.png"); exit(1) }
 let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: width * 2, pixelsHigh: height * 2, bitsPerSample: 8,
                            samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
@@ -11,8 +14,11 @@ NSGraphicsContext.saveGraphicsState()
 NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
 
 let full = NSRect(x: 0, y: 0, width: width, height: height)
-NSGradient(colors: [NSColor(calibratedRed: 0.975, green: 0.968, blue: 1.0, alpha: 1), NSColor(calibratedRed: 0.915, green: 0.905, blue: 0.985, alpha: 1)])!
-    .draw(in: full, angle: -90)
+let top = NSColor(calibratedRed: 0.975, green: 0.968, blue: 1.0, alpha: 1)
+let bottom = NSColor(calibratedRed: 0.915, green: 0.905, blue: 0.985, alpha: 1)
+bottom.setFill(); full.fill()
+// The gradient covers the first 440 pt from the top, then the last color continues.
+NSGradient(colors: [top, bottom])!.draw(in: NSRect(x: 0, y: CGFloat(height) - 440, width: CGFloat(width), height: 440), angle: -90)
 
 // A thin grey arrow between the two icons (app at x=180, Applications at x=480, icon centers at y=205 from the top).
 let y = CGFloat(height) - 205
@@ -28,11 +34,11 @@ func draw(_ text: String, size: CGFloat, weight: NSFont.Weight, color: NSColor, 
     let attrs: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: size, weight: weight), .foregroundColor: color]
     let s = NSAttributedString(string: text, attributes: attrs)
     let w = s.size().width
-    s.draw(at: NSPoint(x: (CGFloat(width) - w) / 2, y: centerY))
+    s.draw(at: NSPoint(x: (windowWidth - w) / 2, y: centerY))
 }
 draw("Drag Méliès to Applications", size: 17, weight: .semibold, color: NSColor(calibratedRed: 0.17, green: 0.14, blue: 0.30, alpha: 1), centerY: CGFloat(height) - 70)
 if CommandLine.arguments.count > 2, !CommandLine.arguments[2].isEmpty {
-    draw(CommandLine.arguments[2], size: 12, weight: .regular, color: NSColor(calibratedRed: 0.42, green: 0.40, blue: 0.55, alpha: 1), centerY: 38)
+    draw(CommandLine.arguments[2], size: 12, weight: .regular, color: NSColor(calibratedRed: 0.42, green: 0.40, blue: 0.55, alpha: 1), centerY: CGFloat(height) - 362)
 }
 
 NSGraphicsContext.restoreGraphicsState()

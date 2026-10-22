@@ -13,7 +13,7 @@ mkdir -p "$TMP/content/.background"
 ditto --noextattr --noqtn "$SRC/Melies.app" "$TMP/content/Melies.app"
 ln -s /Applications "$TMP/content/Applications"
 # The small line under the window is for builds that are not notarized: set MELIES_DMG_HINT="" to hide it.
-swift Scripts/dmg-background.swift "$TMP/content/.background/bg.png" "${MELIES_DMG_HINT-First launch: right-click the app, then Open}"
+swift Scripts/dmg-background.swift "$TMP/content/.background/bg.png" "${MELIES_DMG_HINT-First launch: System Settings > Privacy & Security > Open Anyway}"
 
 hdiutil create -quiet -volname "$VOL" -srcfolder "$TMP/content" -fs HFS+ -format UDRW -ov "$TMP/rw.dmg"
 # Mounted normally (not -nobrowse): Finder must see the volume to lay its window out.
