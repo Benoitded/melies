@@ -360,3 +360,9 @@
 "onb.guide.ready.title" = "Melies está listo";
 "onb.guide.ready.sub" = "Puedes cerrar esta ventana — disfruta.";
 "onb.guide.ready.close" = "Cerrar";
+"set.after_save" = "Después de guardar (⌘S)";
+"set.after_save.both" = "Conservar ambos";
+"set.after_save.compressed" = "Solo la comprimida";
+"set.after_save.hint" = "Con «Solo la comprimida», la grabación original y su archivo de cursor van a la papelera una vez guardada la copia comprimida.";
+"toast.saved_trashed" = "Guardado, original en la papelera";
+"status.trash_failed" = "Guardado, pero no se pudo mover el original a la papelera.";

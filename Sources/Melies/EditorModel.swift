@@ -897,10 +897,35 @@ final class EditorModel {
         guard await export(to: target) else { return }
         status = L("status.saved", target.lastPathComponent, sizeLabel(target))
         NSWorkspace.shared.activateFileViewerSelecting([target])
+        if UserDefaults.standard.string(forKey: Pref.afterSave) == "compressed" {
+            if trashOriginal(keeping: target) {
+                // The editor was open on the file that just left: close it whatever the other setting says.
+                Toast.show(L("toast.saved_trashed"))
+                EditorWindowController.shared.close()
+                return
+            }
+            status = L("status.trash_failed")
+        }
         finish(toast: L("toast.saved"))
     }
 
     /// After a successful copy, save or share, close the editor (and with it the Dock icon).
+    /// Moves the original recording (and its cursor file) to the Trash, but only once the saved copy is really there.
+    private func trashOriginal(keeping saved: URL) -> Bool {
+        Self.trashOriginal(url, keeping: saved)
+    }
+
+    static func trashOriginal(_ original: URL, keeping saved: URL,
+                              trash: (URL) throws -> Void = { try FileManager.default.trashItem(at: $0, resultingItemURL: nil) }) -> Bool {
+        let fm = FileManager.default
+        let size = (try? saved.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        guard size > 0, saved.standardizedFileURL != original.standardizedFileURL else { return false }
+        do { try trash(original) } catch { return false }
+        let sidecar = CursorTrack.sidecarURL(for: original)
+        if fm.fileExists(atPath: sidecar.path) { try? trash(sidecar) }
+        return true
+    }
+
     private func finish(toast: String?) {
         guard UserDefaults.standard.object(forKey: Pref.closeAfterAction) as? Bool ?? true else { return }
         if let toast { Toast.show(toast) }

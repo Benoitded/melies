@@ -360,3 +360,9 @@
 "onb.guide.ready.title" = "Melies is ready";
 "onb.guide.ready.sub" = "You can close this window — enjoy.";
 "onb.guide.ready.close" = "Close";
+"set.after_save" = "After saving (⌘S)";
+"set.after_save.both" = "Keep both";
+"set.after_save.compressed" = "Compressed only";
+"set.after_save.hint" = "With “Compressed only”, the original recording and its cursor file go to the Trash once the compressed copy is saved.";
+"toast.saved_trashed" = "Saved, original in the Trash";
+"status.trash_failed" = "Saved, but the original could not be moved to the Trash.";

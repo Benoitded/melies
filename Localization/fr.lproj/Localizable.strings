@@ -360,3 +360,9 @@
 "onb.guide.ready.title" = "Melies est prêt";
 "onb.guide.ready.sub" = "Tu peux fermer cette fenêtre — bon film.";
 "onb.guide.ready.close" = "Fermer";
+"set.after_save" = "Après l'enregistrement (⌘S)";
+"set.after_save.both" = "Garder les deux";
+"set.after_save.compressed" = "Compressée seulement";
+"set.after_save.hint" = "Avec « Compressée seulement », l'enregistrement original et son fichier de curseur vont à la corbeille une fois la copie compressée enregistrée.";
+"toast.saved_trashed" = "Enregistré, original à la corbeille";
+"status.trash_failed" = "Enregistré, mais l'original n'a pas pu être mis à la corbeille.";

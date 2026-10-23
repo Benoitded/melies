@@ -12,6 +12,8 @@ enum Pref {
     static let clickSize = "clickSize"
     static let openEditorAfterRecording = "openEditorAfterRecording"
     static let closeAfterAction = "closeAfterAction"
+    /// What ⌘S does with the original recording: "both" (keep it, the default) or "compressed" (Trash it).
+    static let afterSave = "afterSave"
     static let alwaysOnTop = "alwaysOnTop"
     static let toolPanelCollapsed = "toolPanelCollapsed"
     static let exportFormat = "exportFormat"
