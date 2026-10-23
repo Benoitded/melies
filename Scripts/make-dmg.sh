@@ -6,7 +6,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 SRC="$1"; OUT="$2"
-VOL="Méliès"
+VOL="Melies"
 TMP=$(mktemp -d); trap 'hdiutil detach "/Volumes/$VOL" -quiet -force 2>/dev/null || true; rm -rf "$TMP"' EXIT
 
 mkdir -p "$TMP/content/.background"

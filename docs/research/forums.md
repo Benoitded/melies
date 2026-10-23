@@ -58,7 +58,7 @@ free tools that add reminders (Shottr, according to a competitor, not verified).
 - Masking that follows moving content.
 - Honest compatibility with macOS updates.
 
-## What the study suggests for Méliès
+## What the study suggests for Melies
 
 1. Sell as a one-time purchase with one year of updates, never as a subscription alone.
 2. Make reliability the #1 argument: test every macOS beta.

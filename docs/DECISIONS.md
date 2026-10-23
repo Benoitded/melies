@@ -16,11 +16,13 @@ was still unproven. All the Tauri code was deleted, nothing of it is kept.
 
 Rejected: local web page with ffmpeg. Cannot have a global shortcut.
 
-## Name: Méliès (2026-10-20)
+## Name: Melies (2026-10-20)
 
 Georges Méliès invented the jump cut, the superimposition and the on-screen
 special effect: exactly what the tool does (cut, overlay, zoom).
 Command and folder name: `melies`, without the accent.
+Update (2026-10-23): the accent is dropped everywhere, in the app name, menus, texts and docs: harder to type and
+to read than it is worth. Only Georges Méliès keeps his.
 
 Rejected: `clipr` (too many homonymous products: Twitch downloader, UGC platform,
 clipboard manager), `motionr` (available but soulless).
@@ -343,11 +345,11 @@ The local MCP server lets an AI app drive the editor, so its inputs are treated 
   tooltip says "applied on export". Default Light, stored in `Pref.motionBlur`.
 ## Automatic captions: on-device only (2026-10-22)
 
-Méliès is free and local-only, so captions are generated with Apple's `SpeechTranscriber` / `SpeechAnalyzer` (Speech
+Melies is free and local-only, so captions are generated with Apple's `SpeechTranscriber` / `SpeechAnalyzer` (Speech
 framework, macOS 26) and never with a server.
 - **Why on-device:** the audio of a screen recording often holds passwords read aloud, customer names, private
   meetings. No upload also means no account, no key, no cost, no rate limit.
-- **No network, even for models:** the framework can download a language model, but Méliès does not trigger it. Only
+- **No network, even for models:** the framework can download a language model, but Melies does not trigger it. Only
   locales reported by `SpeechTranscriber.installedLocales` are offered, and a language whose model is missing gets a
   message pointing to System Settings > Keyboard > Dictation. The `SFSpeechRecognizer` fallback was not written: macOS 26
   is the minimum, so the new API is always there, and the old one can silently use a server unless

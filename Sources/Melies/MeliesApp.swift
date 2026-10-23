@@ -22,7 +22,7 @@ struct MeliesApp: App {
 
     var body: some Scene {
         // While recording, this icon is removed: the red timer is then the only item, and one click stops.
-        MenuBarExtra("Méliès", systemImage: "film", isInserted: Binding(get: { !recorder.isRecording }, set: { _ in })) {
+        MenuBarExtra("Melies", systemImage: "film", isInserted: Binding(get: { !recorder.isRecording }, set: { _ in })) {
             Button(L("menu.reopen")) { EditorWindowController.shared.openLatest() }
                 .keyboardShortcut(swiftUIShortcut(.openEditor))
             Divider()
@@ -89,7 +89,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
     }
 
-    /// "Open with Méliès" from Finder, or `open -a Melies file.mov`.
+    /// "Open with Melies" from Finder, or `open -a Melies file.mov`.
     func application(_ application: NSApplication, open urls: [URL]) {
         guard let url = urls.first else { return }
         Task { @MainActor in EditorWindowController.shared.open(url) }

@@ -10,11 +10,11 @@ dates. A "?" cell means not verified, not "no".
 
 **CleanShot X 5.0 (September 1, 2026)** adds a Studio mode and a video editor: smart zooms,
 cursor smoothing, motion blur, custom backgrounds, cursor size after the fact, keys and camera,
-hardware-encoded export. The reference capture tool is therefore moving into Méliès's space.
+hardware-encoded export. The reference capture tool is therefore moving into Melies's space.
 Price: $35 once (one year of updates). To be tested for real: the quality of its smart zooms is
 unknown.
 
-## Matrix (excerpt, products close to Méliès)
+## Matrix (excerpt, products close to Melies)
 
 | Feature | CleanShot X | Screen Studio | Cap | Recordly | OpenScreen | Screenize |
 |---|---|---|---|---|---|---|

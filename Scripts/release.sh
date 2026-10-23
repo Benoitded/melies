@@ -1,5 +1,5 @@
 #!/bin/bash
-# Publishes a new Méliès version in one command:
+# Publishes a new Melies version in one command:
 #   Scripts/release.sh            bump the patch number (0.1.0 -> 0.1.1)
 #   Scripts/release.sh minor      0.1.1 -> 0.2.0       (also: major)
 #   Scripts/release.sh 1.4.0      an exact version
@@ -33,7 +33,7 @@ esac
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Usage: $0 [patch|minor|major|X.Y.Z] [--dry-run]"; exit 1; }
 NEXT_BUILD=$((BUILD + 1))
 TAG="v$VERSION"
-echo "==> Méliès $CURRENT ($BUILD) -> $VERSION ($NEXT_BUILD)"
+echo "==> Melies $CURRENT ($BUILD) -> $VERSION ($NEXT_BUILD)"
 
 if [ "$DRY" = 0 ]; then
   [ -z "$(git status --porcelain)" ] || { echo "Commit or stash your changes first."; exit 1; }
@@ -113,7 +113,7 @@ fi
 #   1. commit locally  2. create the release as a draft (nothing visible)  3. push commit and tag  4. publish
 git add "$PLIST"
 git commit -q -m "Version $VERSION"
-if ! gh release create "$TAG" "$DMG" "$DIST/appcast.xml" --draft --target main --title "Méliès $VERSION" --notes-file "$DIST/updates/Melies-$VERSION.md"; then
+if ! gh release create "$TAG" "$DMG" "$DIST/appcast.xml" --draft --target main --title "Melies $VERSION" --notes-file "$DIST/updates/Melies-$VERSION.md"; then
   git reset -q --hard HEAD~1 # undo the local version commit
   echo "!! Could not create the GitHub release: nothing was published."
   exit 1
@@ -140,7 +140,7 @@ cask "melies" do
   sha256 "$SHA"
 
   url "https://github.com/Benoitded/melies/releases/download/v#{version}/Melies-#{version}.dmg"
-  name "Méliès"
+  name "Melies"
   desc "Screen recorder and small video editor for the menu bar"
   homepage "https://github.com/Benoitded/melies"
 

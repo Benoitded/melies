@@ -35,7 +35,7 @@ struct EditorView: View {
             .accessibilityHidden(true)
     }
 
-    /// Shown instead of the editor when the file is not a video Méliès can read.
+    /// Shown instead of the editor when the file is not a video Melies can read.
     private struct UnreadableVideo: View {
         let message: String
         @ObservedObject var session: EditorSession

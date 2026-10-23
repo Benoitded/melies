@@ -144,7 +144,7 @@ final class EditorWindowController {
                 backing: .buffered,
                 defer: false
             )
-            w.title = "Méliès"
+            w.title = "Melies"
             w.titlebarAppearsTransparent = true
             w.titleVisibility = .hidden
             w.isReleasedWhenClosed = false

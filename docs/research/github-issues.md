@@ -57,7 +57,7 @@ Report from a research subagent, reviewed and condensed. Data: all issues of the
 Polished rendering and a "Screen Studio-like" result; free, no watermark or subscription; a maintainer
 who answers quickly; for Kap, simplicity (menu bar, area, export).
 
-## For Méliès: what this implies
+## For Melies: what this implies
 
 1. **Boring, infallible export**: exported duration equal to the source, preview identical to the export,
    progress with cancellation.

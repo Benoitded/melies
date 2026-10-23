@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds Méliès, signs it, and installs the single copy at ~/Applications/Melies.app.
+# Builds Melies, signs it, and installs the single copy at ~/Applications/Melies.app.
 # Used as is for daily work. Scripts/release.sh drives it with:
 #   MELIES_SIGN_IDENTITY  signing identity (default: the first "Apple Development", else ad hoc)
 #   MELIES_HARDENED=1     hardened runtime + secure timestamp (needed for notarization)
@@ -21,7 +21,7 @@ case "$(xcode-select -p 2>/dev/null)" in
       export DEVELOPER_DIR="$XCODE/Contents/Developer"
       echo "Using $XCODE (xcode-select points to the Command Line Tools)."
     else
-      echo "Méliès needs Xcode 26 or later (the full app, not only the Command Line Tools)."
+      echo "Melies needs Xcode 26 or later (the full app, not only the Command Line Tools)."
       echo "  1. Install Xcode from the App Store or https://developer.apple.com/xcode/"
       echo "  2. Open it once and accept the license, then run:"
       echo "     sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"

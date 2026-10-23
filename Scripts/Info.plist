@@ -5,8 +5,8 @@
     <key>CFBundleDevelopmentRegion</key><string>en</string>
     <key>CFBundleLocalizations</key>
     <array><string>en</string><string>fr</string><string>it</string><string>es</string></array>
-    <key>CFBundleName</key><string>Méliès</string>
-    <key>CFBundleDisplayName</key><string>Méliès</string>
+    <key>CFBundleName</key><string>Melies</string>
+    <key>CFBundleDisplayName</key><string>Melies</string>
     <key>CFBundleIdentifier</key><string>dev.melies.app</string>
     <key>CFBundleExecutable</key><string>Melies</string>
     <key>CFBundleIconFile</key><string>Melies</string>
@@ -21,9 +21,9 @@
     <key>LSMinimumSystemVersion</key><string>26.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
-    <key>NSMicrophoneUsageDescription</key><string>Méliès records your voice when the microphone option is on.</string>
-    <key>NSSpeechRecognitionUsageDescription</key><string>Méliès recognizes speech on your Mac, offline, to create captions.</string>
-    <key>NSDesktopFolderUsageDescription</key><string>Méliès reads your screen recordings from the Desktop.</string>
+    <key>NSMicrophoneUsageDescription</key><string>Melies records your voice when the microphone option is on.</string>
+    <key>NSSpeechRecognitionUsageDescription</key><string>Melies recognizes speech on your Mac, offline, to create captions.</string>
+    <key>NSDesktopFolderUsageDescription</key><string>Melies reads your screen recordings from the Desktop.</string>
     <key>CFBundleDocumentTypes</key>
     <array>
         <dict>

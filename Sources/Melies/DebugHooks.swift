@@ -101,6 +101,15 @@ enum DebugHooks {
                 exit(0)
             }
         }
+        // Debug: MELIES_GUIDE_TEST=1 opens the permission guide (open the Screen Recording settings first) and prints its frame.
+        if ProcessInfo.processInfo.environment["MELIES_GUIDE_TEST"] != nil {
+            Task { @MainActor in
+                PermissionGuideController.shared.show(ready: false)
+                try? await Task.sleep(for: .seconds(2))
+                print("GUIDE frame=\(String(describing: PermissionGuideController.shared.debugFrame))")
+                exit(0)
+            }
+        }
         if let out = ProcessInfo.processInfo.environment["MELIES_ONBOARDING_SNAPSHOT"] {
             Task { @MainActor in
                 OnboardingWindowController.shared.show()

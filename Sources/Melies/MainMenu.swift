@@ -1,6 +1,6 @@
 import AppKit
 
-/// Targets for the standard Mac menu items that are specific to Méliès.
+/// Targets for the standard Mac menu items that are specific to Melies.
 @MainActor
 final class MenuActions: NSObject, NSMenuItemValidation {
     static let shared = MenuActions()
@@ -61,7 +61,7 @@ final class MenuActions: NSObject, NSMenuItemValidation {
     }
 }
 
-/// The standard macOS menu bar: Méliès, File, Edit, Window, Help (⌘, ⌘O ⌘W ⌘M ⌘H ⌘Q ⌘Z ...).
+/// The standard macOS menu bar: Melies, File, Edit, Window, Help (⌘, ⌘O ⌘W ⌘M ⌘H ⌘Q ⌘Z ...).
 @MainActor
 enum MainMenu {
     private static var rebuilding = false
@@ -125,7 +125,7 @@ enum MainMenu {
     }
 
     private static func appMenu() -> NSMenu {
-        let menu = NSMenu(title: "Méliès")
+        let menu = NSMenu(title: "Melies")
         add(menu, L("mm.about"), #selector(NSApplication.orderFrontStandardAboutPanel(_:)))
         if Updater.shared.isAvailable {
             add(menu, L("menu.updates"), #selector(MenuActions.checkForUpdates), target: MenuActions.shared)

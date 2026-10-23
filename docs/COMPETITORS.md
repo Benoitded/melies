@@ -23,10 +23,10 @@ hints, not statistics.
 | **Local first, no account** | requested | Cap's cloud = 130 issues, mostly noise | differentiator for Shottr, Xnapper, Recordly |
 | **Annotations with a duration in the video** | requested (CleanShot) | blur "basic feature" | few competitors do it well |
 
-**Main threat:** CleanShot X 5.0 (September 2026) moves into Méliès's space (Studio mode,
+**Main threat:** CleanShot X 5.0 (September 2026) moves into Melies's space (Studio mode,
 smart zooms, cursor smoothing, backgrounds). Try it for real before deciding.
 
-## Where Méliès stands
+## Where Melies stands
 
 | Expected feature | Status |
 |---|---|
