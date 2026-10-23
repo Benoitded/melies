@@ -140,7 +140,7 @@ final class EditorTools {
         case "get_recording_status": return ToolOutput(text: Self.json(try recordingController().status()))
         default: break
         }
-        guard let model = currentModel() else { throw ToolError("No video is open in Méliès. Call open_video (without a path it opens the latest recording).") }
+        guard let model = currentModel() else { throw ToolError("No video is open in Melies. Call open_video (without a path it opens the latest recording).") }
         switch name {
         case "get_state": return ToolOutput(text: Self.json(state(model)))
         case "get_frame": return try await frame(model, args)

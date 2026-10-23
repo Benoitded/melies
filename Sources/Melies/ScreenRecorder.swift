@@ -143,7 +143,7 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         recordingConfig.outputFileType = .mov
         let output = SCRecordingOutput(configuration: recordingConfig, delegate: self)
 
-        // Keep every Méliès window (dimming overlay, editor, menu bar button) out of the video.
+        // Keep every Melies window (dimming overlay, editor, menu bar button) out of the video.
         let ownPID = ProcessInfo.processInfo.processIdentifier
         let own = content.windows.filter { $0.owningApplication?.processID == ownPID }
         let stream = SCStream(filter: SCContentFilter(display: display, excludingWindows: own), configuration: config, delegate: self)
@@ -168,10 +168,10 @@ final class ScreenRecorder: NSObject, ObservableObject, SCStreamDelegate, SCReco
         case permission, noDisplay, microphone, busy, countdownCancelled
         var errorDescription: String? {
             switch self {
-            case .permission: return "Screen recording is not allowed for Méliès. The user must enable it in System Settings > Privacy & Security > Screen Recording."
+            case .permission: return "Screen recording is not allowed for Melies. The user must enable it in System Settings > Privacy & Security > Screen Recording."
             case .noDisplay: return "The display is not available."
             case .microphone: return "Microphone access was refused by the user."
-            case .busy: return "Méliès is busy with another recording."
+            case .busy: return "Melies is busy with another recording."
             case .countdownCancelled: return "The count-down was cancelled."
             }
         }

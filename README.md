@@ -1,4 +1,4 @@
-# Méliès
+# Melies
 
 Screen recorder and small video editor for the Mac menu bar, inspired by Shottr.
 A global shortcut films a region of the screen, the editor opens straight on it, you trim and annotate, then
@@ -23,14 +23,14 @@ brew install --cask Benoitded/melies/melies
 ### From the DMG
 
 1. Download the latest `Melies-X.Y.Z.dmg` from [Releases](https://github.com/Benoitded/melies/releases).
-2. Open the DMG and drag **Méliès** into **Applications**.
+2. Open the DMG and drag **Melies** into **Applications**.
 
 ### First launch
 
-1. Open Méliès: a film icon appears in the menu bar.
-2. Allow **screen recording** when the app guides you (System Settings > Privacy & Security). The app restarts
-   by itself once the switch is on.
-   The **microphone** is only requested if you turn it on for a recording.
+1. Open Melies: a short walkthrough opens, and a film icon appears in the menu bar.
+2. Allow **screen recording** on its last step. System Settings opens with a small panel under it: drag the
+   Melies icon into the list, or flip its switch. The app restarts by itself once it is on.
+   The **microphone** is optional: allow it there, or when you first turn it on for a recording.
 
 Requirements: **macOS 26 (Tahoe) or later**. Releases are built to be signed with a Developer ID and notarized by
 Apple (`Scripts/release.sh` refuses to publish a DMG that is not notarized). Updates arrive through Sparkle
@@ -78,7 +78,7 @@ The full list is in [`docs/SHORTCUTS.md`](docs/SHORTCUTS.md).
 - *No microphone sound*: turn the microphone on in the menu bar menu before recording, and accept the prompt.
 - *The app is blocked when opening* ("Apple could not verify...", the case of a non-notarized copy, for example a
   pre-release or your own build): open System Settings > Privacy & Security, scroll down, and click **Open Anyway**
-  next to Méliès. On macOS 15 and later, right-click > Open no longer bypasses the check.
+  next to Melies. On macOS 15 and later, right-click > Open no longer bypasses the check.
 - *The interface shows raw keys such as `mm.file`*: a language file is broken. Reinstall; when building yourself,
   `Scripts/build.sh` and `swift test` both check the language files.
 - *"plugin for module 'SwiftUIMacros' not found" or "needs Xcode"*: the build needs the full Xcode, see below.

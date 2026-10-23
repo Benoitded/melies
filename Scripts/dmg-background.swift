@@ -36,7 +36,7 @@ func draw(_ text: String, size: CGFloat, weight: NSFont.Weight, color: NSColor, 
     let w = s.size().width
     s.draw(at: NSPoint(x: (windowWidth - w) / 2, y: centerY))
 }
-draw("Drag Méliès to Applications", size: 17, weight: .semibold, color: NSColor(calibratedRed: 0.17, green: 0.14, blue: 0.30, alpha: 1), centerY: CGFloat(height) - 70)
+draw("Drag Melies to Applications", size: 17, weight: .semibold, color: NSColor(calibratedRed: 0.17, green: 0.14, blue: 0.30, alpha: 1), centerY: CGFloat(height) - 70)
 if CommandLine.arguments.count > 2, !CommandLine.arguments[2].isEmpty {
     draw(CommandLine.arguments[2], size: 12, weight: .regular, color: NSColor(calibratedRed: 0.42, green: 0.40, blue: 0.55, alpha: 1), centerY: CGFloat(height) - 362)
 }

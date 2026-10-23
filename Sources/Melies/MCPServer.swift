@@ -79,7 +79,7 @@ final class MCPServer: ObservableObject {
     /// For clients that only take a URL: the key rides in the address.
     var urlWithKey: String { "\(url)?token=\(token)" }
 
-    /// The command that registers Méliès in Claude Code.
+    /// The command that registers Melies in Claude Code.
     var claudeCodeCommand: String {
         "claude mcp add --transport http melies \(url) --header \"Authorization: Bearer \(token)\""
     }

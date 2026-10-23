@@ -7,7 +7,7 @@ Causes:
 - 4:1 ratio, whereas Twitter accepts from 1:3 to 3:1.
 - 240 fps, whereas 60 fps is the maximum.
 
-What the Méliès export does (default settings):
+What the Melies export does (default settings):
 - H.264 in an MP4, `faststart` (`shouldOptimizeForNetworkUse`), AAC audio at 128 kb/s when the video has sound
 - 30 fps
 - max width 1920 (the export options also offer 1280, 854 and 640, labeled 720p, 480p and 360p)

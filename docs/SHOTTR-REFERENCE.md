@@ -10,7 +10,7 @@ then copy or save and close. Lightweight window, compact toolbar.
 
 ## Shottr shortcuts adopted or adapted (public docs)
 
-This lists Shottr's conventions, not what Méliès has today. What Méliès implements is in `docs/SHORTCUTS.md`: among
+This lists Shottr's conventions, not what Melies has today. What Melies implements is in `docs/SHORTCUTS.md`: among
 the items below, Cmd+Z / Cmd+Shift+Z, Cmd+S, Cmd+C, Cmd+O (open), Cmd+Shift+V, Return to confirm the crop, and the
 canvas zoom shortcuts (Cmd+1, Cmd+0, Cmd+plus / minus) exist; Cmd+D, Option+drag to duplicate, Cmd+Shift+S, and the
 oval, counter, magnifier, ruler and color picker tools do not.

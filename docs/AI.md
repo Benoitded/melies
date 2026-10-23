@@ -1,4 +1,4 @@
-# AI in Méliès
+# AI in Melies
 
 Idea: let an AI edit the video (and record the screen for a demo) on request, through three paths that
 share the same tool layer.
@@ -50,13 +50,13 @@ Recording tools (done, same MCP server; logic in `RecordingControl.swift`, real 
 
 | Tool | Role |
 |---|---|
-| `get_screen_layout` | displays (id, name, frame in points, scale, `has_mouse`) and visible windows (id, app name, bounds, display). No window titles, no Méliès windows. Marked as untrusted data |
+| `get_screen_layout` | displays (id, name, frame in points, scale, `has_mouse`) and visible windows (id, app name, bounds, display). No window titles, no Melies windows. Marked as untrusted data |
 | `start_recording(display?, x, y, width, height \| window, audio?, max_seconds?, countdown?)` | records a region (points, relative to the top left of the display) or a window (its bounds plus an 8 pt margin, clamped to the display). `audio`: `none` (default), `microphone`, `system`, `both`. `max_seconds`: 1 to 600, default 120. `countdown`: 0 to 10 s, default 0 |
 | `stop_recording` | stops; the editor opens on the file; returns `file`, `duration_seconds`, `has_clicks` / `auto_zoom_available`, `stopped_by` (`client`, `time_limit`, `user`). Also returns a recording that already ended by itself |
 | `get_recording_status` | `idle`, `waiting_for_user_confirmation`, `recording` (elapsed, region, audio) or `stopping` |
 
 Intended flow, only when the user explicitly asked to record: `get_screen_layout`, `start_recording`, do the demo with
-the client's own tools (Méliès does not drive the mouse or keyboard), `stop_recording`, then `get_state` and edit
+the client's own tools (Melies does not drive the mouse or keyboard), `stop_recording`, then `get_state` and edit
 (`add_zoom_segment`, `add_annotation`, `set_trim`...) and `export`.
 
 Safety model (this is the user's screen):
@@ -67,7 +67,7 @@ Safety model (this is the user's screen):
 - Validation happens before the dialog: region at least 40 x 40 points and inside the display, one recording at a
   time (a recording started by the user counts), refused while an export runs.
 - The red menu bar timer and the dimming overlay stay, the shortcut and the red button stop it. It stops by itself at
-  `max_seconds` (default 120, never more than 600). Méliès windows are never in the video.
+  `max_seconds` (default 120, never more than 600). Melies windows are never in the video.
 - Needs the Screen Recording permission like any recording; without it the call fails with a clear error. Microphone
   access is asked on first use when `audio` includes the microphone.
 - Everything stays behind the existing MCP checks (off by default, loopback, key, Host and Origin). No network access
