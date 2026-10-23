@@ -10,6 +10,7 @@ struct GeneralTab: View {
     @AppStorage(Pref.watchedFolder) private var watchedFolder = ""
     @AppStorage(Pref.openEditorAfterRecording) private var openAfterRecording = true
     @AppStorage(Pref.closeAfterAction) private var closeAfterAction = true
+    @AppStorage(Pref.afterSave) private var afterSave = "both"
     @AppStorage(Pref.recordMicrophone) private var recordMicrophone = false
     @AppStorage(Pref.recordSystemAudio) private var recordSystemAudio = false
     @AppStorage(Pref.recordCountdown) private var recordCountdown = 0
@@ -87,6 +88,17 @@ struct GeneralTab: View {
                     .labeledContent(L("set.after_recording"))
                 Toggle(L("set.after_action.close"), isOn: $closeAfterAction)
                     .labeledContent(L("set.after_action"))
+                VStack(alignment: .leading, spacing: 4) {
+                    Picker("", selection: $afterSave) {
+                        Text(L("set.after_save.both")).tag("both")
+                        Text(L("set.after_save.compressed")).tag("compressed")
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(width: 250)
+                    Text(L("set.after_save.hint")).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                .labeledContent(L("set.after_save"))
 
                 Divider()
 
