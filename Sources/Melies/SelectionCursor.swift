@@ -4,10 +4,10 @@ import AppKit
 /// exact pixel where the selection will start. White with a dark edge so it reads on any background.
 enum SelectionCursor {
     static let crosshairRing: NSCursor = {
-        let size: CGFloat = 35 // odd, so the centre is a pixel
+        let size: CGFloat = 25 // odd, so the centre is a pixel
         let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
             let c = CGPoint(x: rect.midX, y: rect.midY)
-            let ring: CGFloat = 5.5
+            let ring: CGFloat = 4
             let reach = rect.width / 2 - 1.5
 
             func draw(_ color: NSColor, width: CGFloat) {

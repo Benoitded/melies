@@ -14,6 +14,14 @@ private final class SelectorView: NSView {
     private var start: CGPoint?
     private var current: CGPoint?
     private var lastPoint: CGPoint?
+    /// Where the pointer is, for the coordinates shown beside the cursor before a drag starts.
+    private var hover: CGPoint? {
+        didSet {
+            setNeedsDisplay(hoverLabelRect(for: oldValue))
+            setNeedsDisplay(hoverLabelRect(for: hover))
+        }
+    }
+    private var trackingArea: NSTrackingArea?
     /// While Space is held, dragging moves the whole rectangle instead of resizing it.
     private var spaceHeld = false {
         didSet { window?.invalidateCursorRects(for: self) }
@@ -27,6 +35,35 @@ private final class SelectorView: NSView {
         )
     }
 
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let trackingArea { removeTrackingArea(trackingArea) }
+        let area = NSTrackingArea(rect: bounds, options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways], owner: self)
+        addTrackingArea(area)
+        trackingArea = area
+    }
+
+    override func mouseMoved(with event: NSEvent) { hover = convert(event.locationInWindow, from: nil) }
+    override func mouseExited(with event: NSEvent) { hover = nil }
+
+    private static let hoverAttrs: [NSAttributedString.Key: Any] = [
+        .font: NSFont.monospacedDigitSystemFont(ofSize: 10.5, weight: .semibold),
+        .foregroundColor: NSColor.white,
+        .strokeColor: NSColor.black.withAlphaComponent(0.7),
+        .strokeWidth: -3,
+    ]
+
+    private func hoverText(_ p: CGPoint) -> NSAttributedString {
+        NSAttributedString(string: "\(Int(p.x))\n\(Int(p.y))", attributes: Self.hoverAttrs)
+    }
+
+    /// The box the coordinates occupy: down and to the right of the cross, clear of the ring.
+    private func hoverLabelRect(for p: CGPoint?) -> NSRect {
+        guard let p else { return .zero }
+        let size = hoverText(p).size()
+        return NSRect(x: p.x + 10, y: p.y + 6, width: size.width + 4, height: size.height + 4)
+    }
+
     override func resetCursorRects() {
         addCursorRect(bounds, cursor: spaceHeld ? .closedHand : SelectionCursor.crosshairRing)
     }
@@ -34,7 +71,10 @@ private final class SelectorView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         NSColor.black.withAlphaComponent(0.32).setFill()
         bounds.fill()
-        guard let rect = selection else { return }
+        guard let rect = selection else {
+            if let hover { hoverText(hover).draw(at: hoverLabelRect(for: hover).origin) }
+            return
+        }
         NSColor.clear.setFill()
         rect.fill(using: .copy)
         NSColor.white.setStroke()
@@ -55,6 +95,7 @@ private final class SelectorView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        hover = nil
         start = convert(event.locationInWindow, from: nil)
         current = start
         lastPoint = start
@@ -121,6 +162,7 @@ enum RegionSelector {
             window.backgroundColor = .clear
             window.hasShadow = false
             window.isReleasedWhenClosed = false
+            window.acceptsMouseMovedEvents = true
 
             let view = SelectorView(frame: NSRect(origin: .zero, size: screen.frame.size))
             // If the selector loses focus (Cmd+Tab, a Space switch) nothing else would end it: cancel, so the app
