@@ -201,6 +201,13 @@
 "exp.motionblur.light" = "Léger";
 "exp.motionblur.strong" = "Fort";
 "exp.motionblur.help" = "Floute l'image pendant les zooms et les déplacements de caméra, comme un obturateur. Appliqué à l'export (l'aperçu de l'éditeur reste net).";
+"exp.gif.fps" = "Fluidité";
+"exp.gif.auto" = "Auto";
+"exp.gif.fps.unit" = "i/s";
+"exp.gif.fps.help" = "Auto choisit la fluidité maximale compatible avec la taille limite. Une valeur fixe garde la fluidité et réduit l’image à la place.";
+"exp.gif.loop" = "Boucle";
+"exp.gif.loop.forever" = "À l’infini";
+"exp.gif.loop.once" = "Une fois";
 "exp.estimating" = "Estimation de la taille...";
 "exp.estimate.range" = "Entre %@ et %@ Mo selon le contenu. Fixe une taille maximale pour un résultat exact.";
 "status.cancelled" = "Export annulé";

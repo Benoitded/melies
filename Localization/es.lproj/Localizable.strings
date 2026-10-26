@@ -201,6 +201,13 @@
 "exp.motionblur.light" = "Ligero";
 "exp.motionblur.strong" = "Fuerte";
 "exp.motionblur.help" = "Desenfoca la imagen durante los zooms y los movimientos de cámara, como un obturador. Se aplica al exportar (la vista previa del editor se mantiene nítida).";
+"exp.gif.fps" = "Fotogramas";
+"exp.gif.auto" = "Auto";
+"exp.gif.fps.unit" = "fps";
+"exp.gif.fps.help" = "Auto elige la fluidez máxima que cabe en el límite de tamaño. Un valor fijo mantiene la fluidez y reduce la imagen.";
+"exp.gif.loop" = "Bucle";
+"exp.gif.loop.forever" = "Infinito";
+"exp.gif.loop.once" = "Una vez";
 "exp.estimating" = "Estimando el tamaño...";
 "exp.estimate.range" = "Entre %@ y %@ MB según el contenido. Fija un tamaño máximo para un resultado exacto.";
 "status.cancelled" = "Exportación cancelada";
