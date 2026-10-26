@@ -15,6 +15,10 @@ struct ExportSettings: Equatable {
     /// nil means no limit.
     var maxMegabytes: Int?
     var maxWidth: Int = 1920
+    /// GIF only. 0 lets the writer pick the frame rate to fit the size limit.
+    var gifFps: Int = 0
+    /// GIF only. 0 loops forever.
+    var gifLoops: Int = 0
     /// Margins, rounded corners, shadow around the picture (one style for the whole app).
     var frame = FrameStyle.load()
     /// Blur during zoom and pan transitions (export only: the editor preview does not use Core Image).
@@ -23,15 +27,21 @@ struct ExportSettings: Equatable {
     static let sizeChoices: [Int] = [1, 2, 3, 5, 8, 15, 25, 50, 100]
     /// 360p, 480p, 720p, 1080p
     static let widthChoices: [Int] = [640, 854, 1280, 1920]
+    static let gifFpsChoices: [Int] = [10, 15, 24, 30]
+    static let gifLoopChoices: [Int] = [0, 1]
 
     static var current: ExportSettings {
         let d = UserDefaults.standard
         let mb = d.integer(forKey: Pref.exportMaxMB)
         let width = d.integer(forKey: Pref.exportMaxWidth)
+        let fps = d.integer(forKey: Pref.gifFps)
+        let loops = d.integer(forKey: Pref.gifLoops)
         return ExportSettings(
             format: Format(rawValue: d.string(forKey: Pref.exportFormat) ?? "") ?? .mp4,
             maxMegabytes: mb > 0 ? mb : nil,
-            maxWidth: widthChoices.contains(width) ? width : 1920
+            maxWidth: widthChoices.contains(width) ? width : 1920,
+            gifFps: gifFpsChoices.contains(fps) ? fps : 0,
+            gifLoops: gifLoopChoices.contains(loops) ? loops : 0
         )
     }
 
@@ -186,29 +196,32 @@ enum MP4Writer {
 
 enum GIFWriter {
     /// Writes an animated GIF, shrinking width and frame rate until it fits `maxMegabytes` (if any).
+    /// A fixed `fps` (> 0) is kept: only the width shrinks. `loops` 0 repeats forever.
     static func write(asset: AVAsset, range: CMTimeRange, track: AVAssetTrack, composition: AVVideoComposition,
-                      canvas: CGSize, maxMegabytes: Int?, control: ExportControl? = nil, to url: URL) async throws {
-        let attempts: [(width: CGFloat, fps: Double)] = maxMegabytes == nil
+                      canvas: CGSize, maxMegabytes: Int?, fps fixedFps: Int = 0, loops: Int = 0,
+                      control: ExportControl? = nil, to url: URL) async throws {
+        var attempts: [(width: CGFloat, fps: Double)] = maxMegabytes == nil
             ? [(800, 15)]
             : [(720, 15), (600, 12), (480, 12), (400, 10), (320, 8), (256, 6), (200, 5), (160, 4), (128, 3)]
+        if fixedFps > 0 { attempts = attempts.map { ($0.width, Double(fixedFps)) } }
         for attempt in attempts {
             let width = min(attempt.width, canvas.width)
             let size = try await writeOnce(asset: asset, range: range, track: track, composition: composition,
-                                           canvas: canvas, width: width, fps: attempt.fps, control: control, to: url)
+                                           canvas: canvas, width: width, fps: attempt.fps, loops: loops, control: control, to: url)
             if let mb = maxMegabytes, size > mb * 1_000_000 { continue }
             return
         }
     }
 
     private static func writeOnce(asset: AVAsset, range: CMTimeRange, track: AVAssetTrack, composition: AVVideoComposition,
-                                  canvas: CGSize, width: CGFloat, fps: Double, control: ExportControl?, to url: URL) async throws -> Int {
+                                  canvas: CGSize, width: CGFloat, fps: Double, loops: Int, control: ExportControl?, to url: URL) async throws -> Int {
         try? FileManager.default.removeItem(at: url)
         let reader = try AVAssetReader(asset: asset)
         reader.timeRange = range
         let output = AVAssetReaderVideoCompositionOutput(
             videoTracks: [track], videoSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
         )
-        // The GIF keeps 3 to 15 frames per second: ask the compositor for just those instead of 30 and dropping most.
+        // The GIF keeps 3 to 30 frames per second: ask the compositor for just those instead of 30 and dropping most.
         if let gifComposition = composition.mutableCopy() as? AVMutableVideoComposition {
             gifComposition.frameDuration = CMTime(value: 1, timescale: CMTimeScale(fps))
             output.videoComposition = gifComposition
@@ -227,7 +240,7 @@ enum GIFWriter {
             throw ExportError.writeFailed
         }
         CGImageDestinationSetProperties(destination, [
-            kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFLoopCount as String: 0],
+            kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFLoopCount as String: loops],
         ] as CFDictionary)
         let frameProperties = [kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFDelayTime as String: 1 / fps]] as CFDictionary
 

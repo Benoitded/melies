@@ -213,7 +213,8 @@ enum VideoExport {
         switch settings.format {
         case .gif:
             try await GIFWriter.write(asset: asset, range: range, track: track, composition: composition,
-                                      canvas: plan.canvas, maxMegabytes: settings.maxMegabytes, control: control, to: url)
+                                      canvas: plan.canvas, maxMegabytes: settings.maxMegabytes, fps: settings.gifFps, loops: settings.gifLoops,
+                                      control: control, to: url)
         case .mp4, .hevc:
             var bitrate = settings.videoBitrate(seconds: range.duration.seconds, canvas: plan.canvas, hasAudio: !audioTracks.isEmpty)
             // Encoders overshoot a size target now and then: retry a little lower, up to three times.

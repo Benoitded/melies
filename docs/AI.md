@@ -55,6 +55,11 @@ Recording tools (done, same MCP server; logic in `RecordingControl.swift`, real 
 | `stop_recording` | stops; the editor opens on the file; returns `file`, `duration_seconds`, `has_clicks` / `auto_zoom_available`, `stopped_by` (`client`, `time_limit`, `user`). Also returns a recording that already ended by itself |
 | `get_recording_status` | `idle`, `waiting_for_user_confirmation`, `recording` (elapsed, region, audio) or `stopping` |
 
+Notes for AI clients (also in the tool descriptions and server instructions):
+- Never record the screen unless the user explicitly asked. To show or edit a video, use `open_video` on the file; it only takes `.mov`, `.mp4` and `.m4v`, so convert a GIF first.
+- At a hard cut (a video made of stills, a scroll jump) end the annotation on the cut and start the next one there; each fades over 0.15 s. Read the real cut times from the video before placing them. For smooth scrolling use `track_annotation`. Check with `get_frame` `render: true` on both sides of the cut.
+- Keep a zoom segment (and its travel) inside one scene: across a cut it zooms on two unrelated images.
+
 Intended flow, only when the user explicitly asked to record: `get_screen_layout`, `start_recording`, do the demo with
 the client's own tools (Melies does not drive the mouse or keyboard), `stop_recording`, then `get_state` and edit
 (`add_zoom_segment`, `add_annotation`, `set_trim`...) and `export`.

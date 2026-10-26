@@ -19,6 +19,8 @@ enum Pref {
     static let exportFormat = "exportFormat"
     static let exportMaxMB = "exportMaxMB"
     static let exportMaxWidth = "exportMaxWidth"
+    static let gifFps = "gifFps"
+    static let gifLoops = "gifLoops"
     static let mcpEnabled = "mcpEnabled"
     static let mcpPort = "mcpPort"
     static let autoZoomStrength = "autoZoomStrength"

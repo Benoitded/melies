@@ -201,6 +201,13 @@
 "exp.motionblur.light" = "Leggera";
 "exp.motionblur.strong" = "Forte";
 "exp.motionblur.help" = "Sfoca l'immagine durante zoom e spostamenti della camera, come un otturatore. Applicata all'esportazione (l'anteprima dell'editor resta nitida).";
+"exp.gif.fps" = "Fotogrammi";
+"exp.gif.auto" = "Auto";
+"exp.gif.fps.unit" = "fps";
+"exp.gif.fps.help" = "Auto sceglie la fluidità massima che rientra nel limite di dimensione. Un valore fisso mantiene la fluidità e riduce l’immagine.";
+"exp.gif.loop" = "Ciclo";
+"exp.gif.loop.forever" = "Infinito";
+"exp.gif.loop.once" = "Una volta";
 "exp.estimating" = "Stima della dimensione...";
 "exp.estimate.range" = "Tra %@ e %@ MB a seconda del contenuto. Imposta una dimensione massima per un risultato esatto.";
 "status.cancelled" = "Esportazione annullata";

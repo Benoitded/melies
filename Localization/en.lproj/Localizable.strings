@@ -201,6 +201,13 @@
 "exp.motionblur.light" = "Light";
 "exp.motionblur.strong" = "Strong";
 "exp.motionblur.help" = "Blurs the picture during zoom and pan transitions, like a camera shutter. Applied on export (the editor preview stays sharp).";
+"exp.gif.fps" = "Frame rate";
+"exp.gif.auto" = "Auto";
+"exp.gif.fps.unit" = "fps";
+"exp.gif.fps.help" = "Auto picks the smoothest rate that fits the size limit. A fixed rate keeps its smoothness and shrinks the picture instead.";
+"exp.gif.loop" = "Loop";
+"exp.gif.loop.forever" = "Forever";
+"exp.gif.loop.once" = "Once";
 "exp.estimating" = "Estimating the size...";
 "exp.estimate.range" = "Between %@ and %@ MB, depending on the content. Set a maximum size for an exact result.";
 "status.cancelled" = "Export cancelled";
